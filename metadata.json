@@ -1,0 +1,8 @@
+{
+  "name": "KLO - Colombian Luxury Travel",
+  "description": "A high-end, AI-driven luxury travel agency specializing in bespoke Colombian Caribbean experiences, including private islands, luxury villas, and yacht charters.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}
