@@ -31,7 +31,7 @@ export const DESTINATIONS: Destination[] = [
     id: '2',
     titleKey: 'dest.santamarta.title',
     descriptionKey: 'dest.santamarta.desc',
-    imageUrl: '/images/destinations/ciudad perdida.jpg',
+    imageUrl: '/images/destinations/ciudad-perdida.jpg',
   },
   {
     id: '3',
@@ -586,6 +586,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
 
 
