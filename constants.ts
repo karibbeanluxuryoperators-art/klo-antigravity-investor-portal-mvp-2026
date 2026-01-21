@@ -24,38 +24,38 @@ export const DESTINATIONS: Destination[] = [
     id: '1',
     titleKey: 'dest.cartagena.title',
     descriptionKey: 'dest.cartagena.desc',
-    imageUrl: 'https://images.unsplash.com/photo-1582772584166-51f7b876a47b?q=80&w=1200', // Authentic Cartagena Street
+    imageUrl: '/images/destinations/pirata.jpg',
     externalLink: 'https://www.isladelpirata.co/',
   },
   {
     id: '2',
     titleKey: 'dest.santamarta.title',
     descriptionKey: 'dest.santamarta.desc',
-    imageUrl: 'https://images.unsplash.com/photo-1585123991986-5389659ee7f6?q=80&w=1200', // Tayrona
+    imageUrl: '/images/destinations/ciudad perdida.jpg',
   },
   {
     id: '3',
     titleKey: 'dest.coffee.title',
     descriptionKey: 'dest.coffee.desc',
-    imageUrl: 'https://images.unsplash.com/photo-1589136777351-943a137e7ae5?q=80&w=1200', // Cocora Valley
+    imageUrl: '/images/destinations/4472.jpg',
   },
   {
     id: '4',
     titleKey: 'dest.guajira.title',
     descriptionKey: 'dest.guajira.desc',
-    imageUrl: 'https://images.unsplash.com/photo-1534067783941-51c9c23ecefd?q=80&w=1200', // Guajira
+    imageUrl: '/images/destinations/guajira.webp',
   },
   {
     id: '5',
     titleKey: 'dest.amazonas.title',
     descriptionKey: 'dest.amazonas.desc',
-    imageUrl: 'https://images.unsplash.com/photo-1544606709-a46c33cbf995?q=80&w=1200', // Amazon
+    imageUrl: '/images/destinations/amazonas2.webp',
   },
   {
     id: '6',
     titleKey: 'dest.bogota.title',
     descriptionKey: 'dest.bogota.desc',
-    imageUrl: 'https://images.unsplash.com/photo-1596781270278-e569769da7e5?q=80&w=1200', // Bogota
+    imageUrl: '/images/destinations/eldorado.webp',
   }
 ];
 
@@ -586,4 +586,5 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
