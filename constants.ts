@@ -87,6 +87,7 @@ export const PREMIER_SERVICES = [
 ];
 // Partner Logos - Using high-reliability sourced URLs (transparent PNG/SVG)
 // Partner Logos - Sourced locally for reliability
+
 export const PARTNERS = [
   {
     name: "NetJets",
@@ -101,9 +102,9 @@ export const PARTNERS = [
     logo: "./images/partners/marriott.svg"
   },
   {
-  name: "Flapz",
-  logo: "/images/partners/flapz.svg"
-}
+    name: "Flapz",
+    logo: "/images/partners/flapz.svg"
+  }
 ];
 
 export const TEAM = [
@@ -573,6 +574,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
 
 
