@@ -101,10 +101,9 @@ export const PARTNERS = [
     logo: "./images/partners/marriott.svg"
   },
   {
-    name: "Cartagena Concierge",
-    logo: "https://cdn-icons-png.flaticon.com/512/3600/3600966.png"
-  }
-];
+  name: "Flapz",
+  logo: "/images/partners/flapz.svg"
+}
 
 export const TEAM = [
   {
@@ -573,6 +572,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
 
 
