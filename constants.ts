@@ -16,7 +16,7 @@ export const NAV_ITEMS: NavItem[] = [
   { labelKey: 'nav.services', href: '#servicios' },
   { labelKey: 'nav.team', href: '#equipo' },
   { labelKey: 'nav.metrics', href: '#metricas' },
-  { labelKey: 'nav.investors', href: '#inversionistas' },
+  { labelKey: 'nav.investors', href: '#inversionistas'},
 ];
 
 export const DESTINATIONS: Destination[] = [
@@ -25,26 +25,22 @@ export const DESTINATIONS: Destination[] = [
     titleKey: 'dest.cartagena.title',
     descriptionKey: 'dest.cartagena.desc',
     imageUrl: '/images/destinations/pirata.jpg',
-    externalLink: 'https://www.isladelpirata.co/',
-  },
+    externalLink: 'https://www.isladelpirata.co/',},
   {
     id: '2',
     titleKey: 'dest.santamarta.title',
     descriptionKey: 'dest.santamarta.desc',
-    imageUrl: '/images/destinations/ciudad-perdida.jpg',
-  },
+    imageUrl: '/images/destinations/ciudad-perdida.jpg',},
   {
     id: '3',
     titleKey: 'dest.coffee.title',
     descriptionKey: 'dest.coffee.desc',
-    imageUrl: '/images/destinations/4472.jpg',
-  },
+    imageUrl: '/images/destinations/4472.jpg',},
   {
     id: '4',
     titleKey: 'dest.guajira.title',
     descriptionKey: 'dest.guajira.desc',
-    imageUrl: '/images/destinations/guajira.webp',
-  },
+    imageUrl: '/images/destinations/guajira.webp',},
   {
     id: '5',
     titleKey: 'dest.amazonas.title',
@@ -55,8 +51,7 @@ export const DESTINATIONS: Destination[] = [
     id: '6',
     titleKey: 'dest.bogota.title',
     descriptionKey: 'dest.bogota.desc',
-    imageUrl: '/images/destinations/eldorado.webp',
-  }
+    imageUrl: '/images/destinations/eldorado.webp',}
 ];
 
 export const PREMIER_SERVICES = [
@@ -580,6 +575,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
 
 
