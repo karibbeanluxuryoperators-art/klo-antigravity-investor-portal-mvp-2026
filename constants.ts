@@ -127,7 +127,7 @@ export const TEAM = [
     equity: "25% Equity"
   },
   {
-    name: "Jose Angel Trucco",
+    name: "Jose Fernando Angel Trucco",
     role: "Director Ventas y Marketing",
     bio: "Visionario del negocio. Líder en creación de alianzas clave y relaciones con inversionistas institucionales.",
     equity: "25% Equity"
@@ -586,3 +586,4 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
