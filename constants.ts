@@ -141,39 +141,37 @@ export const TEAM = [
 ];
 
 // Investor Assets - Centralized for easy editing
+
 export const INVESTOR_ASSETS = [
   {
     id: '1',
     name: 'Memorandum of Understanding (MOU)',
     type: 'pdf',
-    url: './mou.pdf', // Local file in public/
+    url: '/mou.pdf',
     fileSize: '1.2 MB'
   },
   {
     id: '2',
     name: 'Financial Projections 2025-2029',
     type: 'pdf',
-    url: './financials.pdf', // Local file in public/
+    url: '/financials.pdf',
     fileSize: '3.4 MB'
   },
   {
     id: '3',
-    name: 'KLO Vision 2025 - Executive Summary',
+    name: 'KLO Vision 2025 - Presentación Español',
     type: 'mp4',
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    thumbnail: 'https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&q=80&w=800',
-    fileSize: '42 MB'
+    url: 'https://dowdrlxfci6f5q6g.public.blob.vercel-storage.com/klo-esp.mp4',
+    fileSize: '11.3 MB'
   },
   {
     id: '4',
-    name: 'Growth Strategy Deep Dive',
+    name: 'KLO Vision 2025 - English Presentation',
     type: 'mp4',
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    thumbnail: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800',
-    fileSize: '85 MB'
+    url: 'https://dowdrlxfci6f5q6g.public.blob.vercel-storage.com/klo-eng.mp4',
+    fileSize: '13.7 MB'
   }
 ];
-
 
 export const ROADMAP = [
   {
@@ -586,6 +584,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
 
 
