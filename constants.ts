@@ -104,6 +104,7 @@ export const PARTNERS = [
   name: "Flapz",
   logo: "/images/partners/flapz.svg"
 }
+];
 
 export const TEAM = [
   {
@@ -572,6 +573,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
 
 
