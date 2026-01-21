@@ -92,7 +92,6 @@ export const PREMIER_SERVICES = [
   }
 ];
 
-];
 // Partner Logos - Using high-reliability sourced URLs (transparent PNG/SVG)
 // Partner Logos - Sourced locally for reliability
 
@@ -582,6 +581,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
 
 
