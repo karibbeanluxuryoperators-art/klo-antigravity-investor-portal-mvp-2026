@@ -57,34 +57,34 @@ export const PREMIER_SERVICES = [
     icon: "✈️",
     title: "Vuelos Privados (NetJets & Flapz API)",
     description: "Nuestra infraestructura se integra vía API con NetJets, Flapz y Charter del Caribe para ofrecer disponibilidad instantánea de aeronaves de largo alcance como Gulfstream y Bombardier.",
-    imageUrl: "https://images.unsplash.com/photo-1540962351504-03099e0a754b?auto=format&fit=crop&q=80&w=800"},
+    imageUrl: "/images/premier-services/viptransport.jpg"},
   {
     icon: "🏡",
     title: "Alojamientos (Smart API)",
     description: "Sincronización en tiempo real con inventarios globales de Four Seasons y villas privadas. Reserve con un solo clic mediante nuestro motor de reservas automatizado.",
-    imageUrl: "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800"},
+    imageUrl: "/images/premier-services/CuratedExperiences.jpg"},
   {
     icon: "🚤",
     title: "Yates y Veleros (Direct API)",
     description: "Gestione el alquiler de yates Bertram y superyates exclusivos a través de nuestra API propia de logística marítima, garantizando el servicio de mayor nivel en el Caribe.",
-    imageUrl: "https://images.unsplash.com/photo-1567899378494-47b22a28c6ad?auto=format&fit=crop&q=80&w=800"},
+    imageUrl: "/images/premier-services/yatecartagena.webp"},
   {
     icon: "🚗",
     title: "Transporte Terrestre",
     description: "Llegue con estilo con nuestra selección de camionetas de lujo Mercedes-Benz, vans y vehículos blindados.",
-    imageUrl: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&q=80&w=800"},
+    imageUrl: "/images/premier-services/viptransport.jpg"},
   {
     icon: "👨‍🍳",
     title: "Personal Exclusivo",
     description: "Contrate chefs profesionales, DJs, guardaespaldas, enfermeras y niñeras para su estancia de ultra lujo.",
-    imageUrl: "https://images.pexels.com/photos/210607/pexels-photo-210607.jpeg?auto=compress&cs=tinysrgb&w=800"},
+    imageUrl: "/images/premier-services/VIPStaffing.jpg"},
   {
     icon: "✨",
     title: "Experiencias Curadas",
     description: "Elija entre paquetes prediseñados con todo incluido para una escapada de lujo sin complicaciones.",
-    imageUrl: "https://images.pexels.com/photos/4000421/pexels-photo-4000421.jpeg?auto=compress&cs=tinysrgb&w=800"}
+    imageUrl: "/images/premier-services/CuratedExperiences.jpg"
+  }
 ];
-
 // Partner Logos - Using high-reliability sourced URLs (transparent PNG/SVG)
 // Partner Logos - Sourced locally for reliability
 export const PARTNERS = [
@@ -573,6 +573,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
 
 
