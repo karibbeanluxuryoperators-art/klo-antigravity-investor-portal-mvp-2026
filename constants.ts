@@ -90,7 +90,6 @@ export const PREMIER_SERVICES = [
     description: "Elija entre paquetes prediseñados con todo incluido para una escapada de lujo sin complicaciones.",
     imageUrl: "/images/premier-services/curated-experiences.jpg"
   }
-];
 
 // Partner Logos - Using high-reliability sourced URLs (transparent PNG/SVG)
 // Partner Logos - Sourced locally for reliability
@@ -581,6 +580,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
 
 
