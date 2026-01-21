@@ -110,7 +110,7 @@ export const PARTNERS = [
   },
   {
     name: "Flapz",
-    logo: "/images/partners/flapz.jpg"
+    logo: ""
   }
 ];
 
@@ -581,6 +581,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
 
 
