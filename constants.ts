@@ -25,7 +25,7 @@ export const DESTINATIONS: Destination[] = [
     titleKey: 'dest.cartagena.title',
     descriptionKey: 'dest.cartagena.desc',
     imageUrl: '/images/destinations/pirata.jpg',
-    externalLink: 'https://www.isladelpirata.co/,},
+    externalLink: 'https://www.isladelpirata.co/',},
   {
     id: '2',
     titleKey: 'dest.santamarta.title',
@@ -45,15 +45,13 @@ export const DESTINATIONS: Destination[] = [
     id: '5',
     titleKey: 'dest.amazonas.title',
     descriptionKey: 'dest.amazonas.desc',
-    imageUrl: '/images/destinations/amazonas2.webp',
-  },
+    imageUrl: '/images/destinations/amazonas2.webp',},
   {
     id: '6',
     titleKey: 'dest.bogota.title',
     descriptionKey: 'dest.bogota.desc',
     imageUrl: '/images/destinations/eldorado.webp',}
 ];
-
 export const PREMIER_SERVICES = [
   {
     icon: "✈️",
@@ -575,6 +573,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
 
 
