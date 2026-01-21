@@ -24,35 +24,40 @@ export const DESTINATIONS: Destination[] = [
     id: '1',
     titleKey: 'dest.cartagena.title',
     descriptionKey: 'dest.cartagena.desc',
-    imageUrl: '/images/destinations/pirata.jpg',
-    externalLink: 'https://www.isladelpirata.co/',},
+    imageUrl: '/images/pirata.jpg',
+    externalLink: 'https://www.isladelpirata.co/',
+  },
   {
     id: '2',
     titleKey: 'dest.santamarta.title',
     descriptionKey: 'dest.santamarta.desc',
-    imageUrl: '/images/destinations/ciudad-perdida.jpg',},
+    imageUrl: '/images/ciudad-perdida.jpg',
+  },
   {
     id: '3',
     titleKey: 'dest.coffee.title',
     descriptionKey: 'dest.coffee.desc',
-    imageUrl: '/images/destinations/4472.jpg',},
+    imageUrl: '/images/4472.jpg',
+  },
   {
     id: '4',
     titleKey: 'dest.guajira.title',
     descriptionKey: 'dest.guajira.desc',
-    imageUrl: '/images/destinations/guajira.webp',},
+    imageUrl: '/images/guajira.webp',
+  },
   {
     id: '5',
     titleKey: 'dest.amazonas.title',
     descriptionKey: 'dest.amazonas.desc',
-    imageUrl: '/images/destinations/amazonas2.webp',},
+    imageUrl: '/images/lachaquira2.jpeg',
+  },
   {
     id: '6',
     titleKey: 'dest.bogota.title',
     descriptionKey: 'dest.bogota.desc',
-    imageUrl: '/images/destinations/eldorado.webp',}
+    imageUrl: '/images/eldorado.webp',
+  }
 ];
-
 export const PREMIER_SERVICES = [
   {
     icon: "✈️",
@@ -581,6 +586,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
 
 
