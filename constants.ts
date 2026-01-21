@@ -90,7 +90,6 @@ export const PREMIER_SERVICES = [
     imageUrl: "/images/premier-services/CuratedExperiences.jpg"
   }
 ];
-}
 
 ];
 // Partner Logos - Using high-reliability sourced URLs (transparent PNG/SVG)
@@ -582,6 +581,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
 
 
