@@ -52,42 +52,43 @@ export const DESTINATIONS: Destination[] = [
     descriptionKey: 'dest.bogota.desc',
     imageUrl: '/images/destinations/eldorado.webp',}
 ];
+
 export const PREMIER_SERVICES = [
   {
     icon: "✈️",
     title: "Vuelos Privados (NetJets & Flapz API)",
     description: "Nuestra infraestructura se integra vía API con NetJets, Flapz y Charter del Caribe para ofrecer disponibilidad instantánea de aeronaves de largo alcance como Gulfstream y Bombardier.",
-    imageUrl: "/images/premier-services/apiprivateaviation.jpg"
+    imageUrl: "/images/premier-services/api-private-aviation.jpg"
   },
   {
     icon: "🏡",
     title: "Alojamientos (Smart API)",
     description: "Sincronización en tiempo real con inventarios globales de Four Seasons y villas privadas. Reserve con un solo clic mediante nuestro motor de reservas automatizado.",
-    imageUrl: "/images/premier-services/apiaccomodation.jpg"
+    imageUrl: "/images/premier-services/api-accomodation.jpg"
   },
   {
     icon: "🚤",
     title: "Yates y Veleros (Direct API)",
     description: "Gestione el alquiler de yates Bertram y superyates exclusivos a través de nuestra API propia de logística marítima, garantizando el servicio de mayor nivel en el Caribe.",
-    imageUrl: "/images/premier-services/yatecartagena.webp"
+    imageUrl: "/images/premier-services/yate-cartagena.webp"
   },
   {
     icon: "🚗",
     title: "Transporte Terrestre",
     description: "Llegue con estilo con nuestra selección de camionetas de lujo Mercedes-Benz, vans y vehículos blindados.",
-    imageUrl: "/images/premier-services/viptransport.jpg"
+    imageUrl: "/images/premier-services/vip-transport.jpg"
   },
   {
     icon: "👨‍🍳",
     title: "Personal Exclusivo",
     description: "Contrate chefs profesionales, DJs, guardaespaldas, enfermeras y niñeras para su estancia de ultra lujo.",
-    imageUrl: "/images/premier-services/VIPStaffing.jpg"
+    imageUrl: "/images/premier-services/vip-staffing.jpg"
   },
   {
     icon: "✨",
     title: "Experiencias Curadas",
     description: "Elija entre paquetes prediseñados con todo incluido para una escapada de lujo sin complicaciones.",
-    imageUrl: "/images/premier-services/CuratedExperiences.jpg"
+    imageUrl: "/images/premier-services/curated-experiences.jpg"
   }
 ];
 
@@ -581,6 +582,7 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
 
 
 
