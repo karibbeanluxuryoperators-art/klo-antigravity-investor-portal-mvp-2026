@@ -10,28 +10,17 @@ const DestinationCard: React.FC<DestinationCardProps> = ({ destination, t }) => 
   const [imageError, setImageError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Función para obtener imagen de placeholder si falla la original
   const getImageSrc = () => {
     if (imageError) {
-      // Placeholder con el nombre del destino
       const destinationName = t(destination.titleKey);
       return `https://placehold.co/800x600/0f766e/ffffff?text=${encodeURIComponent(destinationName)}`;
     }
-    
-    // Si la URL original es de un dominio roto, usar placeholder directamente
-    if (destination.imageUrl?.includes('netjets.com') || 
-        destination.imageUrl?.includes('flapz.app') ||
-        !destination.imageUrl) {
-      return `https://placehold.co/800x600/0f766e/ffffff?text=${encodeURIComponent(t(destination.titleKey))}`;
-    }
-    
     return destination.imageUrl;
   };
 
   return (
     <div className="group relative bg-white rounded-lg shadow-sm hover:shadow-2xl transition-all duration-700 overflow-hidden flex flex-col h-full border border-slate-100">
       <div className="relative h-72 overflow-hidden bg-slate-100">
-        {/* Loading skeleton */}
         {isLoading && (
           <div className="absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-200 to-slate-100 animate-pulse"></div>
         )}
