@@ -55,7 +55,6 @@ export const DESTINATIONS: Destination[] = [
   }
 ];
 
-// Ahora PREMIER_SERVICES usa claves de traducción
 export const PREMIER_SERVICES = [
   {
     icon: "✈️",
@@ -96,25 +95,12 @@ export const PREMIER_SERVICES = [
 ];
 
 export const PARTNERS = [
-  {
-    name: "NetJets",
-    logo: "./images/partners/netjets.svg"
-  },
-  {
-    name: "Four Seasons",
-    logo: "./images/partners/fourseasons.svg"
-  },
-  {
-    name: "Marriott Luxury",
-    logo: "./images/partners/marriott.svg"
-  },
-  {
-    name: "Flapz",
-    logo: ""
-  }
+  { name: "NetJets", logo: "./images/partners/netjets.svg" },
+  { name: "Four Seasons", logo: "./images/partners/fourseasons.svg" },
+  { name: "Marriott Luxury", logo: "./images/partners/marriott.svg" },
+  { name: "Flapz", logo: "" }
 ];
 
-// TEAM ahora usa claves de traducción
 export const TEAM = [
   {
     name: "Deiby Villalobos",
@@ -136,7 +122,6 @@ export const TEAM = [
   }
 ];
 
-// INVESTOR_ASSETS con claves de traducción
 export const INVESTOR_ASSETS = [
   {
     id: '1',
@@ -168,7 +153,6 @@ export const INVESTOR_ASSETS = [
   }
 ];
 
-// ROADMAP con claves de traducción
 export const ROADMAP = [
   {
     periodKey: "roadmap.year1.period",
@@ -186,8 +170,8 @@ export const ROADMAP = [
     goalsKey: "roadmap.year3.goals"
   }
 ];
-
-export const TRANSLATIONS: Record<Language, any> = {
+// ALL TRANSLATIONS
+export const TRANSLATIONS = {
   es: {
     hero: {
       title: "Elevando el Lujo en el Caribe",
@@ -331,9 +315,43 @@ export const TRANSLATIONS: Record<Language, any> = {
       placeholder: "Habla con María Fernanda...",
       suggestion_title: "Prueba una consulta de ejemplo",
       suggestions: ["Isla privada por una semana", "Villas en Cartagena", "Helicóptero a Tayrona"]
+    },
+    // NEW TRANSLATIONS FOR METRICS AND FOOTER
+    metrics: {
+      title: "Dashboard de Crecimiento",
+      subtitle: "Proyecciones estratégicas basadas en el despliegue de nuestra infraestructura de IA y P&L proyectado.",
+      conservative: "Conservador",
+      aggressive: "Agresivo",
+      chart_label: "Proyecciones de Ingresos y Ganancias Netas (USD)",
+      year1: "Año 1",
+      year2: "Año 2",
+      year3: "Año 3",
+      year4: "Año 4",
+      year5: "Año 5",
+      margin: "Margen",
+      revenue: "Ing",
+      profit: "Ganancia",
+      profit_title: "Meta de Ganancia Neta (Año 5)",
+      profit_desc: "Crecimiento escalable del 364% en 5 años basado en optimización de costos operativos.",
+      breakeven_title: "Confianza de Punto de Equilibrio",
+      breakeven_month: "Mes 4"
+    },
+    footer: {
+      description: "Karibbean Luxury Operators. Redefiniendo el ecosistema del turismo de ultra-lujo en Colombia a través de la tecnología y la pasión por lo extraordinario.",
+      connect: "Conecta con nosotros",
+      menu_title: "Menú",
+      legal_title: "Legal",
+      privacy: "Privacidad",
+      terms: "Términos",
+      cookies: "Cookies",
+      tagline: "Lujo Incomparable. Colombia."
+    },
+    modal: {
+      name_placeholder: "Tu Nombre",
+      email_placeholder: "Correo electrónico"
     }
   },
-  en: {
+    en: {
     hero: {
       title: "Caribbean Luxury Redefined",
       subtitle: "As data-driven AI pioneers, we curate bespoke travel experiences with exclusive access to private islands, luxury villas, and yacht charters in Colombia.",
@@ -476,9 +494,42 @@ export const TRANSLATIONS: Record<Language, any> = {
       placeholder: "Talk to María Fernanda...",
       suggestion_title: "Try a sample query",
       suggestions: ["Private island for a week", "Villas in Cartagena", "Helicopter to Tayrona"]
+    },
+    metrics: {
+      title: "Growth Dashboard",
+      subtitle: "Strategic projections based on our AI infrastructure deployment and projected P&L.",
+      conservative: "Conservative",
+      aggressive: "Aggressive",
+      chart_label: "Revenue & Net Profit Projections (USD)",
+      year1: "Year 1",
+      year2: "Year 2",
+      year3: "Year 3",
+      year4: "Year 4",
+      year5: "Year 5",
+      margin: "Margin",
+      revenue: "Rev",
+      profit: "Profit",
+      profit_title: "Net Profit Target (Year 5)",
+      profit_desc: "Scalable growth of 364% over 5 years based on operational cost optimization.",
+      breakeven_title: "Breakeven Confidence",
+      breakeven_month: "Month 4"
+    },
+    footer: {
+      description: "Karibbean Luxury Operators. Redefining the ultra-luxury tourism ecosystem in Colombia through technology and passion for the extraordinary.",
+      connect: "Connect with us",
+      menu_title: "Menu",
+      legal_title: "Legal",
+      privacy: "Privacy",
+      terms: "Terms",
+      cookies: "Cookies",
+      tagline: "Unparalleled Luxury. Colombia."
+    },
+    modal: {
+      name_placeholder: "Your Name",
+      email_placeholder: "Email"
     }
   },
-  pt: {
+    pt: {
     hero: {
       title: "Elevando o Luxo no Caribe",
       subtitle: "Como pioneiros em dados e IA, somos especialistas em experiências sob medida, com acesso a ilhas privadas e iates exclusivos.",
@@ -621,21 +672,54 @@ export const TRANSLATIONS: Record<Language, any> = {
       placeholder: "Fale com María Fernanda...",
       suggestion_title: "Tente uma consulta de exemplo",
       suggestions: ["Ilha privada por uma semana", "Villas em Cartagena", "Helicóptero para Tayrona"]
+    },
+    metrics: {
+      title: "Dashboard de Crescimento",
+      subtitle: "Projeções estratégicas baseadas na implantação da nossa infraestrutura de IA e P&L projetado.",
+      conservative: "Conservador",
+      aggressive: "Agressivo",
+      chart_label: "Projeções de Receita e Lucro Líquido (USD)",
+      year1: "Ano 1",
+      year2: "Ano 2",
+      year3: "Ano 3",
+      year4: "Ano 4",
+      year5: "Ano 5",
+      margin: "Margem",
+      revenue: "Rec",
+      profit: "Lucro",
+      profit_title: "Meta de Lucro Líquido (Ano 5)",
+      profit_desc: "Crescimento escalável de 364% em 5 anos baseado na otimização de custos operacionais.",
+      breakeven_title: "Confiança de Ponto de Equilíbrio",
+      breakeven_month: "Mês 4"
+    },
+    footer: {
+      description: "Karibbean Luxury Operators. Redefinindo o ecossistema do turismo de ultra-luxo na Colômbia através da tecnologia e paixão pelo extraordinário.",
+      connect: "Conecte-se conosco",
+      menu_title: "Menu",
+      legal_title: "Legal",
+      privacy: "Privacidade",
+      terms: "Termos",
+      cookies: "Cookies",
+      tagline: "Luxo Incomparável. Colômbia."
+    },
+    modal: {
+      name_placeholder: "Seu Nome",
+      email_placeholder: "E-mail"
     }
   }
 };
 
-// Translation helper function
+// Translation helper function - THIS GOES AT THE VERY END OF THE FILE
 export const getTranslation = (key: string, lang: Language): any => {
   const keys = key.split('.');
-  let value = TRANSLATIONS[lang];
+  let value: any = TRANSLATIONS[lang];
   
   for (const k of keys) {
     if (value && typeof value === 'object' && k in value) {
       value = value[k];
     } else {
-      // Fallback to Spanish if key not found
-      let fallback = TRANSLATIONS['es'];
+      // Try fallback to Spanish
+      let fallback: any = TRANSLATIONS['es'];
       for (const fk of keys) {
         if (fallback && typeof fallback === 'object' && fk in fallback) {
           fallback = fallback[fk];
@@ -646,131 +730,6 @@ export const getTranslation = (key: string, lang: Language): any => {
       return fallback;
     }
   }
-
-  // Translation helper function - ADD THIS AT THE END
-export const getTranslation = (key: string, lang: Language): any => {
-  const keys = key.split('.');
-  let value = TRANSLATIONS[lang];
-  
-  for (const k of keys) {
-    if (value && typeof value === 'object' && k in value) {
-      value = value[k];
-    } else {
-      // Fallback to Spanish if key not found
-      let fallback = TRANSLATIONS['es'];
-      for (const fk of keys) {
-        if (fallback && typeof fallback === 'object' && fk in fallback) {
-          fallback = fallback[fk];
-        } else {
-          return key;
-        }
-      }
-      return fallback;
-    }
-  }
   
   return value ?? key;
-};  return value;
 };
-
-metrics: {
-  title: "Growth Dashboard",
-  subtitle: "Strategic projections based on our AI infrastructure deployment and projected P&L.",
-  conservative: "Conservative",
-  aggressive: "Aggressive",
-  chart_label: "Revenue & Net Profit Projections (USD)",
-  year1: "Year 1",
-  year2: "Year 2",
-  year3: "Year 3",
-  year4: "Year 4",
-  year5: "Year 5",
-  margin: "Margin",
-  revenue: "Rev",
-  profit: "Profit",
-  profit_title: "Net Profit Target (Year 5)",
-  profit_desc: "Scalable growth of 364% over 5 years based on operational cost optimization.",
-  breakeven_title: "Breakeven Confidence",
-  breakeven_month: "Month 4"
-},
-footer: {
-  description: "Karibbean Luxury Operators. Redefining the ultra-luxury tourism ecosystem in Colombia through technology and passion for the extraordinary.",
-  connect: "Connect with us",
-  menu_title: "Menu",
-  legal_title: "Legal",
-  privacy: "Privacy",
-  terms: "Terms",
-  cookies: "Cookies",
-  tagline: "Unparalleled Luxury. Colombia."
-},
-modal: {
-  name_placeholder: "Your Name",
-  email_placeholder: "Email"
-}
-
-metrics: {
-  title: "Dashboard de Crecimiento",
-  subtitle: "Proyecciones estratégicas basadas en el despliegue de nuestra infraestructura de IA y P&L proyectado.",
-  conservative: "Conservador",
-  aggressive: "Agresivo",
-  chart_label: "Proyecciones de Ingresos y Ganancias Netas (USD)",
-  year1: "Año 1",
-  year2: "Año 2",
-  year3: "Año 3",
-  year4: "Año 4",
-  year5: "Año 5",
-  margin: "Margen",
-  revenue: "Ing",
-  profit: "Ganancia",
-  profit_title: "Meta de Ganancia Neta (Año 5)",
-  profit_desc: "Crecimiento escalable del 364% en 5 años basado en optimización de costos operativos.",
-  breakeven_title: "Confianza de Punto de Equilibrio",
-  breakeven_month: "Mes 4"
-},
-footer: {
-  description: "Karibbean Luxury Operators. Redefiniendo el ecosistema del turismo de ultra-lujo en Colombia a través de la tecnología y la pasión por lo extraordinario.",
-  connect: "Conecta con nosotros",
-  menu_title: "Menú",
-  legal_title: "Legal",
-  privacy: "Privacidad",
-  terms: "Términos",
-  cookies: "Cookies",
-  tagline: "Lujo Incomparable. Colombia."
-},
-modal: {
-  name_placeholder: "Tu Nombre",
-  email_placeholder: "Correo electrónico"
-}
-
-metrics: {
-  title: "Dashboard de Crescimento",
-  subtitle: "Projeções estratégicas baseadas na implantação da nossa infraestrutura de IA e P&L projetado.",
-  conservative: "Conservador",
-  aggressive: "Agressivo",
-  chart_label: "Projeções de Receita e Lucro Líquido (USD)",
-  year1: "Ano 1",
-  year2: "Ano 2",
-  year3: "Ano 3",
-  year4: "Ano 4",
-  year5: "Ano 5",
-  margin: "Margem",
-  revenue: "Rec",
-  profit: "Lucro",
-  profit_title: "Meta de Lucro Líquido (Ano 5)",
-  profit_desc: "Crescimento escalável de 364% em 5 anos baseado na otimização de custos operacionais.",
-  breakeven_title: "Confiança de Ponto de Equilíbrio",
-  breakeven_month: "Mês 4"
-},
-footer: {
-  description: "Karibbean Luxury Operators. Redefinindo o ecossistema do turismo de ultra-luxo na Colômbia através da tecnologia e paixão pelo extraordinário.",
-  connect: "Conecte-se conosco",
-  menu_title: "Menu",
-  legal_title: "Legal",
-  privacy: "Privacidade",
-  terms: "Termos",
-  cookies: "Cookies",
-  tagline: "Luxo Incomparável. Colômbia."
-},
-modal: {
-  name_placeholder: "Seu Nome",
-  email_placeholder: "E-mail"
-}
