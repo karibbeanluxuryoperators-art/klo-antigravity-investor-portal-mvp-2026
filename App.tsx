@@ -1,13 +1,18 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import Navbar from './components/Navbar';
 import Destinations from './components/Destinations';
 import AIAssistant from './components/AIAssistant';
 import Investors from './components/Investors';
-import { PREMIER_SERVICES, TEAM, ROADMAP, TRANSLATIONS, PARTNERS, getTranslation } from './constants';
+import { PREMIER_SERVICES, TEAM, ROADMAP, TRANSLATIONS, PARTNERS } from './constants';
 import { Language } from './types';
 
+// Helper function to safely get nested translations
+const getTranslation = (obj: any, key: string): any => {
+  return key.split('.').reduce((o, i) => o?.[i], obj) ?? key;
+};
+
 // Modal Component for luxury experience
-const InquiryModal = ({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => void, t: any }) => {
+const InquiryModal = ({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => void, t: (key: string) => any }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-md animate-fade-in">
@@ -31,28 +36,35 @@ const InquiryModal = ({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => 
   );
 };
 
-// High-resolution static image of a luxury yacht in the Caribbean - Very reliable URL
+// High-resolution static image of a luxury yacht in the Caribbean
 const HERO_STATIC_IMAGE = "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&q=80&w=1920";
 
 function App() {
   const [lang, setLang] = useState<Language>('es');
   const [growthScenario, setGrowthScenario] = useState<'conservative' | 'aggressive'>('conservative');
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Forzar español por defecto al cargar la página
+  // Initialize language from localStorage on mount
   useEffect(() => {
-    const savedLang = localStorage.getItem('language');
-    if (!savedLang) {
+    const savedLang = localStorage.getItem('language') as Language;
+    if (savedLang && ['es', 'en', 'pt'].includes(savedLang)) {
+      setLang(savedLang);
+    } else {
       localStorage.setItem('language', 'es');
       setLang('es');
-    } else {
-      setLang(savedLang as Language);
     }
+    setIsLoading(false);
   }, []);
+
+  // Update document lang attribute when language changes
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   // Reveal effect on scroll
   useEffect(() => {
-    const observerOptions = { threshold: 0.1 };
+    const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -65,24 +77,35 @@ function App() {
     return () => observer.disconnect();
   }, []);
 
+  // Stable translation function using useMemo
   const t = useMemo(() => {
     return (key: string): any => {
-      return getTranslation(key, lang);
+      const translations = TRANSLATIONS[lang];
+      if (!translations) return key;
+      return getTranslation(translations, key);
     };
   }, [lang]);
 
-  // Función para cambiar idioma
-  const handleLanguageChange = (newLang: Language) => {
-    setLang(newLang);
-    localStorage.setItem('language', newLang);
-  };
+  // Stable language change handler using useCallback
+  const handleLanguageChange = useCallback((newLang: Language) => {
+    if (newLang !== lang) {
+      setLang(newLang);
+      localStorage.setItem('language', newLang);
+      // Force reload to ensure all components update (optional, remove if not needed)
+      // window.location.reload();
+    }
+  }, [lang]);
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Loading...</div>;
+  }
 
   return (
-    <div className="min-h-screen selection:bg-luxury-teal selection:text-white">
+    <div className="min-h-screen selection:bg-luxury-teal selection:text-white" key={lang}>
       <Navbar lang={lang} setLang={handleLanguageChange} t={t} onInquiryOpen={() => setIsInquiryOpen(true)} />
 
       <main>
-        {/* Hero Section with Reliable Static Background */}
+        {/* Hero Section */}
         <section className="relative h-[85vh] md:h-screen w-full flex items-center justify-center overflow-hidden bg-slate-900">
           <div className="absolute inset-0 z-0 opacity-100">
             <img
@@ -253,9 +276,7 @@ function App() {
                           </div>
                         </div>
                         <div className="flex h-3 rounded-full overflow-hidden bg-white/5 p-0.5">
-                          {/* Revenue Bar */}
                           <div style={{ width: `${(row.rev / 6.13) * 100}%` }} className="bg-luxury-teal rounded-full transition-all duration-1000 ease-out"></div>
-                          {/* Profit Bar (overlay) */}
                           <div style={{ width: `${(row.prof / 6.13) * 100}%` }} className="bg-emerald-400/30 rounded-full -ml-full transition-all duration-1000 delay-100 ease-out"></div>
                         </div>
                       </div>
