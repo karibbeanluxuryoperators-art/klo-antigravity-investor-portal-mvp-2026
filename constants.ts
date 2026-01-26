@@ -646,6 +646,131 @@ export const getTranslation = (key: string, lang: Language): any => {
       return fallback;
     }
   }
+
+  // Translation helper function - ADD THIS AT THE END
+export const getTranslation = (key: string, lang: Language): any => {
+  const keys = key.split('.');
+  let value = TRANSLATIONS[lang];
   
-  return value;
+  for (const k of keys) {
+    if (value && typeof value === 'object' && k in value) {
+      value = value[k];
+    } else {
+      // Fallback to Spanish if key not found
+      let fallback = TRANSLATIONS['es'];
+      for (const fk of keys) {
+        if (fallback && typeof fallback === 'object' && fk in fallback) {
+          fallback = fallback[fk];
+        } else {
+          return key;
+        }
+      }
+      return fallback;
+    }
+  }
+  
+  return value ?? key;
+};  return value;
 };
+
+metrics: {
+  title: "Growth Dashboard",
+  subtitle: "Strategic projections based on our AI infrastructure deployment and projected P&L.",
+  conservative: "Conservative",
+  aggressive: "Aggressive",
+  chart_label: "Revenue & Net Profit Projections (USD)",
+  year1: "Year 1",
+  year2: "Year 2",
+  year3: "Year 3",
+  year4: "Year 4",
+  year5: "Year 5",
+  margin: "Margin",
+  revenue: "Rev",
+  profit: "Profit",
+  profit_title: "Net Profit Target (Year 5)",
+  profit_desc: "Scalable growth of 364% over 5 years based on operational cost optimization.",
+  breakeven_title: "Breakeven Confidence",
+  breakeven_month: "Month 4"
+},
+footer: {
+  description: "Karibbean Luxury Operators. Redefining the ultra-luxury tourism ecosystem in Colombia through technology and passion for the extraordinary.",
+  connect: "Connect with us",
+  menu_title: "Menu",
+  legal_title: "Legal",
+  privacy: "Privacy",
+  terms: "Terms",
+  cookies: "Cookies",
+  tagline: "Unparalleled Luxury. Colombia."
+},
+modal: {
+  name_placeholder: "Your Name",
+  email_placeholder: "Email"
+}
+
+metrics: {
+  title: "Dashboard de Crecimiento",
+  subtitle: "Proyecciones estratégicas basadas en el despliegue de nuestra infraestructura de IA y P&L proyectado.",
+  conservative: "Conservador",
+  aggressive: "Agresivo",
+  chart_label: "Proyecciones de Ingresos y Ganancias Netas (USD)",
+  year1: "Año 1",
+  year2: "Año 2",
+  year3: "Año 3",
+  year4: "Año 4",
+  year5: "Año 5",
+  margin: "Margen",
+  revenue: "Ing",
+  profit: "Ganancia",
+  profit_title: "Meta de Ganancia Neta (Año 5)",
+  profit_desc: "Crecimiento escalable del 364% en 5 años basado en optimización de costos operativos.",
+  breakeven_title: "Confianza de Punto de Equilibrio",
+  breakeven_month: "Mes 4"
+},
+footer: {
+  description: "Karibbean Luxury Operators. Redefiniendo el ecosistema del turismo de ultra-lujo en Colombia a través de la tecnología y la pasión por lo extraordinario.",
+  connect: "Conecta con nosotros",
+  menu_title: "Menú",
+  legal_title: "Legal",
+  privacy: "Privacidad",
+  terms: "Términos",
+  cookies: "Cookies",
+  tagline: "Lujo Incomparable. Colombia."
+},
+modal: {
+  name_placeholder: "Tu Nombre",
+  email_placeholder: "Correo electrónico"
+}
+
+metrics: {
+  title: "Dashboard de Crescimento",
+  subtitle: "Projeções estratégicas baseadas na implantação da nossa infraestrutura de IA e P&L projetado.",
+  conservative: "Conservador",
+  aggressive: "Agressivo",
+  chart_label: "Projeções de Receita e Lucro Líquido (USD)",
+  year1: "Ano 1",
+  year2: "Ano 2",
+  year3: "Ano 3",
+  year4: "Ano 4",
+  year5: "Ano 5",
+  margin: "Margem",
+  revenue: "Rec",
+  profit: "Lucro",
+  profit_title: "Meta de Lucro Líquido (Ano 5)",
+  profit_desc: "Crescimento escalável de 364% em 5 anos baseado na otimização de custos operacionais.",
+  breakeven_title: "Confiança de Ponto de Equilíbrio",
+  breakeven_month: "Mês 4"
+},
+footer: {
+  description: "Karibbean Luxury Operators. Redefinindo o ecossistema do turismo de ultra-luxo na Colômbia através da tecnologia e paixão pelo extraordinário.",
+  connect: "Conecte-se conosco",
+  menu_title: "Menu",
+  legal_title: "Legal",
+  privacy: "Privacidade",
+  terms: "Termos",
+  cookies: "Cookies",
+  tagline: "Luxo Incomparável. Colômbia."
+},
+modal: {
+  name_placeholder: "Seu Nome",
+  email_placeholder: "E-mail"
+}
