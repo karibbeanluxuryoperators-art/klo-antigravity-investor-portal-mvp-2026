@@ -3,7 +3,7 @@ import Navbar from './components/Navbar';
 import Destinations from './components/Destinations';
 import AIAssistant from './components/AIAssistant';
 import Investors from './components/Investors';
-import { PREMIER_SERVICES, TEAM, ROADMAP, TRANSLATIONS, PARTNERS } from './constants';
+import { PREMIER_SERVICES, TEAM, ROADMAP, TRANSLATIONS, PARTNERS, getTranslation } from './constants';
 import { Language } from './types';
 
 // Modal Component for luxury experience
@@ -18,12 +18,12 @@ const InquiryModal = ({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => 
           </svg>
         </button>
         <div className="p-12 text-center">
-          <h3 className="text-4xl font-bold mb-6 serif text-slate-900">Comienza tu Viaje</h3>
-          <p className="text-slate-500 mb-10 font-light">Un concierge especializado se pondrá en contacto contigo para diseñar una experiencia a tu medida.</p>
+          <h3 className="text-4xl font-bold mb-6 serif text-slate-900">{t('assistant.name')}</h3>
+          <p className="text-slate-500 mb-10 font-light">{t('assistant.greeting')}</p>
           <div className="space-y-4 max-w-sm mx-auto">
             <input type="text" placeholder="Tu Nombre" className="w-full px-6 py-4 rounded-full bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-luxury-teal outline-none transition-all" />
             <input type="email" placeholder="Email" className="w-full px-6 py-4 rounded-full bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-luxury-teal outline-none transition-all" />
-            <button className="w-full bg-luxury-teal text-white py-4 rounded-full font-bold tracking-widest uppercase hover:brightness-110 transition-all">Enviar Solicitud</button>
+            <button className="w-full bg-luxury-teal text-white py-4 rounded-full font-bold tracking-widest uppercase hover:brightness-110 transition-all">{t('hero.cta')}</button>
           </div>
         </div>
       </div>
@@ -38,6 +38,17 @@ function App() {
   const [lang, setLang] = useState<Language>('es');
   const [growthScenario, setGrowthScenario] = useState<'conservative' | 'aggressive'>('conservative');
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
+
+  // Forzar español por defecto al cargar la página
+  useEffect(() => {
+    const savedLang = localStorage.getItem('language');
+    if (!savedLang) {
+      localStorage.setItem('language', 'es');
+      setLang('es');
+    } else {
+      setLang(savedLang as Language);
+    }
+  }, []);
 
   // Reveal effect on scroll
   useEffect(() => {
@@ -56,22 +67,19 @@ function App() {
 
   const t = useMemo(() => {
     return (key: string): any => {
-      const keys = key.split('.');
-      let result = TRANSLATIONS[lang];
-      for (const k of keys) {
-        if (result && result[k]) {
-          result = result[k];
-        } else {
-          return key;
-        }
-      }
-      return result;
+      return getTranslation(key, lang);
     };
   }, [lang]);
 
+  // Función para cambiar idioma
+  const handleLanguageChange = (newLang: Language) => {
+    setLang(newLang);
+    localStorage.setItem('language', newLang);
+  };
+
   return (
     <div className="min-h-screen selection:bg-luxury-teal selection:text-white">
-      <Navbar lang={lang} setLang={setLang} t={t} onInquiryOpen={() => setIsInquiryOpen(true)} />
+      <Navbar lang={lang} setLang={handleLanguageChange} t={t} onInquiryOpen={() => setIsInquiryOpen(true)} />
 
       <main>
         {/* Hero Section with Reliable Static Background */}
@@ -86,7 +94,6 @@ function App() {
           </div>
 
           <div className="relative z-10 container mx-auto px-6 text-center text-white max-w-5xl">
-            {/* Optimized title size for all languages, ensuring messages and nav stay clear */}
             <h1 className="text-3xl md:text-5xl lg:text-6xl mb-6 leading-tight animate-fade-in-up font-bold serif tracking-tight drop-shadow-2xl">
               {t('hero.title')}
             </h1>
@@ -110,7 +117,9 @@ function App() {
         {/* Partners Bar */}
         <section className="py-16 bg-white border-b border-slate-100 overflow-hidden">
           <div className="container mx-auto px-6">
-            <p className="text-center text-[10px] font-bold uppercase tracking-[0.4em] text-slate-300 mb-10">Strategic Alliances & API Integrations</p>
+            <p className="text-center text-[10px] font-bold uppercase tracking-[0.4em] text-slate-300 mb-10">
+              {t('services.section_subtitle')}
+            </p>
             <div className="flex flex-wrap items-center justify-center gap-12 md:gap-32 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-700">
               {PARTNERS.map((partner, idx) => (
                 <div key={idx} className="flex items-center space-x-4 group cursor-default">
@@ -135,23 +144,25 @@ function App() {
         <section id="servicios" className="py-32 bg-white reveal">
           <div className="container mx-auto px-6">
             <div className="text-center mb-24 max-w-3xl mx-auto">
-              <h2 className="text-4xl md:text-6xl font-bold mb-8 text-slate-900 leading-tight serif">Ecosistema Digital de Lujo</h2>
+              <h2 className="text-4xl md:text-6xl font-bold mb-8 text-slate-900 leading-tight serif">
+                {t('services.section_title')}
+              </h2>
               <div className="w-24 h-1 bg-luxury-teal mx-auto mb-8"></div>
               <p className="text-slate-500 text-xl font-light leading-relaxed">
-                Nuestra plataforma conecta vía API con los proveedores de servicios más exclusivos, garantizando confirmaciones en tiempo real para el viajero de ultra-lujo.
+                {t('services.section_subtitle')}
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
               {PREMIER_SERVICES.map((service, idx) => (
                 <div key={idx} className="group bg-white p-2 rounded-2xl transition-all duration-500 hover:-translate-y-2">
                   <div className="relative h-72 mb-8 overflow-hidden rounded-3xl shadow-lg border border-slate-50">
-                    <img src={service.imageUrl} alt={service.title} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                    <img src={service.imageUrl} alt={t(service.titleKey)} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
                     <div className="absolute top-6 right-6 bg-white/95 backdrop-blur-md w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-xl border border-black/5">{service.icon}</div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                   </div>
                   <div className="px-6">
-                    <h3 className="text-2xl font-bold mb-4 text-slate-900 serif leading-snug">{service.title}</h3>
-                    <p className="text-slate-500 text-sm leading-relaxed font-light">{service.description}</p>
+                    <h3 className="text-2xl font-bold mb-4 text-slate-900 serif leading-snug">{t(service.titleKey)}</h3>
+                    <p className="text-slate-500 text-sm leading-relaxed font-light">{t(service.descriptionKey)}</p>
                   </div>
                 </div>
               ))}
@@ -163,8 +174,12 @@ function App() {
         <section id="equipo" className="py-32 bg-slate-50 reveal">
           <div className="container mx-auto px-6">
             <div className="text-center mb-24">
-              <p className="text-luxury-teal font-bold text-xs uppercase tracking-[0.4em] mb-4">Liderazgo Visionario</p>
-              <h2 className="text-4xl md:text-6xl font-bold text-slate-900 serif">Nuestro Equipo Fundador</h2>
+              <p className="text-luxury-teal font-bold text-xs uppercase tracking-[0.4em] mb-4">
+                {t('team.section_subtitle')}
+              </p>
+              <h2 className="text-4xl md:text-6xl font-bold text-slate-900 serif">
+                {t('team.section_title')}
+              </h2>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 mb-20">
               {TEAM.map((member, idx) => (
@@ -173,12 +188,12 @@ function App() {
                     {member.name.split(' ').map(n => n[0]).join('')}
                   </div>
                   <h3 className="text-3xl font-bold text-slate-900 mb-2 serif">{member.name}</h3>
-                  <p className="text-luxury-teal font-bold text-[10px] uppercase tracking-[0.3em] mb-8">{member.role}</p>
-                  <p className="text-slate-600 text-base leading-relaxed mb-10 font-light flex-grow italic">
-                    "{member.bio}"
+                  <p className="text-luxury-teal font-bold text-[10px] uppercase tracking-[0.3em] mb-8">{t(member.roleKey)}</p>
+                  <p className="text-slate-600 text-base leading-relaxed mb-10 font-light italic">
+                    "{t(member.bioKey)}"
                   </p>
                   <div className="pt-8 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-400 tracking-widest">{member.equity}</span>
+                    <span className="text-sm font-bold text-slate-400 tracking-widest">{t(member.equityKey)}</span>
                     <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-luxury-teal hover:text-white cursor-pointer transition-all">
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg>
                     </div>
@@ -315,8 +330,13 @@ function App() {
                 <div className="space-y-8">
                   <h4 className="text-xs font-bold uppercase tracking-[0.4em] text-white/20">Menu</h4>
                   <ul className="space-y-4">
-                    {['Destinos', 'Servicios', 'Inversionistas'].map(m => (
-                      <li key={m}><a href="#" className="text-white/60 hover:text-white transition-colors">{m}</a></li>
+                    {['destinations', 'services', 'investors'].map((item) => (
+                      <li key={item}>
+                        <a href={`#${item === 'destinations' ? 'destinos' : item === 'services' ? 'servicios' : 'inversionistas'}`} 
+                           className="text-white/60 hover:text-white transition-colors">
+                          {t(`nav.${item}`)}
+                        </a>
+                      </li>
                     ))}
                   </ul>
                 </div>
