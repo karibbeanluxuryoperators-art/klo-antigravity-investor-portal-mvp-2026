@@ -3,13 +3,8 @@ import Navbar from './components/Navbar';
 import Destinations from './components/Destinations';
 import AIAssistant from './components/AIAssistant';
 import Investors from './components/Investors';
-import { PREMIER_SERVICES, TEAM, ROADMAP, TRANSLATIONS, PARTNERS } from './constants';
+import { PREMIER_SERVICES, TEAM, ROADMAP, TRANSLATIONS, PARTNERS, getTranslation } from './constants';
 import { Language } from './types';
-
-// Helper function to safely get nested translations
-const getTranslation = (obj: any, key: string): any => {
-  return key.split('.').reduce((o, i) => o?.[i], obj) ?? key;
-};
 
 // Modal Component for luxury experience
 const InquiryModal = ({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => void, t: (key: string) => any }) => {
@@ -36,14 +31,13 @@ const InquiryModal = ({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => 
   );
 };
 
-// High-resolution static image of a luxury yacht in the Caribbean
 const HERO_STATIC_IMAGE = "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&q=80&w=1920";
 
 function App() {
   const [lang, setLang] = useState<Language>('es');
   const [growthScenario, setGrowthScenario] = useState<'conservative' | 'aggressive'>('conservative');
   const [isInquiryOpen, setIsInquiryOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isReady, setIsReady] = useState(false);
 
   // Initialize language from localStorage on mount
   useEffect(() => {
@@ -54,55 +48,53 @@ function App() {
       localStorage.setItem('language', 'es');
       setLang('es');
     }
-    setIsLoading(false);
+    setIsReady(true);
   }, []);
 
-  // Update document lang attribute when language changes
+  // Update HTML lang attribute
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
 
-  // Reveal effect on scroll
+  // Scroll reveal effect
   useEffect(() => {
-    const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           entry.target.classList.add('active');
         }
       });
-    }, observerOptions);
+    }, { threshold: 0.1 });
 
     document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
     return () => observer.disconnect();
   }, []);
 
-  // Stable translation function using useMemo
-  const t = useMemo(() => {
-    return (key: string): any => {
-      const translations = TRANSLATIONS[lang];
-      if (!translations) return key;
-      return getTranslation(translations, key);
-    };
+  // Translation function
+  const t = useCallback((key: string): any => {
+    return getTranslation(key, lang);
   }, [lang]);
 
-  // Stable language change handler using useCallback
+  // Language change handler
   const handleLanguageChange = useCallback((newLang: Language) => {
     if (newLang !== lang) {
       setLang(newLang);
       localStorage.setItem('language', newLang);
-      // Force reload to ensure all components update (optional, remove if not needed)
-      // window.location.reload();
     }
   }, [lang]);
 
-  if (isLoading) {
-    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Loading...</div>;
+  if (!isReady) {
+    return <div className="min-h-screen bg-slate-900" />;
   }
 
   return (
     <div className="min-h-screen selection:bg-luxury-teal selection:text-white" key={lang}>
-      <Navbar lang={lang} setLang={handleLanguageChange} t={t} onInquiryOpen={() => setIsInquiryOpen(true)} />
+      <Navbar 
+        lang={lang} 
+        setLang={handleLanguageChange} 
+        t={t} 
+        onInquiryOpen={() => setIsInquiryOpen(true)} 
+      />
 
       <main>
         {/* Hero Section */}
@@ -158,7 +150,7 @@ function App() {
           </div>
         </section>
 
-        {/* Destinations Grid */}
+        {/* Destinations */}
         <div className="reveal">
           <Destinations t={t} />
         </div>
@@ -193,7 +185,7 @@ function App() {
           </div>
         </section>
 
-        {/* Founders Section */}
+        {/* Founders */}
         <section id="equipo" className="py-32 bg-slate-50 reveal">
           <div className="container mx-auto px-6">
             <div className="text-center mb-24">
@@ -227,7 +219,7 @@ function App() {
           </div>
         </section>
 
-        {/* Metrics Section */}
+        {/* Metrics */}
         <section id="metricas" className="py-32 bg-slate-900 text-white reveal overflow-hidden">
           <div className="container mx-auto px-6">
             <div className="flex flex-col md:flex-row justify-between items-center mb-24 gap-12">
@@ -311,7 +303,7 @@ function App() {
           </div>
         </section>
 
-        {/* Investors Section */}
+        {/* Investors */}
         <Investors t={t} lang={lang} />
 
         {/* Footer */}
