@@ -21,8 +21,8 @@ const InquiryModal = ({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => 
           <h3 className="text-4xl font-bold mb-6 serif text-slate-900">{t('assistant.name')}</h3>
           <p className="text-slate-500 mb-10 font-light">{t('assistant.greeting')}</p>
           <div className="space-y-4 max-w-sm mx-auto">
-            <input type="text" placeholder={t('modal.name_placeholder') || "Tu Nombre"} className="w-full px-6 py-4 rounded-full bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-luxury-teal outline-none transition-all" />
-            <input type="email" placeholder={t('modal.email_placeholder') || "Email"} className="w-full px-6 py-4 rounded-full bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-luxury-teal outline-none transition-all" />
+            <input type="text" placeholder={t('modal.name_placeholder')} className="w-full px-6 py-4 rounded-full bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-luxury-teal outline-none transition-all" />
+            <input type="email" placeholder={t('modal.email_placeholder')} className="w-full px-6 py-4 rounded-full bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-luxury-teal outline-none transition-all" />
             <button className="w-full bg-luxury-teal text-white py-4 rounded-full font-bold tracking-widest uppercase hover:brightness-110 transition-all">{t('hero.cta')}</button>
           </div>
         </div>
@@ -218,8 +218,7 @@ function App() {
             </div>
           </div>
         </section>
-
-        {/* Metrics */}
+                {/* Metrics */}
         <section id="metricas" className="py-32 bg-slate-900 text-white reveal overflow-hidden">
           <div className="container mx-auto px-6">
             <div className="flex flex-col md:flex-row justify-between items-center mb-24 gap-12">
