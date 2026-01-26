@@ -624,3 +624,28 @@ export const TRANSLATIONS: Record<Language, any> = {
     }
   }
 };
+
+// Translation helper function
+export const getTranslation = (key: string, lang: Language): any => {
+  const keys = key.split('.');
+  let value = TRANSLATIONS[lang];
+  
+  for (const k of keys) {
+    if (value && typeof value === 'object' && k in value) {
+      value = value[k];
+    } else {
+      // Fallback to Spanish if key not found
+      let fallback = TRANSLATIONS['es'];
+      for (const fk of keys) {
+        if (fallback && typeof fallback === 'object' && fk in fallback) {
+          fallback = fallback[fk];
+        } else {
+          return key; // Return key if not found anywhere
+        }
+      }
+      return fallback;
+    }
+  }
+  
+  return value;
+};
