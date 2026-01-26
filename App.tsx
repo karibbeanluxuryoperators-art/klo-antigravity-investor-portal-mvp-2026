@@ -21,8 +21,8 @@ const InquiryModal = ({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => 
           <h3 className="text-4xl font-bold mb-6 serif text-slate-900">{t('assistant.name')}</h3>
           <p className="text-slate-500 mb-10 font-light">{t('assistant.greeting')}</p>
           <div className="space-y-4 max-w-sm mx-auto">
-            <input type="text" placeholder="Tu Nombre" className="w-full px-6 py-4 rounded-full bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-luxury-teal outline-none transition-all" />
-            <input type="email" placeholder="Email" className="w-full px-6 py-4 rounded-full bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-luxury-teal outline-none transition-all" />
+            <input type="text" placeholder={t('modal.name_placeholder') || "Tu Nombre"} className="w-full px-6 py-4 rounded-full bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-luxury-teal outline-none transition-all" />
+            <input type="email" placeholder={t('modal.email_placeholder') || "Email"} className="w-full px-6 py-4 rounded-full bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-luxury-teal outline-none transition-all" />
             <button className="w-full bg-luxury-teal text-white py-4 rounded-full font-bold tracking-widest uppercase hover:brightness-110 transition-all">{t('hero.cta')}</button>
           </div>
         </div>
@@ -224,21 +224,21 @@ function App() {
           <div className="container mx-auto px-6">
             <div className="flex flex-col md:flex-row justify-between items-center mb-24 gap-12">
               <div className="max-w-2xl">
-                <h2 className="text-4xl md:text-6xl font-bold mb-8 serif italic">Dashboard de Crecimiento</h2>
-                <p className="text-white/40 text-xl font-light">Proyecciones estratégicas basadas en el despliegue de nuestra infraestructura de IA y P&L proyectado.</p>
+                <h2 className="text-4xl md:text-6xl font-bold mb-8 serif italic">{t('metrics.title')}</h2>
+                <p className="text-white/40 text-xl font-light">{t('metrics.subtitle')}</p>
               </div>
               <div className="bg-white/5 p-2 rounded-2xl flex border border-white/10 backdrop-blur-md">
                 <button
                   onClick={() => setGrowthScenario('conservative')}
                   className={`px-10 py-4 rounded-xl text-xs font-bold transition-all uppercase tracking-widest ${growthScenario === 'conservative' ? 'bg-luxury-teal text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
                 >
-                  Conservador
+                  {t('metrics.conservative')}
                 </button>
                 <button
                   onClick={() => setGrowthScenario('aggressive')}
                   className={`px-10 py-4 rounded-xl text-xs font-bold transition-all uppercase tracking-widest ${growthScenario === 'aggressive' ? 'bg-luxury-teal text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
                 >
-                  Agresivo
+                  {t('metrics.aggressive')}
                 </button>
               </div>
             </div>
@@ -247,24 +247,24 @@ function App() {
               <div className="lg:col-span-2 space-y-12">
                 <div className="bg-white/5 p-12 rounded-3xl border border-white/10 relative group">
                   <div className="absolute -top-6 -left-6 w-12 h-12 bg-luxury-teal rounded-full blur-2xl opacity-20 group-hover:opacity-50 transition-all"></div>
-                  <h4 className="text-[10px] font-bold uppercase tracking-[0.5em] text-white/30 mb-16">Revenue & Net Profit Projections (USD)</h4>
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.5em] text-white/30 mb-16">{t('metrics.chart_label')}</h4>
                   <div className="space-y-12">
                     {[
-                      { year: 'Year 1', rev: 1.32, prof: 0.24, margin: 18.7 },
-                      { year: 'Year 2', rev: 3.20, prof: 0.81, margin: 25.5 },
-                      { year: 'Year 3', rev: 5.06, prof: 1.36, margin: 26.9 },
-                      { year: 'Year 4', rev: 5.57, prof: 1.49, margin: 26.8 },
-                      { year: 'Year 5', rev: 6.13, prof: 1.64, margin: 26.7 },
+                      { year: t('metrics.year1'), rev: 1.32, prof: 0.24, margin: 18.7 },
+                      { year: t('metrics.year2'), rev: 3.20, prof: 0.81, margin: 25.5 },
+                      { year: t('metrics.year3'), rev: 5.06, prof: 1.36, margin: 26.9 },
+                      { year: t('metrics.year4'), rev: 5.57, prof: 1.49, margin: 26.8 },
+                      { year: t('metrics.year5'), rev: 6.13, prof: 1.64, margin: 26.7 },
                     ].map((row, i) => (
                       <div key={i} className="space-y-4">
                         <div className="flex justify-between items-end">
                           <div className="flex flex-col">
                             <span className="text-xl font-bold serif">{row.year}</span>
-                            <span className="text-[9px] uppercase tracking-widest text-white/20">Margin: {row.margin}%</span>
+                            <span className="text-[9px] uppercase tracking-widest text-white/20">{t('metrics.margin')}: {row.margin}%</span>
                           </div>
                           <div className="text-right">
-                            <span className="block text-luxury-teal font-mono text-xl">${row.rev.toFixed(2)}M Rev</span>
-                            <span className="block text-emerald-400 font-mono text-sm">${row.prof.toFixed(2)}M Profit</span>
+                            <span className="block text-luxury-teal font-mono text-xl">${row.rev.toFixed(2)}M {t('metrics.revenue')}</span>
+                            <span className="block text-emerald-400 font-mono text-sm">${row.prof.toFixed(2)}M {t('metrics.profit')}</span>
                           </div>
                         </div>
                         <div className="flex h-3 rounded-full overflow-hidden bg-white/5 p-0.5">
@@ -280,7 +280,7 @@ function App() {
               <div className="space-y-8">
                 <div className="bg-luxury-teal text-white p-12 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-                  <h4 className="text-lg font-bold mb-8 serif">Net Profit Target (Year 5)</h4>
+                  <h4 className="text-lg font-bold mb-8 serif">{t('metrics.profit_title')}</h4>
                   <div className="space-y-6">
                     <div className="flex justify-between text-2xl font-bold tracking-widest serif">
                       <span>$1.64M+</span>
@@ -288,12 +288,12 @@ function App() {
                     <div className="h-1 bg-white/20 rounded-full overflow-hidden">
                       <div className="h-full bg-white w-[100%]"></div>
                     </div>
-                    <p className="text-sm opacity-60 font-light">Crecimiento escalable del 364% en 5 años basado en optimización de costos operativos.</p>
+                    <p className="text-sm opacity-60 font-light">{t('metrics.profit_desc')}</p>
                   </div>
                 </div>
                 <div className="bg-white/5 p-10 rounded-[2.5rem] border border-white/10 backdrop-blur-md">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-white/40 mb-4">Breakeven Confidence</h4>
-                  <p className="text-4xl font-bold serif">Month 4</p>
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-white/40 mb-4">{t('metrics.breakeven_title')}</h4>
+                  <p className="text-4xl font-bold serif">{t('metrics.breakeven_month')}</p>
                   <div className="mt-4 flex space-x-1">
                     {[1, 2, 3, 4, 5].map(s => <div key={s} className="h-1 w-full bg-luxury-teal rounded-full"></div>)}
                   </div>
@@ -313,10 +313,10 @@ function App() {
               <div className="max-w-md">
                 <h3 className="text-6xl font-bold serif mb-10 tracking-tighter text-luxury-teal">KLO</h3>
                 <p className="text-white/40 leading-relaxed text-lg mb-8 font-light">
-                  Karibbean Luxury Operators. Redefiniendo el ecosistema del turismo de ultra-lujo en Colombia a través de la tecnología y la pasión por lo extraordinario.
+                  {t('footer.description')}
                 </p>
                 <div className="mb-10 group">
-                  <p className="text-[10px] uppercase tracking-[0.4em] text-white/20 mb-2">Connect with us</p>
+                  <p className="text-[10px] uppercase tracking-[0.4em] text-white/20 mb-2">{t('footer.connect')}</p>
                   <a href="mailto:hola@karibbeanluxuryoperators.lat" className="text-luxury-teal text-xl font-medium hover:text-white tracking-wide transition-all duration-300">
                     hola@karibbeanluxuryoperators.lat
                   </a>
@@ -341,7 +341,7 @@ function App() {
               </div>
               <div className="grid grid-cols-2 gap-20">
                 <div className="space-y-8">
-                  <h4 className="text-xs font-bold uppercase tracking-[0.4em] text-white/20">Menu</h4>
+                  <h4 className="text-xs font-bold uppercase tracking-[0.4em] text-white/20">{t('footer.menu_title')}</h4>
                   <ul className="space-y-4">
                     {['destinations', 'services', 'investors'].map((item) => (
                       <li key={item}>
@@ -354,18 +354,18 @@ function App() {
                   </ul>
                 </div>
                 <div className="space-y-8">
-                  <h4 className="text-xs font-bold uppercase tracking-[0.4em] text-white/20">Legal</h4>
+                  <h4 className="text-xs font-bold uppercase tracking-[0.4em] text-white/20">{t('footer.legal_title')}</h4>
                   <ul className="space-y-4">
-                    {['Privacidad', 'Términos', 'Cookies'].map(m => (
-                      <li key={m}><a href="#" className="text-white/60 hover:text-white transition-colors">{m}</a></li>
-                    ))}
+                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('footer.privacy')}</a></li>
+                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('footer.terms')}</a></li>
+                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('footer.cookies')}</a></li>
                   </ul>
                 </div>
               </div>
             </div>
             <div className="text-center pt-24">
               <p className="text-[10px] text-white/10 uppercase tracking-[0.5em] leading-relaxed">
-                © {new Date().getFullYear()} KLO. Lujo Incomparable. Colombia.
+                © {new Date().getFullYear()} KLO. {t('footer.tagline')}
               </p>
             </div>
           </div>
