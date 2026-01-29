@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import Destinations from './components/Destinations';
 import AIAssistant from './components/AIAssistant';
 import Investors from './components/Investors';
+import ForwardLookingStatement from './components/ForwardLookingStatement';
 import { PREMIER_SERVICES, TEAM, ROADMAP, TRANSLATIONS, PARTNERS, getTranslation } from './constants';
 import { Language } from './types';
 
@@ -304,6 +305,9 @@ function App() {
 
         {/* Investors */}
         <Investors t={t} lang={lang} />
+
+        {/* Forward-Looking Statement - NUEVO */}
+        <ForwardLookingStatement />
 
         {/* Footer */}
         <footer id="footer" className="bg-[#0a1518] py-32 text-white overflow-hidden relative border-t border-white/5">
