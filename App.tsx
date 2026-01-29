@@ -219,7 +219,8 @@ function App() {
             </div>
           </div>
         </section>
-                {/* Metrics */}
+
+        {/* Metrics */}
         <section id="metricas" className="py-32 bg-slate-900 text-white reveal overflow-hidden">
           <div className="container mx-auto px-6">
             <div className="flex flex-col md:flex-row justify-between items-center mb-24 gap-12">
@@ -306,7 +307,7 @@ function App() {
         {/* Investors */}
         <Investors t={t} lang={lang} />
 
-        {/* Forward-Looking Statement - NUEVO */}
+        {/* Forward-Looking Statement */}
         <ForwardLookingStatement />
 
         {/* Footer */}
