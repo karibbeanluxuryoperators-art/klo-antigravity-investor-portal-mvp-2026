@@ -1,124 +1,396 @@
-// components/ForwardLookingStatement.tsx
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import Navbar from './components/Navbar';
+import Destinations from './components/Destinations';
+import AIAssistant from './components/AIAssistant';
+import Investors from './components/Investors';
+import ForwardLookingStatement from './components/ForwardLookingStatement';
+import { PREMIER_SERVICES, TEAM, ROADMAP, TRANSLATIONS, PARTNERS, getTranslation } from './constants';
+import { Language } from './types';
 
-interface ContentSection {
-  title: string;
-  paragraphs: string[];
-  date: string;
-}
-
-interface FLSContent {
-  es: ContentSection;
-  en: ContentSection;
-  fr: ContentSection;
-}
-
-const ForwardLookingStatement: React.FC = () => {
-  const [activeLanguage, setActiveLanguage] = useState<'es' | 'en' | 'fr'>('es');
-
-  const content: FLSContent = {
-    es: {
-      title: 'Declaración de Proyecciones y Compromisos Futuros',
-      paragraphs: [
-        'La información presentada en este sitio web respecto a <strong>Karibbéan Luxury Operators (KLO)</strong> contiene declaraciones prospectivas sobre planes, proyecciones, asociaciones y desarrollos futuros que están sujetas a diversos riesgos, incertidumbres y supuestos.',
-        '<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-4"><p class="text-yellow-800"><strong>IMPORTANTE:</strong> Todos los proyectos, asociaciones estratégicas, propiedades, desarrollos inmobiliarios y acuerdos comerciales mencionados en este sitio web representan oportunidades en fase de negociación, estructuración o acuerdos preliminares.</p></div>',
-        'Al momento de esta publicación, KLO cuenta con:<br/><ul class="list-disc ml-6 mt-2"><li><strong>Memorandos de Entendimiento (MOU)</strong> con diversos socios estratégicos</li><li><strong>Acuerdos verbales y compromisos de palabra</strong> con propietarios, desarrolladores y operadores</li><li><strong>Negociaciones en curso</strong> para la formalización de contratos definitivos</li><li><strong>Proyecciones financieras y operativas</strong> basadas en planes de negocio y estudios de factibilidad</li></ul>',
-        '<strong>Ninguno de los proyectos, propiedades o asociaciones mencionados debe considerarse como definitivo, garantizado o completamente ejecutado</strong> hasta que se formalicen los contratos correspondientes y se cumplan todas las condiciones precedentes.',
-        'Los resultados reales, cronogramas de desarrollo, alianzas estratégicas y operaciones pueden diferir materialmente de las proyecciones presentadas debido a factores que incluyen, pero no se limitan a:<br/><ul class="list-disc ml-6 mt-2"><li>Cambios en condiciones de mercado y económicas</li><li>Modificaciones regulatorias y legales</li><li>Disponibilidad de financiamiento</li><li>Negociaciones contractuales</li><li>Factores operativos y logísticos</li><li>Eventos imprevistos o fuerza mayor</li></ul>',
-        'Esta declaración no constituye una oferta de valores, inversión o garantía de rendimientos. Los inversionistas y partes interesadas deben realizar su propia diligencia debida y no deben basarse exclusivamente en la información prospectiva aquí presentada.'
-      ],
-      date: 'Última actualización: Enero 2026'
-    },
-    en: {
-      title: 'Forward-Looking Statement and Future Commitments',
-      paragraphs: [
-        'The information presented on this website regarding <strong>Karibbéan Luxury Operators (KLO)</strong> contains forward-looking statements about plans, projections, partnerships, and future developments that are subject to various risks, uncertainties, and assumptions.',
-        '<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-4"><p class="text-yellow-800"><strong>IMPORTANT:</strong> All projects, strategic partnerships, properties, real estate developments, and commercial agreements mentioned on this website represent opportunities in negotiation phase, structuring, or preliminary agreements.</p></div>',
-        'As of this publication date, KLO has:<br/><ul class="list-disc ml-6 mt-2"><li><strong>Memoranda of Understanding (MOUs)</strong> with various strategic partners</li><li><strong>Verbal agreements and handshake commitments</strong> with owners, developers, and operators</li><li><strong>Ongoing negotiations</strong> for the formalization of definitive contracts</li><li><strong>Financial and operational projections</strong> based on business plans and feasibility studies</li></ul>',
-        '<strong>None of the projects, properties, or partnerships mentioned should be considered definitive, guaranteed, or fully executed</strong> until corresponding contracts are formalized and all precedent conditions are fulfilled.',
-        'Actual results, development timelines, strategic alliances, and operations may differ materially from the projections presented due to factors including, but not limited to:<br/><ul class="list-disc ml-6 mt-2"><li>Changes in market and economic conditions</li><li>Regulatory and legal modifications</li><li>Financing availability</li><li>Contractual negotiations</li><li>Operational and logistical factors</li><li>Unforeseen events or force majeure</li></ul>',
-        'This statement does not constitute an offer of securities, investment, or guarantee of returns. Investors and interested parties should conduct their own due diligence and should not rely exclusively on the forward-looking information presented herein.'
-      ],
-      date: 'Last updated: January 2026'
-    },
-    fr: {
-      title: 'Déclaration Prospective et Engagements Futurs',
-      paragraphs: [
-        'Les informations présentées sur ce site web concernant <strong>Karibbéan Luxury Operators (KLO)</strong> contiennent des déclarations prospectives sur les plans, projections, partenariats et développements futurs qui sont soumis à divers risques, incertitudes et hypothèses.',
-        '<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-4"><p class="text-yellow-800"><strong>IMPORTANT :</strong> Tous les projets, partenariats stratégiques, propriétés, développements immobiliers et accords commerciaux mentionnés sur ce site web représentent des opportunités en phase de négociation, de structuration ou d\'accords préliminaires.</p></div>',
-        'À la date de cette publication, KLO dispose de :<br/><ul class="list-disc ml-6 mt-2"><li><strong>Protocoles d\'Accord (MOU)</strong> avec divers partenaires stratégiques</li><li><strong>Accords verbaux et engagements de principe</strong> avec propriétaires, développeurs et opérateurs</li><li><strong>Négociations en cours</strong> pour la formalisation de contrats définitifs</li><li><strong>Projections financières et opérationnelles</strong> basées sur des plans d\'affaires et études de faisabilité</li></ul>',
-        '<strong>Aucun des projets, propriétés ou partenariats mentionnés ne doit être considéré comme définitif, garanti ou entièrement exécuté</strong> jusqu\'à ce que les contrats correspondants soient formalisés et que toutes les conditions préalables soient remplies.',
-        'Les résultats réels, les calendriers de développement, les alliances stratégiques et les opérations peuvent différer sensiblement des projections présentées en raison de facteurs incluant, sans s\'y limiter :<br/><ul class="list-disc ml-6 mt-2"><li>Changements dans les conditions du marché et économiques</li><li>Modifications réglementaires et légales</li><li>Disponibilité du financement</li><li>Négociations contractuelles</li><li>Facteurs opérationnels et logistiques</li><li>Événements imprévus ou force majeure</li></ul>',
-        'Cette déclaration ne constitue pas une offre de titres, d\'investissement ou une garantie de rendements. Les investisseurs et parties intéressées doivent effectuer leur propre diligence raisonnable et ne doivent pas se fier exclusivement aux informations prospectives présentées ici.'
-      ],
-      date: 'Dernière mise à jour : Janvier 2026'
-    }
-  };
-
-  const languages = [
-    { code: 'es' as const, flag: '🇪🇸', name: 'Español' },
-    { code: 'en' as const, flag: '🇬🇧', name: 'English' },
-    { code: 'fr' as const, flag: '🇫🇷', name: 'Français' }
-  ];
-
+// Modal Component for luxury experience
+const InquiryModal = ({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => void, t: (key: string) => any }) => {
+  if (!isOpen) return null;
   return (
-    <section className="py-16 px-4 bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-xl shadow-xl overflow-hidden">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white p-8 text-center">
-            <div className="flex items-center justify-center mb-4">
-              <span className="text-4xl mr-3">⚠️</span>
-              <h2 className="text-2xl md:text-3xl font-bold">
-                Declaración Prospectiva / Forward-Looking Statement / Déclaration Prospective
-              </h2>
-            </div>
-          </div>
-
-          {/* Language Selector */}
-          <div className="flex justify-center gap-4 p-6 bg-slate-50 border-b">
-            {languages.map((lang) => (
-              <button
-                key={lang.code}
-                onClick={() => setActiveLanguage(lang.code)}
-                className={`px-6 py-3 rounded-full font-semibold transition-all duration-300 transform hover:scale-105 ${
-                  activeLanguage === lang.code
-                    ? 'bg-slate-800 text-white shadow-lg'
-                    : 'bg-white text-slate-700 border-2 border-slate-300 hover:border-slate-500'
-                }`}
-              >
-                <span className="mr-2">{lang.flag}</span>
-                {lang.name}
-              </button>
-            ))}
-          </div>
-
-          {/* Content */}
-          <div className="p-8 md:p-12">
-            <h3 className="text-2xl md:text-3xl font-bold text-slate-800 mb-6">
-              {content[activeLanguage].title}
-            </h3>
-            
-            <div className="space-y-4 text-slate-700 leading-relaxed">
-              {content[activeLanguage].paragraphs.map((paragraph, index) => (
-                <div
-                  key={index}
-                  className="text-base md:text-lg"
-                  dangerouslySetInnerHTML={{ __html: paragraph }}
-                />
-              ))}
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-slate-200 text-right">
-              <p className="text-sm text-slate-500 italic">
-                {content[activeLanguage].date}
-              </p>
-            </div>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-md animate-fade-in">
+      <div className="bg-white w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl relative animate-scale-in">
+        <button onClick={onClose} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <div className="p-12 text-center">
+          <h3 className="text-4xl font-bold mb-6 serif text-slate-900">{t('assistant.name')}</h3>
+          <p className="text-slate-500 mb-10 font-light">{t('assistant.greeting')}</p>
+          <div className="space-y-4 max-w-sm mx-auto">
+            <input type="text" placeholder={t('modal.name_placeholder')} className="w-full px-6 py-4 rounded-full bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-luxury-teal outline-none transition-all" />
+            <input type="email" placeholder={t('modal.email_placeholder')} className="w-full px-6 py-4 rounded-full bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-luxury-teal outline-none transition-all" />
+            <button className="w-full bg-luxury-teal text-white py-4 rounded-full font-bold tracking-widest uppercase hover:brightness-110 transition-all">{t('hero.cta')}</button>
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 
-export default ForwardLookingStatement;
+const HERO_STATIC_IMAGE = "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&q=80&w=1920";
+
+function App() {
+  const [lang, setLang] = useState<Language>('es');
+  const [growthScenario, setGrowthScenario] = useState<'conservative' | 'aggressive'>('conservative');
+  const [isInquiryOpen, setIsInquiryOpen] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+
+  // Initialize language from localStorage on mount
+  useEffect(() => {
+    const savedLang = localStorage.getItem('language') as Language;
+    if (savedLang && ['es', 'en', 'pt'].includes(savedLang)) {
+      setLang(savedLang);
+    } else {
+      localStorage.setItem('language', 'es');
+      setLang('es');
+    }
+    setIsReady(true);
+  }, []);
+
+  // Update HTML lang attribute
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  // Scroll reveal effect
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('active');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  // Translation function
+  const t = useCallback((key: string): any => {
+    return getTranslation(key, lang);
+  }, [lang]);
+
+  // Language change handler
+  const handleLanguageChange = useCallback((newLang: Language) => {
+    if (newLang !== lang) {
+      setLang(newLang);
+      localStorage.setItem('language', newLang);
+    }
+  }, [lang]);
+
+  if (!isReady) {
+    return <div className="min-h-screen bg-slate-900" />;
+  }
+
+  return (
+    <div className="min-h-screen selection:bg-luxury-teal selection:text-white" key={lang}>
+      <Navbar 
+        lang={lang} 
+        setLang={handleLanguageChange} 
+        t={t} 
+        onInquiryOpen={() => setIsInquiryOpen(true)} 
+      />
+
+      <main>
+        {/* Hero Section */}
+        <section className="relative h-[85vh] md:h-screen w-full flex items-center justify-center overflow-hidden bg-slate-900">
+          <div className="absolute inset-0 z-0 opacity-100">
+            <img
+              src={HERO_STATIC_IMAGE}
+              alt="Luxury Caribbean Yacht"
+              className="w-full h-full object-cover scale-105 animate-slow-zoom"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/90"></div>
+          </div>
+
+          <div className="relative z-10 container mx-auto px-6 text-center text-white max-w-5xl">
+            <h1 className="text-3xl md:text-5xl lg:text-6xl mb-6 leading-tight animate-fade-in-up font-bold serif tracking-tight drop-shadow-2xl">
+              {t('hero.title')}
+            </h1>
+            <p className="text-sm md:text-lg mb-10 text-white/90 max-w-2xl mx-auto font-light leading-relaxed drop-shadow-md">
+              {t('hero.subtitle')}
+            </p>
+            <button
+              onClick={() => setIsInquiryOpen(true)}
+              className="group relative bg-luxury-teal text-white px-12 py-5 rounded-full text-xs font-bold tracking-[0.2em] hover:brightness-110 transition-all hover:shadow-[0_20px_50px_rgba(0,168,181,0.3)] active:scale-95 uppercase overflow-hidden"
+            >
+              <span className="relative z-10">{t('hero.cta')}</span>
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+            </button>
+          </div>
+
+          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 animate-bounce hidden md:block opacity-40">
+            <div className="w-px h-24 bg-gradient-to-b from-white to-transparent"></div>
+          </div>
+        </section>
+
+        {/* Partners Bar */}
+        <section className="py-16 bg-white border-b border-slate-100 overflow-hidden">
+          <div className="container mx-auto px-6">
+            <p className="text-center text-[10px] font-bold uppercase tracking-[0.4em] text-slate-300 mb-10">
+              {t('services.section_subtitle')}
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-12 md:gap-32 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-700">
+              {PARTNERS.map((partner, idx) => (
+                <div key={idx} className="flex items-center space-x-4 group cursor-default">
+                  <div className="h-12 md:h-16 flex items-center justify-center transition-colors p-2">
+                    <img src={partner.logo} alt={partner.name} className="h-full w-auto object-contain transition-all" />
+                  </div>
+                  <div className="hidden sm:block">
+                    <span className="text-[11px] font-black tracking-widest text-slate-400 uppercase group-hover:text-slate-900 transition-colors">{partner.name}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Destinations */}
+        <div className="reveal">
+          <Destinations t={t} />
+        </div>
+
+        {/* Premier Services */}
+        <section id="servicios" className="py-32 bg-white reveal">
+          <div className="container mx-auto px-6">
+            <div className="text-center mb-24 max-w-3xl mx-auto">
+              <h2 className="text-4xl md:text-6xl font-bold mb-8 text-slate-900 leading-tight serif">
+                {t('services.section_title')}
+              </h2>
+              <div className="w-24 h-1 bg-luxury-teal mx-auto mb-8"></div>
+              <p className="text-slate-500 text-xl font-light leading-relaxed">
+                {t('services.section_subtitle')}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+              {PREMIER_SERVICES.map((service, idx) => (
+                <div key={idx} className="group bg-white p-2 rounded-2xl transition-all duration-500 hover:-translate-y-2">
+                  <div className="relative h-72 mb-8 overflow-hidden rounded-3xl shadow-lg border border-slate-50">
+                    <img src={service.imageUrl} alt={t(service.titleKey)} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                    <div className="absolute top-6 right-6 bg-white/95 backdrop-blur-md w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-xl border border-black/5">{service.icon}</div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                  </div>
+                  <div className="px-6">
+                    <h3 className="text-2xl font-bold mb-4 text-slate-900 serif leading-snug">{t(service.titleKey)}</h3>
+                    <p className="text-slate-500 text-sm leading-relaxed font-light">{t(service.descriptionKey)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Founders */}
+        <section id="equipo" className="py-32 bg-slate-50 reveal">
+          <div className="container mx-auto px-6">
+            <div className="text-center mb-24">
+              <p className="text-luxury-teal font-bold text-xs uppercase tracking-[0.4em] mb-4">
+                {t('team.section_subtitle')}
+              </p>
+              <h2 className="text-4xl md:text-6xl font-bold text-slate-900 serif">
+                {t('team.section_title')}
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 mb-20">
+              {TEAM.map((member, idx) => (
+                <div key={idx} className="bg-white p-12 rounded-[2.5rem] shadow-sm border border-slate-100 hover:shadow-2xl transition-all duration-500 group flex flex-col">
+                  <div className="w-20 h-20 bg-slate-100 rounded-2xl mb-10 flex items-center justify-center text-2xl font-bold text-luxury-teal group-hover:bg-luxury-teal group-hover:text-white group-hover:rotate-12 transition-all duration-500">
+                    {member.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <h3 className="text-3xl font-bold text-slate-900 mb-2 serif">{member.name}</h3>
+                  <p className="text-luxury-teal font-bold text-[10px] uppercase tracking-[0.3em] mb-8">{t(member.roleKey)}</p>
+                  <p className="text-slate-600 text-base leading-relaxed mb-10 font-light italic">
+                    "{t(member.bioKey)}"
+                  </p>
+                  <div className="pt-8 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-400 tracking-widest">{t(member.equityKey)}</span>
+                    <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-luxury-teal hover:text-white cursor-pointer transition-all">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+                {/* Metrics */}
+        <section id="metricas" className="py-32 bg-slate-900 text-white reveal overflow-hidden">
+          <div className="container mx-auto px-6">
+            <div className="flex flex-col md:flex-row justify-between items-center mb-24 gap-12">
+              <div className="max-w-2xl">
+                <h2 className="text-4xl md:text-6xl font-bold mb-8 serif italic">{t('metrics.title')}</h2>
+                <p className="text-white/40 text-xl font-light">{t('metrics.subtitle')}</p>
+              </div>
+              <div className="bg-white/5 p-2 rounded-2xl flex border border-white/10 backdrop-blur-md">
+                <button
+                  onClick={() => setGrowthScenario('conservative')}
+                  className={`px-10 py-4 rounded-xl text-xs font-bold transition-all uppercase tracking-widest ${growthScenario === 'conservative' ? 'bg-luxury-teal text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                >
+                  {t('metrics.conservative')}
+                </button>
+                <button
+                  onClick={() => setGrowthScenario('aggressive')}
+                  className={`px-10 py-4 rounded-xl text-xs font-bold transition-all uppercase tracking-widest ${growthScenario === 'aggressive' ? 'bg-luxury-teal text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                >
+                  {t('metrics.aggressive')}
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
+              <div className="lg:col-span-2 space-y-12">
+                <div className="bg-white/5 p-12 rounded-3xl border border-white/10 relative group">
+                  <div className="absolute -top-6 -left-6 w-12 h-12 bg-luxury-teal rounded-full blur-2xl opacity-20 group-hover:opacity-50 transition-all"></div>
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.5em] text-white/30 mb-16">{t('metrics.chart_label')}</h4>
+                  <div className="space-y-12">
+                    {[
+                      { year: t('metrics.year1'), rev: 1.32, prof: 0.24, margin: 18.7 },
+                      { year: t('metrics.year2'), rev: 3.20, prof: 0.81, margin: 25.5 },
+                      { year: t('metrics.year3'), rev: 5.06, prof: 1.36, margin: 26.9 },
+                      { year: t('metrics.year4'), rev: 5.57, prof: 1.49, margin: 26.8 },
+                      { year: t('metrics.year5'), rev: 6.13, prof: 1.64, margin: 26.7 },
+                    ].map((row, i) => (
+                      <div key={i} className="space-y-4">
+                        <div className="flex justify-between items-end">
+                          <div className="flex flex-col">
+                            <span className="text-xl font-bold serif">{row.year}</span>
+                            <span className="text-[9px] uppercase tracking-widest text-white/20">{t('metrics.margin')}: {row.margin}%</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="block text-luxury-teal font-mono text-xl">${row.rev.toFixed(2)}M {t('metrics.revenue')}</span>
+                            <span className="block text-emerald-400 font-mono text-sm">${row.prof.toFixed(2)}M {t('metrics.profit')}</span>
+                          </div>
+                        </div>
+                        <div className="flex h-3 rounded-full overflow-hidden bg-white/5 p-0.5">
+                          <div style={{ width: `${(row.rev / 6.13) * 100}%` }} className="bg-luxury-teal rounded-full transition-all duration-1000 ease-out"></div>
+                          <div style={{ width: `${(row.prof / 6.13) * 100}%` }} className="bg-emerald-400/30 rounded-full -ml-full transition-all duration-1000 delay-100 ease-out"></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-8">
+                <div className="bg-luxury-teal text-white p-12 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+                  <h4 className="text-lg font-bold mb-8 serif">{t('metrics.profit_title')}</h4>
+                  <div className="space-y-6">
+                    <div className="flex justify-between text-2xl font-bold tracking-widest serif">
+                      <span>$1.64M+</span>
+                    </div>
+                    <div className="h-1 bg-white/20 rounded-full overflow-hidden">
+                      <div className="h-full bg-white w-[100%]"></div>
+                    </div>
+                    <p className="text-sm opacity-60 font-light">{t('metrics.profit_desc')}</p>
+                  </div>
+                </div>
+                <div className="bg-white/5 p-10 rounded-[2.5rem] border border-white/10 backdrop-blur-md">
+                  <h4 className="text-xs font-bold uppercase tracking-widest text-white/40 mb-4">{t('metrics.breakeven_title')}</h4>
+                  <p className="text-4xl font-bold serif">{t('metrics.breakeven_month')}</p>
+                  <div className="mt-4 flex space-x-1">
+                    {[1, 2, 3, 4, 5].map(s => <div key={s} className="h-1 w-full bg-luxury-teal rounded-full"></div>)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Investors */}
+        <Investors t={t} lang={lang} />
+
+        {/* Forward-Looking Statement - NUEVO */}
+        <ForwardLookingStatement />
+
+        {/* Footer */}
+        <footer id="footer" className="bg-[#0a1518] py-32 text-white overflow-hidden relative border-t border-white/5">
+          <div className="container mx-auto px-6 relative z-10">
+            <div className="flex flex-col md:flex-row justify-between items-start border-b border-white/5 pb-24 mb-24 gap-20">
+              <div className="max-w-md">
+                <h3 className="text-6xl font-bold serif mb-10 tracking-tighter text-luxury-teal">KLO</h3>
+                <p className="text-white/40 leading-relaxed text-lg mb-8 font-light">
+                  {t('footer.description')}
+                </p>
+                <div className="mb-10 group">
+                  <p className="text-[10px] uppercase tracking-[0.4em] text-white/20 mb-2">{t('footer.connect')}</p>
+                  <a href="mailto:hola@karibbeanluxuryoperators.lat" className="text-luxury-teal text-xl font-medium hover:text-white tracking-wide transition-all duration-300">
+                    hola@karibbeanluxuryoperators.lat
+                  </a>
+                </div>
+                <div className="flex space-x-10 items-center">
+                  <a href="#" className="text-white/40 hover:text-luxury-teal transition-all transform hover:scale-125 duration-300" title="Instagram">
+                    <svg className="w-7 h-7 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                    </svg>
+                  </a>
+                  <a href="#" className="text-white/40 hover:text-luxury-teal transition-all transform hover:scale-125 duration-300" title="LinkedIn">
+                    <svg className="w-7 h-7 fill-current" viewBox="0 0 24 24">
+                      <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                    </svg>
+                  </a>
+                  <a href="#" className="text-white/40 hover:text-luxury-teal transition-all transform hover:scale-125 duration-300" title="X">
+                    <svg className="w-7 h-7 fill-current" viewBox="0 0 24 24">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-20">
+                <div className="space-y-8">
+                  <h4 className="text-xs font-bold uppercase tracking-[0.4em] text-white/20">{t('footer.menu_title')}</h4>
+                  <ul className="space-y-4">
+                    {['destinations', 'services', 'investors'].map((item) => (
+                      <li key={item}>
+                        <a href={`#${item === 'destinations' ? 'destinos' : item === 'services' ? 'servicios' : 'inversionistas'}`} 
+                           className="text-white/60 hover:text-white transition-colors">
+                          {t(`nav.${item}`)}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="space-y-8">
+                  <h4 className="text-xs font-bold uppercase tracking-[0.4em] text-white/20">{t('footer.legal_title')}</h4>
+                  <ul className="space-y-4">
+                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('footer.privacy')}</a></li>
+                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('footer.terms')}</a></li>
+                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('footer.cookies')}</a></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="text-center pt-24">
+              <p className="text-[10px] text-white/10 uppercase tracking-[0.5em] leading-relaxed">
+                © {new Date().getFullYear()} KLO. {t('footer.tagline')}
+              </p>
+            </div>
+          </div>
+        </footer>
+      </main>
+
+      <AIAssistant t={t} lang={lang} />
+      <InquiryModal isOpen={isInquiryOpen} onClose={() => setIsInquiryOpen(false)} t={t} />
+
+      <style>{`
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scale-in { from { transform: scale(0.9) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
+        .animate-scale-in { animation: scale-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .animate-fade-in-up { animation: fade-in-up 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes fade-in-up { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slow-zoom { from { transform: scale(1); } to { transform: scale(1.15); } }
+        .animate-slow-zoom { animation: slow-zoom 30s ease-in-out infinite alternate; }
+        html { scroll-behavior: smooth; }
+      `}</style>
+    </div>
+  );
+}
+
+export default App;
