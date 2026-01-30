@@ -43,9 +43,7 @@ const Navbar: React.FC<NavbarProps> = ({ lang, setLang, t, onInquiryOpen }) => {
             {NAV_ITEMS.map((item) => (
               <a 
                 key={item.labelKey} 
-                href={item.href === '/experiencias' ? 'https://karibbean-luxury-operators-experiences.vercel.app/' : item.href}
-                target={item.href === '/experiencias' ? '_blank' : '_self'}
-                rel={item.href === '/experiencias' ? 'noopener noreferrer' : ''}
+                href={item.href}
                 className={`text-[10px] uppercase tracking-[0.3em] font-bold transition-all duration-300 hover:tracking-[0.5em] group ${isScrolled ? 'text-slate-900/60 hover:text-luxury-teal' : 'text-white/60 hover:text-white'} ${item.href === '/experiencias' ? 'flex items-center gap-1' : ''}`}
               >
                 {t(item.labelKey)}
