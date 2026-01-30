@@ -2,25 +2,5 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "outputDirectory": "dist",
-  "framework": "vite",
-  "redirects": [
-    {
-      "source": "/experiencias",
-      "destination": "https://ai.studio/apps/drive/1yqHX0zCOpiooUxAZjI9CMyeTB1WtupC2",
-      "permanent": false
-    },
-    {
-      "source": "/experiences",
-      "destination": "https://ai.studio/apps/drive/1yqHX0zCOpiooUxAZjI9CMyeTB1WtupC2",
-      "permanent": false
-    },
-    {
-      "source": "/ai",
-      "destination": "https://ai.studio/apps/drive/1yqHX0zCOpiooUxAZjI9CMyeTB1WtupC2",
-      "permanent": false
-    }
-  ],
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "framework": "vite"
 }
