@@ -307,6 +307,82 @@ function App() {
         {/* Investors */}
         <Investors t={t} lang={lang} />
 
+        {/* Investors */}
+        <Investors t={t} lang={lang} />
+
+        {/* Experiencias - NUEVA SECCIÓN */}
+        <section id="experiencias" className="py-32 bg-gradient-to-br from-slate-900 to-slate-800 text-white relative overflow-hidden reveal">
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-20 left-20 w-72 h-72 bg-luxury-teal rounded-full blur-3xl"></div>
+            <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
+          </div>
+          
+          <div className="container mx-auto px-6 relative z-10">
+            <div className="max-w-4xl mx-auto text-center">
+              <p className="text-luxury-teal font-bold text-xs uppercase tracking-[0.4em] mb-6">
+                {t('experiences.subtitle') || 'Innovación y Tecnología'}
+              </p>
+              <h2 className="text-5xl md:text-7xl font-bold mb-8 serif leading-tight">
+                {t('experiences.title') || 'Experiencia Interactiva'}
+              </h2>
+              <p className="text-xl text-white/70 mb-16 font-light leading-relaxed max-w-2xl mx-auto">
+                {t('experiences.description') || 'Explora nuestro portfolio de destinos y servicios con inteligencia artificial. Una experiencia inmersiva diseñada para inversores y viajeros de lujo.'}
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+                <a 
+                  href="https://ai.studio/apps/drive/1yqHX0zCOpiooUxAZjI9CMyeTB1WtupC2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative bg-luxury-teal text-white px-12 py-6 rounded-full text-sm font-bold tracking-[0.2em] hover:brightness-110 transition-all hover:shadow-[0_20px_50px_rgba(0,168,181,0.4)] active:scale-95 uppercase overflow-hidden inline-flex items-center gap-3"
+                >
+                  <span className="relative z-10">
+                    {t('experiences.cta') || 'Explorar Experiencia AI'}
+                  </span>
+                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                </a>
+              </div>
+
+              <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="bg-white/5 backdrop-blur-md p-8 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                  <div className="text-4xl mb-4">🤖</div>
+                  <h3 className="text-lg font-bold mb-2 serif">
+                    {t('experiences.feature1_title') || 'Asistente IA'}
+                  </h3>
+                  <p className="text-sm text-white/60">
+                    {t('experiences.feature1_desc') || 'Interactúa con nuestro asistente inteligente'}
+                  </p>
+                </div>
+                
+                <div className="bg-white/5 backdrop-blur-md p-8 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                  <div className="text-4xl mb-4">🏝️</div>
+                  <h3 className="text-lg font-bold mb-2 serif">
+                    {t('experiences.feature2_title') || 'Destinos Virtuales'}
+                  </h3>
+                  <p className="text-sm text-white/60">
+                    {t('experiences.feature2_desc') || 'Explora cada ubicación en detalle'}
+                  </p>
+                </div>
+                
+                <div className="bg-white/5 backdrop-blur-md p-8 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                  <div className="text-4xl mb-4">💎</div>
+                  <h3 className="text-lg font-bold mb-2 serif">
+                    {t('experiences.feature3_title') || 'Portafolio Premium'}
+                  </h3>
+                  <p className="text-sm text-white/60">
+                    {t('experiences.feature3_desc') || 'Accede a información exclusiva'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Forward-Looking Statement */}
+        <ForwardLookingStatement />
         {/* Forward-Looking Statement */}
         <ForwardLookingStatement />
 
@@ -395,3 +471,4 @@ function App() {
 }
 
 export default App;
+
