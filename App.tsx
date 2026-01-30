@@ -331,7 +331,9 @@ function App() {
               
               <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
                 <a 
-                  href="/experiencias"
+                  href="https://karibbean-luxury-operators-experiences.vercel.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="group relative bg-luxury-teal text-white px-12 py-6 rounded-full text-sm font-bold tracking-[0.2em] hover:brightness-110 transition-all hover:shadow-[0_20px_50px_rgba(0,168,181,0.4)] active:scale-95 uppercase overflow-hidden inline-flex items-center gap-3"
                 >
                   <span className="relative z-10">
