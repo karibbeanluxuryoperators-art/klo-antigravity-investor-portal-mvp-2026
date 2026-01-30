@@ -12,7 +12,7 @@ export const NAV_ITEMS: NavItem[] = [
   { labelKey: 'nav.services', href: '#servicios' },
   { labelKey: 'nav.team', href: '#equipo' },
   { labelKey: 'nav.metrics', href: '#metricas' },
-{ labelKey: 'nav.experiences', href: '/experiencias' },
+  { labelKey: 'nav.experiences', href: 'https://experiencias.karibbeanluxuryoperators.lat' },
   { labelKey: 'nav.investors', href: '#inversionistas'},
 ];
 
@@ -325,7 +325,7 @@ export const TRANSLATIONS = {
     assistant: {
       name: "María Fernanda",
       role: "Tu Conserje Personal de IA",
-      greeting: "¡Hola! Soy María Fernanda. Estoy lista para crear las vacaciones de tus sueños en el Caribe colombiano.",
+      greeting: "¡Hola! Soy María Fernanda. Estoy para crear las vacaciones de tus sueños en el Caribe colombiano.",
       prompt: "¡Pregúntame cualquier cosa sobre viajes de lujo en Colombia!",
       placeholder: "Habla con María Fernanda...",
       suggestion_title: "Prueba una consulta de ejemplo",
@@ -342,7 +342,7 @@ export const TRANSLATIONS = {
       year3: "Año 3",
       year4: "Año 4",
       year5: "Año 5",
-      margin: "Margen",
+      margin: "Margem",
       revenue: "Ing",
       profit: "Ganancia",
       profit_title: "Meta de Ganancia Neta (Año 5)",
@@ -773,5 +773,3 @@ export const getTranslation = (key: string, lang: Language): any => {
   
   return value ?? key;
 };
-
-
