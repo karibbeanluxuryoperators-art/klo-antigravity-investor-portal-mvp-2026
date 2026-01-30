@@ -12,6 +12,7 @@ export const NAV_ITEMS: NavItem[] = [
   { labelKey: 'nav.services', href: '#servicios' },
   { labelKey: 'nav.team', href: '#equipo' },
   { labelKey: 'nav.metrics', href: '#metricas' },
+  { labelKey: 'nav.experiences', href: '#experiencias' },
   { labelKey: 'nav.investors', href: '#inversionistas'},
 ];
 
@@ -170,6 +171,7 @@ export const ROADMAP = [
     goalsKey: "roadmap.year3.goals"
   }
 ];
+
 // ALL TRANSLATIONS
 export const TRANSLATIONS = {
   es: {
@@ -183,6 +185,7 @@ export const TRANSLATIONS = {
       services: "Servicios",
       team: "Equipo",
       metrics: "Métricas",
+      experiences: "Experiencias",
       investors: "Inversionistas",
       contact: "Contáctanos"
     },
@@ -213,6 +216,18 @@ export const TRANSLATIONS = {
         title: "Experiencias Curadas",
         desc: "Elija entre paquetes prediseñados con todo incluido para una escapada de lujo sin complicaciones."
       }
+    },
+    experiences: {
+      subtitle: "Innovación y Tecnología",
+      title: "Experiencia Interactiva",
+      description: "Explora nuestro portfolio de destinos y servicios con inteligencia artificial. Una experiencia inmersiva diseñada para inversores y viajeros de lujo.",
+      cta: "Explorar Experiencia AI",
+      feature1_title: "Asistente IA",
+      feature1_desc: "Interactúa con nuestro asistente inteligente",
+      feature2_title: "Destinos Virtuales",
+      feature2_desc: "Explora cada ubicación en detalle",
+      feature3_title: "Portafolio Premium",
+      feature3_desc: "Accede a información exclusiva"
     },
     team: {
       section_title: "Nuestro Equipo",
@@ -316,7 +331,6 @@ export const TRANSLATIONS = {
       suggestion_title: "Prueba una consulta de ejemplo",
       suggestions: ["Isla privada por una semana", "Villas en Cartagena", "Helicóptero a Tayrona"]
     },
-    // NEW TRANSLATIONS FOR METRICS AND FOOTER
     metrics: {
       title: "Dashboard de Crecimiento",
       subtitle: "Proyecciones estratégicas basadas en el despliegue de nuestra infraestructura de IA y P&L proyectado.",
@@ -351,7 +365,7 @@ export const TRANSLATIONS = {
       email_placeholder: "Correo electrónico"
     }
   },
-    en: {
+  en: {
     hero: {
       title: "Caribbean Luxury Redefined",
       subtitle: "As data-driven AI pioneers, we curate bespoke travel experiences with exclusive access to private islands, luxury villas, and yacht charters in Colombia.",
@@ -362,6 +376,7 @@ export const TRANSLATIONS = {
       services: "Services",
       team: "Team",
       metrics: "Metrics",
+      experiences: "Experiences",
       investors: "Investors",
       contact: "Contact Us"
     },
@@ -392,6 +407,18 @@ export const TRANSLATIONS = {
         title: "Curated Experiences",
         desc: "Choose from pre-designed all-inclusive packages for a hassle-free luxury getaway."
       }
+    },
+    experiences: {
+      subtitle: "Innovation & Technology",
+      title: "Interactive Experience",
+      description: "Explore our portfolio of destinations and services with artificial intelligence. An immersive experience designed for investors and luxury travelers.",
+      cta: "Explore AI Experience",
+      feature1_title: "AI Assistant",
+      feature1_desc: "Interact with our intelligent assistant",
+      feature2_title: "Virtual Destinations",
+      feature2_desc: "Explore each location in detail",
+      feature3_title: "Premium Portfolio",
+      feature3_desc: "Access exclusive information"
     },
     team: {
       section_title: "Our Team",
@@ -529,7 +556,7 @@ export const TRANSLATIONS = {
       email_placeholder: "Email"
     }
   },
-    pt: {
+  pt: {
     hero: {
       title: "Elevando o Luxo no Caribe",
       subtitle: "Como pioneiros em dados e IA, somos especialistas em experiências sob medida, com acesso a ilhas privadas e iates exclusivos.",
@@ -540,6 +567,7 @@ export const TRANSLATIONS = {
       services: "Serviços",
       team: "Equipe",
       metrics: "Métricas",
+      experiences: "Experiências",
       investors: "Investidores",
       contact: "Contate-nos"
     },
@@ -570,6 +598,18 @@ export const TRANSLATIONS = {
         title: "Experiências Curadas",
         desc: "Escolha entre pacotes pré-desenhados all-inclusive para uma escapada de luxo sem complicações."
       }
+    },
+    experiences: {
+      subtitle: "Inovação e Tecnologia",
+      title: "Experiência Interativa",
+      description: "Explore nosso portfólio de destinos e serviços com inteligência artificial. Uma experiência imersiva projetada para investidores e viajantes de luxo.",
+      cta: "Explorar Experiência AI",
+      feature1_title: "Assistente IA",
+      feature1_desc: "Interaja com nosso assistente inteligente",
+      feature2_title: "Destinos Virtuais",
+      feature2_desc: "Explore cada localização em detalhes",
+      feature3_title: "Portfólio Premium",
+      feature3_desc: "Acesse informações exclusivas"
     },
     team: {
       section_title: "Nossa Equipe",
