@@ -2,5 +2,12 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "outputDirectory": "dist",
-  "framework": "vite"
+  "framework": "vite",
+  "redirects": [
+    {
+      "source": "/experiencias",
+      "destination": "https://karibbean-luxury-operators-experiences.vercel.app/",
+      "permanent": false
+    }
+  ]
 }
