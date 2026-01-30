@@ -323,21 +323,19 @@ function App() {
                 {t('experiences.subtitle') || 'Innovación y Tecnología'}
               </p>
               <h2 className="text-5xl md:text-7xl font-bold mb-8 serif leading-tight">
-                {t('experiences.title') || 'Experiencia Interactiva'}
+                {t('experiences.title') || 'Experiencias Exclusivas'}
               </h2>
               <p className="text-xl text-white/70 mb-16 font-light leading-relaxed max-w-2xl mx-auto">
-                {t('experiences.description') || 'Explora nuestro portfolio de destinos y servicios con inteligencia artificial. Una experiencia inmersiva diseñada para inversores y viajeros de lujo.'}
+                {t('experiences.description') || 'Descubre nuestro catálogo de experiencias de lujo en el Caribe colombiano. Cada una diseñada para superar tus expectativas.'}
               </p>
               
               <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
                 <a 
-                  href="https://ai.studio/apps/drive/1yqHX0zCOpiooUxAZjI9CMyeTB1WtupC2"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/experiencias"
                   className="group relative bg-luxury-teal text-white px-12 py-6 rounded-full text-sm font-bold tracking-[0.2em] hover:brightness-110 transition-all hover:shadow-[0_20px_50px_rgba(0,168,181,0.4)] active:scale-95 uppercase overflow-hidden inline-flex items-center gap-3"
                 >
                   <span className="relative z-10">
-                    {t('experiences.cta') || 'Explorar Experiencia AI'}
+                    {t('experiences.cta') || 'Explorar Experiencias'}
                   </span>
                   <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -348,32 +346,32 @@ function App() {
 
               <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="bg-white/5 backdrop-blur-md p-8 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
-                  <div className="text-4xl mb-4">🤖</div>
-                  <h3 className="text-lg font-bold mb-2 serif">
-                    {t('experiences.feature1_title') || 'Asistente IA'}
-                  </h3>
-                  <p className="text-sm text-white/60">
-                    {t('experiences.feature1_desc') || 'Interactúa con nuestro asistente inteligente'}
-                  </p>
-                </div>
-                
-                <div className="bg-white/5 backdrop-blur-md p-8 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
                   <div className="text-4xl mb-4">🏝️</div>
                   <h3 className="text-lg font-bold mb-2 serif">
-                    {t('experiences.feature2_title') || 'Destinos Virtuales'}
+                    {t('experiences.feature1_title') || '20+ Experiencias'}
                   </h3>
                   <p className="text-sm text-white/60">
-                    {t('experiences.feature2_desc') || 'Explora cada ubicación en detalle'}
+                    {t('experiences.feature1_desc') || 'Desde yates hasta expediciones'}
                   </p>
                 </div>
                 
                 <div className="bg-white/5 backdrop-blur-md p-8 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
-                  <div className="text-4xl mb-4">💎</div>
+                  <div className="text-4xl mb-4">✨</div>
                   <h3 className="text-lg font-bold mb-2 serif">
-                    {t('experiences.feature3_title') || 'Portafolio Premium'}
+                    {t('experiences.feature2_title') || 'Servicio Personalizado'}
                   </h3>
                   <p className="text-sm text-white/60">
-                    {t('experiences.feature3_desc') || 'Accede a información exclusiva'}
+                    {t('experiences.feature2_desc') || 'Cada detalle adaptado a ti'}
+                  </p>
+                </div>
+                
+                <div className="bg-white/5 backdrop-blur-md p-8 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
+                  <div className="text-4xl mb-4">🤖</div>
+                  <h3 className="text-lg font-bold mb-2 serif">
+                    {t('experiences.feature3_title') || 'Asistente IA'}
+                  </h3>
+                  <p className="text-sm text-white/60">
+                    {t('experiences.feature3_desc') || 'Chat en vivo para ayudarte'}
                   </p>
                 </div>
               </div>
@@ -471,4 +469,3 @@ function App() {
 }
 
 export default App;
-
