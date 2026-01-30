@@ -12,7 +12,7 @@ export const NAV_ITEMS: NavItem[] = [
   { labelKey: 'nav.services', href: '#servicios' },
   { labelKey: 'nav.team', href: '#equipo' },
   { labelKey: 'nav.metrics', href: '#metricas' },
-  { labelKey: 'nav.experiences', href: 'https://experiencias.karibbeanluxuryoperators.lat' },
+{ labelKey: 'nav.experiences', href: 'https://karibbean-luxury-operators-experien.vercel.app/' },
   { labelKey: 'nav.investors', href: '#inversionistas'},
 ];
 
@@ -773,3 +773,4 @@ export const getTranslation = (key: string, lang: Language): any => {
   
   return value ?? key;
 };
+
