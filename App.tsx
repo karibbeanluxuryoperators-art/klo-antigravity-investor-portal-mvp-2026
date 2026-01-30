@@ -307,9 +307,6 @@ function App() {
         {/* Investors */}
         <Investors t={t} lang={lang} />
 
-        {/* Investors */}
-        <Investors t={t} lang={lang} />
-
         {/* Experiencias - NUEVA SECCIÓN */}
         <section id="experiencias" className="py-32 bg-gradient-to-br from-slate-900 to-slate-800 text-white relative overflow-hidden reveal">
           <div className="absolute inset-0 opacity-10">
@@ -381,8 +378,6 @@ function App() {
           </div>
         </section>
 
-        {/* Forward-Looking Statement */}
-        <ForwardLookingStatement />
         {/* Forward-Looking Statement */}
         <ForwardLookingStatement />
 
