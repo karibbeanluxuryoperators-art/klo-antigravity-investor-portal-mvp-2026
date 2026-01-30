@@ -43,10 +43,17 @@ const Navbar: React.FC<NavbarProps> = ({ lang, setLang, t, onInquiryOpen }) => {
             {NAV_ITEMS.map((item) => (
               <a 
                 key={item.labelKey} 
-                href={item.href} 
-                className={`text-[10px] uppercase tracking-[0.3em] font-bold transition-all duration-300 hover:tracking-[0.5em] ${isScrolled ? 'text-slate-900/60 hover:text-luxury-teal' : 'text-white/60 hover:text-white'}`}
+                href={item.href === '/experiencias' ? 'https://karibbean-luxury-operators-experiences.vercel.app/' : item.href}
+                target={item.href === '/experiencias' ? '_blank' : '_self'}
+                rel={item.href === '/experiencias' ? 'noopener noreferrer' : ''}
+                className={`text-[10px] uppercase tracking-[0.3em] font-bold transition-all duration-300 hover:tracking-[0.5em] group ${isScrolled ? 'text-slate-900/60 hover:text-luxury-teal' : 'text-white/60 hover:text-white'} ${item.href === '/experiencias' ? 'flex items-center gap-1' : ''}`}
               >
                 {t(item.labelKey)}
+                {item.href === '/experiencias' && (
+                  <svg className="w-4 h-4 opacity-60 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                )}
               </a>
             ))}
           </div>
