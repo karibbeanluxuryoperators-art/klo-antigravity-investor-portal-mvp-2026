@@ -12,8 +12,7 @@ export const NAV_ITEMS: NavItem[] = [
   { labelKey: 'nav.services', href: '#servicios' },
   { labelKey: 'nav.team', href: '#equipo' },
   { labelKey: 'nav.metrics', href: '#metricas' },
-  { labelKey: 'nav.experiences', href: '#experiencias' },
-  { labelKey: 'nav.investors', href: '#inversionistas'},
+{ labelKey: 'nav.experiences', href: '/experiencias' },  { labelKey: 'nav.investors', href: '#inversionistas'},
 ];
 
 export const DESTINATIONS: Destination[] = [
@@ -773,3 +772,4 @@ export const getTranslation = (key: string, lang: Language): any => {
   
   return value ?? key;
 };
+
