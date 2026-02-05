@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { NAV_ITEMS, LANGUAGES } from '../constants';
+import { LANGUAGES } from '../constants';
 import { Language } from '../types';
 
 interface NavbarProps {
@@ -39,24 +39,7 @@ const Navbar: React.FC<NavbarProps> = ({ lang, setLang, t, onInquiryOpen }) => {
           <a href="/" className={`text-4xl font-bold serif tracking-tighter transition-all duration-500 ${isScrolled ? 'text-luxury-teal scale-90' : 'text-white'}`}>
             KLO
           </a>
-          <div className="hidden lg:flex items-center space-x-8">
-            {NAV_ITEMS.map((item) => (
-              <a 
-                key={item.labelKey} 
-                href={item.href}
-                target={item.href === 'https://karibbean-luxury-operators-experien.vercel.app/' ? '_blank' : '_self'}
-                rel={item.href === 'https://karibbean-luxury-operators-experien.vercel.app/' ? 'noopener noreferrer' : ''}
-                className={`text-[10px] uppercase tracking-[0.3em] font-bold transition-all duration-300 hover:tracking-[0.5em] group ${isScrolled ? 'text-slate-900/60 hover:text-luxury-teal' : 'text-white/60 hover:text-white'} ${item.href === 'https://karibbean-luxury-operators-experien.vercel.app/' ? 'flex items-center gap-1' : ''}`}
-              >
-                {t(item.labelKey)}
-                {item.href === 'https://karibbean-luxury-operators-experien.vercel.app/' && (
-                  <svg className="w-4 h-4 opacity-60 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                )}
-              </a>
-            ))}
-          </div>
+          {/* NAVEGACIÓN DESHABILITADA - ONE PAGER */}
         </div>
 
         <div className="flex items-center space-x-8">
