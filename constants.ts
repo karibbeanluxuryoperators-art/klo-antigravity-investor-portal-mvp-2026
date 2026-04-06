@@ -95,12 +95,7 @@ export const PREMIER_SERVICES = [
   }
 ];
 
-export const PARTNERS = [
-  { name: "NetJets", logo: "./images/partners/netjets.svg" },
-  { name: "Four Seasons", logo: "./images/partners/fourseasons.svg" },
-  { name: "Marriott Luxury", logo: "./images/partners/marriott.svg" },
-  { name: "Flapz", logo: "" }
-];
+export const PARTNERS = [];
 
 export const TEAM = [
   {
