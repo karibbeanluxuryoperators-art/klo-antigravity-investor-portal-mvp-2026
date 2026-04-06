@@ -99,7 +99,7 @@ function App() {
           </div>
         </section>
 
-        {/* Pre-Launch Registration Section */}
+        {/* Pre-Launch Message Section */}
         <section className="py-32 bg-gradient-to-br from-slate-900 to-slate-800 text-white relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-20 left-20 w-72 h-72 bg-luxury-teal rounded-full blur-3xl"></div>
@@ -122,19 +122,18 @@ function App() {
                 <span className="text-luxury-teal text-sm uppercase tracking-wider">Private Aviation · Superyachts · Exclusive Villas · Elite Staffing</span>
               </div>
               
-              {/* Google Form */}
-              <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 max-w-2xl mx-auto">
-                <h3 className="text-2xl font-bold mb-4 serif text-luxury-teal">Register for Early Access</h3>
-                <iframe 
-                  src="https://docs.google.com/forms/d/e/1FAIpQLSdLTLnFDzsqtJHNfj30hM-s7MVEDTb3_4nmaTnP7M9KTvRtzw/viewform?embedded=true" 
-                  width="100%" 
-                  height="550" 
-                  frameBorder="0"
-                  className="rounded-xl"
-                  title="KLO Registration Form"
+              {/* Email Contact */}
+              <div className="bg-white/5 backdrop-blur-md rounded-2xl p-8 border border-white/10 max-w-md mx-auto">
+                <h3 className="text-xl font-bold mb-4 serif text-luxury-teal">Contact Us</h3>
+                <a 
+                  href="mailto:hola@karibbeanluxuryoperators.lat"
+                  className="text-white text-2xl md:text-3xl font-light hover:text-luxury-teal transition-colors break-all"
                 >
-                  Loading…
-                </iframe>
+                  hola@karibbeanluxuryoperators.lat
+                </a>
+                <p className="text-white/40 text-sm mt-6">
+                  Reach out for investment inquiries, partnerships, or early access.
+                </p>
               </div>
             </div>
           </div>
