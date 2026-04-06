@@ -1,43 +1,12 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Navbar from './components/Navbar';
-import Destinations from './components/Destinations';
-import AIAssistant from './components/AIAssistant';
-import Investors from './components/Investors';
-import ForwardLookingStatement from './components/ForwardLookingStatement';
-import { PREMIER_SERVICES, TEAM, ROADMAP, TRANSLATIONS, PARTNERS, getTranslation } from './constants';
+import { TRANSLATIONS, PARTNERS, getTranslation } from './constants';
 import { Language } from './types';
-
-// Modal Component for luxury experience
-const InquiryModal = ({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => void, t: (key: string) => any }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-white w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl relative animate-scale-in">
-        <button onClick={onClose} className="absolute top-6 right-6 text-slate-400 hover:text-slate-900 transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-        <div className="p-12 text-center">
-          <h3 className="text-4xl font-bold mb-6 serif text-slate-900">{t('assistant.name')}</h3>
-          <p className="text-slate-500 mb-10 font-light">{t('assistant.greeting')}</p>
-          <div className="space-y-4 max-w-sm mx-auto">
-            <input type="text" placeholder={t('modal.name_placeholder')} className="w-full px-6 py-4 rounded-full bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-luxury-teal outline-none transition-all" />
-            <input type="email" placeholder={t('modal.email_placeholder')} className="w-full px-6 py-4 rounded-full bg-slate-50 border border-slate-100 focus:ring-2 focus:ring-luxury-teal outline-none transition-all" />
-            <button className="w-full bg-luxury-teal text-white py-4 rounded-full font-bold tracking-widest uppercase hover:brightness-110 transition-all">{t('hero.cta')}</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const HERO_STATIC_IMAGE = "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&q=80&w=1920";
 
 function App() {
   const [lang, setLang] = useState<Language>('es');
-  const [growthScenario, setGrowthScenario] = useState<'conservative' | 'aggressive'>('conservative');
-  const [isInquiryOpen, setIsInquiryOpen] = useState(false);
   const [isReady, setIsReady] = useState(false);
 
   // Initialize language from localStorage on mount
@@ -56,20 +25,6 @@ function App() {
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
-
-  // Scroll reveal effect
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('active');
-        }
-      });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
 
   // Translation function
   const t = useCallback((key: string): any => {
@@ -94,7 +49,7 @@ function App() {
         lang={lang} 
         setLang={handleLanguageChange} 
         t={t} 
-        onInquiryOpen={() => setIsInquiryOpen(true)} 
+        onInquiryOpen={() => {}} 
       />
 
       <main>
@@ -116,13 +71,6 @@ function App() {
             <p className="text-sm md:text-lg mb-10 text-white/90 max-w-2xl mx-auto font-light leading-relaxed drop-shadow-md">
               {t('hero.subtitle')}
             </p>
-            <button
-              onClick={() => setIsInquiryOpen(true)}
-              className="group relative bg-luxury-teal text-white px-12 py-5 rounded-full text-xs font-bold tracking-[0.2em] hover:brightness-110 transition-all hover:shadow-[0_20px_50px_rgba(0,168,181,0.3)] active:scale-95 uppercase overflow-hidden"
-            >
-              <span className="relative z-10">{t('hero.cta')}</span>
-              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-            </button>
           </div>
 
           <div className="absolute bottom-12 left-1/2 -translate-x-1/2 animate-bounce hidden md:block opacity-40">
@@ -151,164 +99,8 @@ function App() {
           </div>
         </section>
 
-        {/* Destinations */}
-        <div className="reveal">
-          <Destinations t={t} />
-        </div>
-
-        {/* Premier Services */}
-        <section id="servicios" className="py-32 bg-white reveal">
-          <div className="container mx-auto px-6">
-            <div className="text-center mb-24 max-w-3xl mx-auto">
-              <h2 className="text-4xl md:text-6xl font-bold mb-8 text-slate-900 leading-tight serif">
-                {t('services.section_title')}
-              </h2>
-              <div className="w-24 h-1 bg-luxury-teal mx-auto mb-8"></div>
-              <p className="text-slate-500 text-xl font-light leading-relaxed">
-                {t('services.section_subtitle')}
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
-              {PREMIER_SERVICES.map((service, idx) => (
-                <div key={idx} className="group bg-white p-2 rounded-2xl transition-all duration-500 hover:-translate-y-2">
-                  <div className="relative h-72 mb-8 overflow-hidden rounded-3xl shadow-lg border border-slate-50">
-                    <img src={service.imageUrl} alt={t(service.titleKey)} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
-                    <div className="absolute top-6 right-6 bg-white/95 backdrop-blur-md w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-xl border border-black/5">{service.icon}</div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                  </div>
-                  <div className="px-6">
-                    <h3 className="text-2xl font-bold mb-4 text-slate-900 serif leading-snug">{t(service.titleKey)}</h3>
-                    <p className="text-slate-500 text-sm leading-relaxed font-light">{t(service.descriptionKey)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Founders */}
-        <section id="equipo" className="py-32 bg-slate-50 reveal">
-          <div className="container mx-auto px-6">
-            <div className="text-center mb-24">
-              <p className="text-luxury-teal font-bold text-xs uppercase tracking-[0.4em] mb-4">
-                {t('team.section_subtitle')}
-              </p>
-              <h2 className="text-4xl md:text-6xl font-bold text-slate-900 serif">
-                {t('team.section_title')}
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 mb-20">
-              {TEAM.map((member, idx) => (
-                <div key={idx} className="bg-white p-12 rounded-[2.5rem] shadow-sm border border-slate-100 hover:shadow-2xl transition-all duration-500 group flex flex-col">
-                  <div className="w-20 h-20 bg-slate-100 rounded-2xl mb-10 flex items-center justify-center text-2xl font-bold text-luxury-teal group-hover:bg-luxury-teal group-hover:text-white group-hover:rotate-12 transition-all duration-500">
-                    {member.name.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <h3 className="text-3xl font-bold text-slate-900 mb-2 serif">{member.name}</h3>
-                  <p className="text-luxury-teal font-bold text-[10px] uppercase tracking-[0.3em] mb-8">{t(member.roleKey)}</p>
-                  <p className="text-slate-600 text-base leading-relaxed mb-10 font-light italic">
-                    "{t(member.bioKey)}"
-                  </p>
-                  <div className="pt-8 border-t border-slate-100 flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-400 tracking-widest">{t(member.equityKey)}</span>
-                    <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-luxury-teal hover:text-white cursor-pointer transition-all">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Metrics */}
-        <section id="metricas" className="py-32 bg-slate-900 text-white reveal overflow-hidden">
-          <div className="container mx-auto px-6">
-            <div className="flex flex-col md:flex-row justify-between items-center mb-24 gap-12">
-              <div className="max-w-2xl">
-                <h2 className="text-4xl md:text-6xl font-bold mb-8 serif italic">{t('metrics.title')}</h2>
-                <p className="text-white/40 text-xl font-light">{t('metrics.subtitle')}</p>
-              </div>
-              <div className="bg-white/5 p-2 rounded-2xl flex border border-white/10 backdrop-blur-md">
-                <button
-                  onClick={() => setGrowthScenario('conservative')}
-                  className={`px-10 py-4 rounded-xl text-xs font-bold transition-all uppercase tracking-widest ${growthScenario === 'conservative' ? 'bg-luxury-teal text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
-                >
-                  {t('metrics.conservative')}
-                </button>
-                <button
-                  onClick={() => setGrowthScenario('aggressive')}
-                  className={`px-10 py-4 rounded-xl text-xs font-bold transition-all uppercase tracking-widest ${growthScenario === 'aggressive' ? 'bg-luxury-teal text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
-                >
-                  {t('metrics.aggressive')}
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
-              <div className="lg:col-span-2 space-y-12">
-                <div className="bg-white/5 p-12 rounded-3xl border border-white/10 relative group">
-                  <div className="absolute -top-6 -left-6 w-12 h-12 bg-luxury-teal rounded-full blur-2xl opacity-20 group-hover:opacity-50 transition-all"></div>
-                  <h4 className="text-[10px] font-bold uppercase tracking-[0.5em] text-white/30 mb-16">{t('metrics.chart_label')}</h4>
-                  <div className="space-y-12">
-                    {[
-                      { year: t('metrics.year1'), rev: 1.32, prof: 0.24, margin: 18.7 },
-                      { year: t('metrics.year2'), rev: 3.20, prof: 0.81, margin: 25.5 },
-                      { year: t('metrics.year3'), rev: 5.06, prof: 1.36, margin: 26.9 },
-                      { year: t('metrics.year4'), rev: 5.57, prof: 1.49, margin: 26.8 },
-                      { year: t('metrics.year5'), rev: 6.13, prof: 1.64, margin: 26.7 },
-                    ].map((row, i) => (
-                      <div key={i} className="space-y-4">
-                        <div className="flex justify-between items-end">
-                          <div className="flex flex-col">
-                            <span className="text-xl font-bold serif">{row.year}</span>
-                            <span className="text-[9px] uppercase tracking-widest text-white/20">{t('metrics.margin')}: {row.margin}%</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="block text-luxury-teal font-mono text-xl">${row.rev.toFixed(2)}M {t('metrics.revenue')}</span>
-                            <span className="block text-emerald-400 font-mono text-sm">${row.prof.toFixed(2)}M {t('metrics.profit')}</span>
-                          </div>
-                        </div>
-                        <div className="flex h-3 rounded-full overflow-hidden bg-white/5 p-0.5">
-                          <div style={{ width: `${(row.rev / 6.13) * 100}%` }} className="bg-luxury-teal rounded-full transition-all duration-1000 ease-out"></div>
-                          <div style={{ width: `${(row.prof / 6.13) * 100}%` }} className="bg-emerald-400/30 rounded-full -ml-full transition-all duration-1000 delay-100 ease-out"></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-8">
-                <div className="bg-luxury-teal text-white p-12 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-                  <h4 className="text-lg font-bold mb-8 serif">{t('metrics.profit_title')}</h4>
-                  <div className="space-y-6">
-                    <div className="flex justify-between text-2xl font-bold tracking-widest serif">
-                      <span>$1.64M+</span>
-                    </div>
-                    <div className="h-1 bg-white/20 rounded-full overflow-hidden">
-                      <div className="h-full bg-white w-[100%]"></div>
-                    </div>
-                    <p className="text-sm opacity-60 font-light">{t('metrics.profit_desc')}</p>
-                  </div>
-                </div>
-                <div className="bg-white/5 p-10 rounded-[2.5rem] border border-white/10 backdrop-blur-md">
-                  <h4 className="text-xs font-bold uppercase tracking-widest text-white/40 mb-4">{t('metrics.breakeven_title')}</h4>
-                  <p className="text-4xl font-bold serif">{t('metrics.breakeven_month')}</p>
-                  <div className="mt-4 flex space-x-1">
-                    {[1, 2, 3, 4, 5].map(s => <div key={s} className="h-1 w-full bg-luxury-teal rounded-full"></div>)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Investors */}
-        <Investors t={t} lang={lang} />
-
-        {/* Experiencias - NUEVA SECCIÓN */}
-        <section id="experiencias" className="py-32 bg-gradient-to-br from-slate-900 to-slate-800 text-white relative overflow-hidden reveal">
+        {/* Pre-Launch Registration Section */}
+        <section className="py-32 bg-gradient-to-br from-slate-900 to-slate-800 text-white relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-20 left-20 w-72 h-72 bg-luxury-teal rounded-full blur-3xl"></div>
             <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
@@ -316,70 +108,37 @@ function App() {
           
           <div className="container mx-auto px-6 relative z-10">
             <div className="max-w-4xl mx-auto text-center">
-              <p className="text-luxury-teal font-bold text-xs uppercase tracking-[0.4em] mb-6">
-                {t('experiences.subtitle') || 'Innovación y Tecnología'}
-              </p>
-              <h2 className="text-5xl md:text-7xl font-bold mb-8 serif leading-tight">
-                {t('experiences.title') || 'Experiencias Exclusivas'}
-              </h2>
-              <p className="text-xl text-white/70 mb-16 font-light leading-relaxed max-w-2xl mx-auto">
-                {t('experiences.description') || 'Descubre nuestro catálogo de experiencias de lujo en el Caribe colombiano. Cada una diseñada para superar tus expectativas.'}
-              </p>
-              
-              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-                <a 
-                  href="https://karibbean-luxury-operators-experiences.vercel.app/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group relative bg-luxury-teal text-white px-12 py-6 rounded-full text-sm font-bold tracking-[0.2em] hover:brightness-110 transition-all hover:shadow-[0_20px_50px_rgba(0,168,181,0.4)] active:scale-95 uppercase overflow-hidden inline-flex items-center gap-3"
-                >
-                  <span className="relative z-10">
-                    {t('experiences.cta') || 'Explorar Experiencias'}
-                  </span>
-                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                </a>
+              <div className="w-20 h-20 bg-luxury-teal rounded-full flex items-center justify-center mx-auto mb-8">
+                <span className="text-3xl font-bold text-white">K</span>
               </div>
-
-              <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="bg-white/5 backdrop-blur-md p-8 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
-                  <div className="text-4xl mb-4">🏝️</div>
-                  <h3 className="text-lg font-bold mb-2 serif">
-                    {t('experiences.feature1_title') || '20+ Experiencias'}
-                  </h3>
-                  <p className="text-sm text-white/60">
-                    {t('experiences.feature1_desc') || 'Desde yates hasta expediciones'}
-                  </p>
-                </div>
-                
-                <div className="bg-white/5 backdrop-blur-md p-8 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
-                  <div className="text-4xl mb-4">✨</div>
-                  <h3 className="text-lg font-bold mb-2 serif">
-                    {t('experiences.feature2_title') || 'Servicio Personalizado'}
-                  </h3>
-                  <p className="text-sm text-white/60">
-                    {t('experiences.feature2_desc') || 'Cada detalle adaptado a ti'}
-                  </p>
-                </div>
-                
-                <div className="bg-white/5 backdrop-blur-md p-8 rounded-2xl border border-white/10 hover:bg-white/10 transition-all">
-                  <div className="text-4xl mb-4">🤖</div>
-                  <h3 className="text-lg font-bold mb-2 serif">
-                    {t('experiences.feature3_title') || 'Asistente IA'}
-                  </h3>
-                  <p className="text-sm text-white/60">
-                    {t('experiences.feature3_desc') || 'Chat en vivo para ayudarte'}
-                  </p>
-                </div>
+              <h1 className="text-5xl md:text-7xl font-bold mb-6 serif leading-tight">
+                Coming Soon
+              </h1>
+              <p className="text-xl text-white/70 mb-6 font-light leading-relaxed max-w-2xl mx-auto">
+                Karibbean Luxury Operators is currently finalizing its legal structure (LLC/SAS) 
+                and building the most exclusive ultra-luxury travel platform in the Caribbean.
+              </p>
+              <div className="inline-block px-6 py-2 bg-luxury-teal/20 border border-luxury-teal/50 rounded-full mb-12">
+                <span className="text-luxury-teal text-sm uppercase tracking-wider">Private Aviation · Superyachts · Exclusive Villas · Elite Staffing</span>
+              </div>
+              
+              {/* Google Form */}
+              <div className="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10 max-w-2xl mx-auto">
+                <h3 className="text-2xl font-bold mb-4 serif text-luxury-teal">Register for Early Access</h3>
+                <iframe 
+                  src="https://docs.google.com/forms/d/e/1FAIpQLSdLTLnFDzsqtJHNfj30hM-s7MVEDTb3_4nmaTnP7M9KTvRtzw/viewform?embedded=true" 
+                  width="100%" 
+                  height="550" 
+                  frameBorder="0"
+                  className="rounded-xl"
+                  title="KLO Registration Form"
+                >
+                  Loading…
+                </iframe>
               </div>
             </div>
           </div>
         </section>
-
-        {/* Forward-Looking Statement */}
-        <ForwardLookingStatement />
 
         {/* Footer */}
         <footer id="footer" className="bg-[#0a1518] py-32 text-white overflow-hidden relative border-t border-white/5">
@@ -407,25 +166,15 @@ function App() {
                       <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
                     </svg>
                   </a>
-                  <a href="#" className="text-white/40 hover:text-luxury-teal transition-all transform hover:scale-125 duration-300" title="X">
-                    <svg className="w-7 h-7 fill-current" viewBox="0 0 24 24">
-                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                    </svg>
-                  </a>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-20">
                 <div className="space-y-8">
                   <h4 className="text-xs font-bold uppercase tracking-[0.4em] text-white/20">{t('footer.menu_title')}</h4>
                   <ul className="space-y-4">
-                    {['destinations', 'services', 'investors'].map((item) => (
-                      <li key={item}>
-                        <a href={`#${item === 'destinations' ? 'destinos' : item === 'services' ? 'servicios' : 'inversionistas'}`} 
-                           className="text-white/60 hover:text-white transition-colors">
-                          {t(`nav.${item}`)}
-                        </a>
-                      </li>
-                    ))}
+                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('nav.destinations')}</a></li>
+                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('nav.services')}</a></li>
+                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('nav.investors')}</a></li>
                   </ul>
                 </div>
                 <div className="space-y-8">
@@ -446,9 +195,6 @@ function App() {
           </div>
         </footer>
       </main>
-
-      <AIAssistant t={t} lang={lang} />
-      <InquiryModal isOpen={isInquiryOpen} onClose={() => setIsInquiryOpen(false)} t={t} />
 
       <style>{`
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
