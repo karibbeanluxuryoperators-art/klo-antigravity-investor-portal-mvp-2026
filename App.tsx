@@ -54,24 +54,30 @@ function App() {
       />
 
       <main>
-        {/* Hero Section - FIXED VERSION */}
+        {/* Hero Section - SIMPLE IMG TAG FIX */}
         <section 
           className="relative w-full overflow-hidden bg-slate-900 flex items-center justify-center"
-          style={{ height: '85vh' }}
+          style={{ 
+            height: '85vh',
+            maxHeight: '85vh'
+          }}
         >
-          <div 
-            className="absolute inset-0 z-0"
+          <img
+            src={HERO_STATIC_IMAGE}
+            alt="Luxury Caribbean Yacht"
             style={{
-              backgroundImage: `url('${HERO_STATIC_IMAGE}')`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundAttachment: 'fixed'
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center',
             }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/90"></div>
-          </div>
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/90 z-[1]"></div>
 
-          <div className="relative z-10 container mx-auto px-6 text-center text-white max-w-5xl">
+          <div className="relative z-10 container mx-auto px-6 text-center text-white max-w-5xl flex flex-col items-center justify-center">
             <h1 className="text-3xl md:text-5xl lg:text-6xl mb-6 leading-tight animate-fade-in-up font-bold serif tracking-tight drop-shadow-2xl">
               {t('hero.title')}
             </h1>
@@ -80,7 +86,7 @@ function App() {
             </p>
           </div>
 
-          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 animate-bounce hidden md:block opacity-40">
+          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 animate-bounce hidden md:block opacity-40 z-10">
             <div className="w-px h-24 bg-gradient-to-b from-white to-transparent"></div>
           </div>
         </section>
