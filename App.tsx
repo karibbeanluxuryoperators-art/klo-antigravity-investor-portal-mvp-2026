@@ -54,40 +54,78 @@ function App() {
       />
 
       <main>
-        {/* Hero Section - SIMPLE IMG TAG FIX */}
+        {/* Hero Section - BULLETPROOF FIX */}
         <section 
-          className="relative w-full overflow-hidden bg-slate-900 flex items-center justify-center"
-          style={{ 
-            height: '85vh',
-            maxHeight: '85vh'
-          }}
+          className="relative w-screen h-screen overflow-hidden bg-slate-900"
+          style={{ maxHeight: '100vh' }}
         >
-          <img
-            src={HERO_STATIC_IMAGE}
-            alt="Luxury Caribbean Yacht"
+          <div
             style={{
               position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: 'center',
+              inset: 0,
+              width: '100vw',
+              height: '100vh',
+              overflow: 'hidden',
             }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/90 z-[1]"></div>
-
-          <div className="relative z-10 container mx-auto px-6 text-center text-white max-w-5xl flex flex-col items-center justify-center">
-            <h1 className="text-3xl md:text-5xl lg:text-6xl mb-6 leading-tight animate-fade-in-up font-bold serif tracking-tight drop-shadow-2xl">
-              {t('hero.title')}
-            </h1>
-            <p className="text-sm md:text-lg mb-10 text-white/90 max-w-2xl mx-auto font-light leading-relaxed drop-shadow-md">
-              {t('hero.subtitle')}
-            </p>
+          >
+            <img
+              src={HERO_STATIC_IMAGE}
+              alt="Luxury Caribbean Yacht"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'center',
+                display: 'block',
+              }}
+            />
           </div>
 
-          <div className="absolute bottom-12 left-1/2 -translate-x-1/2 animate-bounce hidden md:block opacity-40 z-10">
-            <div className="w-px h-24 bg-gradient-to-b from-white to-transparent"></div>
+          <div 
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.4), transparent, rgba(0,0,0,0.9))',
+              zIndex: 1,
+            }}
+          ></div>
+
+          <div 
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '2rem',
+            }}
+          >
+            <div style={{ maxWidth: '42rem', textAlign: 'center', color: 'white' }}>
+              <h1 style={{ fontSize: '3.75rem', fontWeight: 'bold', marginBottom: '1.5rem', lineHeight: 1.2, textShadow: '0 20px 25px rgba(0,0,0,0.5)' }} className="serif">
+                {t('hero.title')}
+              </h1>
+              <p style={{ fontSize: '1.125rem', marginBottom: '2.5rem', opacity: 0.9, lineHeight: 1.6, textShadow: '0 10px 15px rgba(0,0,0,0.3)' }}>
+                {t('hero.subtitle')}
+              </p>
+            </div>
+          </div>
+
+          <div 
+            style={{
+              position: 'absolute',
+              bottom: '3rem',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 10,
+              opacity: 0.4,
+              display: 'none',
+              '@media (min-width: 768px)': { display: 'block' }
+            }}
+            className="hidden md:block"
+          >
+            <div style={{ width: '1px', height: '6rem', background: 'linear-gradient(to bottom, white, transparent)' }}></div>
           </div>
         </section>
 
