@@ -54,14 +54,20 @@ function App() {
       />
 
       <main>
-        {/* Hero Section */}
-        <section className="relative h-[85vh] md:h-screen w-full flex items-center justify-center overflow-hidden bg-slate-900">
-          <div className="absolute inset-0 z-0 opacity-100">
-           <img
-  src={HERO_STATIC_IMAGE}
-  alt="Luxury Caribbean Yacht"
-  className="w-full h-full object-cover scale-100 animate-slow-zoom"
-            />
+        {/* Hero Section - FIXED VERSION */}
+        <section 
+          className="relative w-full overflow-hidden bg-slate-900 flex items-center justify-center"
+          style={{ height: '85vh' }}
+        >
+          <div 
+            className="absolute inset-0 z-0"
+            style={{
+              backgroundImage: `url('${HERO_STATIC_IMAGE}')`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundAttachment: 'fixed'
+            }}
+          >
             <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/90"></div>
           </div>
 
