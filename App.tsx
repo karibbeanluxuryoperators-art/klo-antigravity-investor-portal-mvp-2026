@@ -56,8 +56,14 @@ function App() {
       <main>
         {/* Hero Section - BULLETPROOF FIX */}
         <section 
-          className="relative w-screen h-screen overflow-hidden bg-slate-900"
-          style={{ maxHeight: '100vh' }}
+          className="relative overflow-hidden bg-slate-900"
+          style={{ 
+            width: '100%',
+            height: '100vh',
+            maxHeight: '100vh',
+            margin: 0,
+            padding: 0
+          }}
         >
           <div
             style={{
