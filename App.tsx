@@ -53,8 +53,8 @@ function App() {
       />
 
       <main>
-        <Hero />
-
+<Hero t={t} />
+        
         {/* Partners Bar */}
         <section className="py-16 bg-white border-b border-slate-100 overflow-hidden">
           <div className="container mx-auto px-6">
