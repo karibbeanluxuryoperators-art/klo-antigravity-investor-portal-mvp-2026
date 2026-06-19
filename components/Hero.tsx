@@ -1,38 +1,88 @@
-
 import React from 'react';
 
-const Hero: React.FC = () => {
+interface HeroProps {
+  t: (key: string) => any;
+}
+
+const HERO_STATIC_IMAGE = "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&q=80&w=1920";
+
+const Hero: React.FC<HeroProps> = ({ t }) => {
   return (
-    <section className="relative h-screen w-full flex items-center justify-center overflow-hidden">
-      {/* Background Image with Overlay */}
-      <div className="absolute inset-0 z-0">
-        <img 
-          src="https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&q=80&w=2000" 
-          alt="Caribbean Island" 
-          className="w-full h-full object-cover"
+    <section 
+      className="relative overflow-hidden bg-slate-900"
+      style={{ 
+        width: '100%',
+        height: '100vh',
+        maxHeight: '100vh',
+        margin: 0,
+        padding: 0
+      }}
+    >
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100vw',
+          height: '100vh',
+          overflow: 'hidden',
+        }}
+      >
+        <img
+          src={HERO_STATIC_IMAGE}
+          alt="Luxury Caribbean Yacht"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+            display: 'block',
+          }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60"></div>
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 container mx-auto px-6 text-center text-white max-w-5xl">
-        <h1 className="text-5xl md:text-7xl lg:text-8xl mb-6 leading-tight animate-fade-in-up">
-          Descubra el Caribe Colombiano con un Lujo Incomparable
-        </h1>
-        <p className="text-lg md:text-xl mb-10 text-white/90 max-w-3xl mx-auto font-light leading-relaxed">
-          Como una empresa data-driven y pionera en IA, nos especializamos en crear experiencias de viaje a medida, 
-          ofreciendo acceso exclusivo a islas privadas, villas de lujo y yates.
-        </p>
-        <button className="bg-luxury-teal text-white px-10 py-4 rounded-sm text-lg font-bold tracking-widest hover:brightness-110 transition-all hover:shadow-xl active:scale-95 uppercase">
-          Empieza a Planificar
-        </button>
+      <div 
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.4), transparent, rgba(0,0,0,0.9))',
+          zIndex: 1,
+        }}
+      ></div>
+
+      <div 
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem',
+        }}
+      >
+        <div style={{ maxWidth: '42rem', textAlign: 'center', color: 'white' }}>
+          <h1 style={{ fontSize: '3.75rem', fontWeight: 'bold', marginBottom: '1.5rem', lineHeight: 1.2, textShadow: '0 20px 25px rgba(0,0,0,0.5)' }} className="serif">
+            {t('hero.title')}
+          </h1>
+          <p style={{ fontSize: '1.125rem', marginBottom: '2.5rem', opacity: 0.9, lineHeight: 1.6, textShadow: '0 10px 15px rgba(0,0,0,0.3)' }}>
+            {t('hero.subtitle')}
+          </p>
+        </div>
       </div>
-      
-      {/* Floating Indicator */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-        </svg>
+
+      <div 
+        style={{
+          position: 'absolute',
+          bottom: '3rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 10,
+          opacity: 0.4,
+        }}
+        className="hidden md:block"
+      >
+        <div style={{ width: '1px', height: '6rem', background: 'linear-gradient(to bottom, white, transparent)' }}></div>
       </div>
     </section>
   );
