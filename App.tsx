@@ -3,11 +3,11 @@ import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import { TRANSLATIONS, PARTNERS, getTranslation } from './constants';
 import { Language } from './types';
+import AIAssistant from './components/AIAssistant';
 
 function App() {
   const [lang, setLang] = useState<Language>('es');
   const [isReady, setIsReady] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
 
   // Initialize language from localStorage on mount
   useEffect(() => {
@@ -115,12 +115,14 @@ function App() {
                 {/* Private Charters CTA */}
                 <div className="mt-8 pt-8 border-t border-white/10">
                   <p className="text-white/50 text-xs uppercase tracking-[0.3em] mb-4">Private Aviation Inquiries</p>
-                  <button
-                    onClick={() => setChatOpen(true)}
-                    className="w-full py-4 px-6 bg-[#B8963E]/10 border border-[#B8963E]/40 hover:bg-[#B8963E]/20 hover:border-[#B8963E]/70 transition-all duration-500 text-[#B8963E] text-xs uppercase tracking-[0.4em] font-medium"
+                  <a
+                    href="https://klo-private-charters.vercel.app/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full py-4 px-6 bg-[#B8963E]/10 border border-[#B8963E]/40 hover:bg-[#B8963E]/20 hover:border-[#B8963E]/70 transition-all duration-500 text-[#B8963E] text-xs uppercase tracking-[0.4em] font-medium text-center"
                   >
                     ✈ Speak with Maria — Private Charters Concierge
-                  </button>
+                  </a>
                 </div>
               </div>
             </div>
@@ -189,81 +191,8 @@ function App() {
         </footer>
       </main>
 
-      {/* ── MARIA CHAT WIDGET ─────────────────────────────────────────── */}
-
-      {/* Floating button — always visible */}
-      <button
-        onClick={() => setChatOpen(prev => !prev)}
-        aria-label="Open Private Charters Concierge"
-        style={{
-          position: 'fixed',
-          bottom: '28px',
-          right: '28px',
-          zIndex: 9999,
-          width: '60px',
-          height: '60px',
-          borderRadius: '0px',
-          background: '#B8963E',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 8px 32px rgba(184,150,62,0.35)',
-          transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-        }}
-        onMouseEnter={e => {
-          (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.08)';
-          (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 48px rgba(184,150,62,0.55)';
-        }}
-        onMouseLeave={e => {
-          (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
-          (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 32px rgba(184,150,62,0.35)';
-        }}
-      >
-        {chatOpen ? (
-          // X icon when open
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        ) : (
-          // Plane icon when closed
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="#0A0A0A">
-            <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
-          </svg>
-        )}
-      </button>
-
-      {/* Chat panel — slides up from bottom-right */}
-      {chatOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '104px',
-            right: '28px',
-            zIndex: 9998,
-            width: 'min(420px, calc(100vw - 40px))',
-            height: 'min(640px, calc(100vh - 140px))',
-            boxShadow: '0 32px 80px rgba(0,0,0,0.7)',
-            border: '1px solid rgba(184,150,62,0.18)',
-            background: '#0A0A0A',
-            animation: 'klo-slide-up 0.4s cubic-bezier(0.16,1,0.3,1) forwards',
-          }}
-        >
-          <iframe
-            src="https://klo-private-charters.vercel.app/"
-            title="KLO Private Charters — Maria Concierge"
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              display: 'block',
-            }}
-            allow="clipboard-write"
-          />
-        </div>
-      )}
+      {/* ── MARIA AI CONCIERGE ───────────────────────────────────────── */}
+      <AIAssistant t={t} lang={lang} />
 
       <style>{`
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -274,7 +203,6 @@ function App() {
         @keyframes fade-in-up { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slow-zoom { from { transform: scale(1); } to { transform: scale(1.15); } }
         .animate-slow-zoom { animation: slow-zoom 30s ease-in-out infinite alternate; }
-        @keyframes klo-slide-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
         html { scroll-behavior: smooth; }
       `}</style>
     </div>

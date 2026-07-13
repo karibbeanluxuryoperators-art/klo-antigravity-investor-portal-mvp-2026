@@ -1,3 +1,9 @@
+/**
+ * AIAssistant — KLO Investor Portal
+ * Restyled to match the KLO dark luxury design system.
+ * Glassmorphism, teal accents, Cormorant Garamond, gold highlights.
+ */
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { GoogleGenAI, Modality, LiveServerMessage } from "@google/genai";
 import { Language } from '../types';
@@ -20,140 +26,90 @@ interface AIAssistantProps {
   lang: Language;
 }
 
-// Helper functions for Live API as per requirements
+// ── Audio helpers (unchanged) ──────────────────────────────────────
 function encode(bytes: Uint8Array) {
   let binary = '';
   const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
+  for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
   return btoa(binary);
 }
-
 function decode(base64: string) {
   const binaryString = atob(base64);
   const len = binaryString.length;
   const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
+  for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
   return bytes;
 }
-
-async function decodeAudioData(
-  data: Uint8Array,
-  ctx: AudioContext,
-  sampleRate: number,
-  numChannels: number,
-): Promise<AudioBuffer> {
+async function decodeAudioData(data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number) {
   const dataInt16 = new Int16Array(data.buffer);
   const frameCount = dataInt16.length / numChannels;
   const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-
   for (let channel = 0; channel < numChannels; channel++) {
     const channelData = buffer.getChannelData(channel);
-    for (let i = 0; i < frameCount; i++) {
-      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-    }
+    for (let i = 0; i < frameCount; i++) channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
   }
   return buffer;
 }
 
+// ── Component ─────────────────────────────────────────────────────
 const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLiveActive, setIsLiveActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Refs for Live Audio logic
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const sessionRef = useRef<any>(null);
   const inputAudioContextRef = useRef<AudioContext | null>(null);
   const outputAudioContextRef = useRef<AudioContext | null>(null);
   const nextStartTimeRef = useRef<number>(0);
   const audioSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
-  
-  // Refs for real-time transcription
-  const currentInputTranscriptionRef = useRef('');
-  const currentOutputTranscriptionRef = useRef('');
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, isLoading, isLiveActive]);
 
   const stopLiveSession = useCallback(() => {
-    if (sessionRef.current) {
-      sessionRef.current.close();
-      sessionRef.current = null;
-    }
-    if (inputAudioContextRef.current) {
-      inputAudioContextRef.current.close();
-      inputAudioContextRef.current = null;
-    }
-    if (outputAudioContextRef.current) {
-      outputAudioContextRef.current.close();
-      outputAudioContextRef.current = null;
-    }
-    audioSourcesRef.current.forEach(source => source.stop());
+    if (sessionRef.current) { sessionRef.current.close(); sessionRef.current = null; }
+    if (inputAudioContextRef.current) { inputAudioContextRef.current.close(); inputAudioContextRef.current = null; }
+    if (outputAudioContextRef.current) { outputAudioContextRef.current.close(); outputAudioContextRef.current = null; }
+    audioSourcesRef.current.forEach(s => s.stop());
     audioSourcesRef.current.clear();
     setIsLiveActive(false);
     setIsLoading(false);
   }, []);
 
   const startLiveSession = async () => {
-    if (isLiveActive) {
-      stopLiveSession();
-      return;
-    }
-
+    if (isLiveActive) { stopLiveSession(); return; }
     setIsLoading(true);
     setIsLiveActive(true);
-    
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      
-      // Initialize Audio Contexts
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       inputAudioContextRef.current = inputCtx;
       outputAudioContextRef.current = outputCtx;
       nextStartTimeRef.current = 0;
-
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
       const sessionPromise = ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         callbacks: {
           onopen: () => {
-            console.debug('Live Session Opened');
             setIsLoading(false);
-            
-            // Stream audio from mic
             const source = inputCtx.createMediaStreamSource(stream);
             const scriptProcessor = inputCtx.createScriptProcessor(4096, 1, 1);
             scriptProcessor.onaudioprocess = (e) => {
               const inputData = e.inputBuffer.getChannelData(0);
-              const l = inputData.length;
-              const int16 = new Int16Array(l);
-              for (let i = 0; i < l; i++) {
-                int16[i] = inputData[i] * 32768;
-              }
-              const pcmBlob = {
-                data: encode(new Uint8Array(int16.buffer)),
-                mimeType: 'audio/pcm;rate=16000',
-              };
-              sessionPromise.then(session => {
-                session.sendRealtimeInput({ media: pcmBlob });
-              });
+              const int16 = new Int16Array(inputData.length);
+              for (let i = 0; i < inputData.length; i++) int16[i] = inputData[i] * 32768;
+              const pcmBlob = { data: encode(new Uint8Array(int16.buffer)), mimeType: 'audio/pcm;rate=16000' };
+              sessionPromise.then(session => { session.sendRealtimeInput({ media: pcmBlob }); });
             };
             source.connect(scriptProcessor);
             scriptProcessor.connect(inputCtx.destination);
           },
           onmessage: async (message: LiveServerMessage) => {
-            // Handle Transcriptions
             if (message.serverContent?.outputTranscription) {
               currentOutputTranscriptionRef.current += message.serverContent.outputTranscription.text;
               updateLastMessage('model', currentOutputTranscriptionRef.current);
@@ -161,18 +117,14 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
               currentInputTranscriptionRef.current += message.serverContent.inputTranscription.text;
               updateLastMessage('user', currentInputTranscriptionRef.current);
             }
-
             if (message.serverContent?.turnComplete) {
               currentInputTranscriptionRef.current = '';
               currentOutputTranscriptionRef.current = '';
             }
-
-            // Handle Audio Data
             const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
             if (base64Audio && outputAudioContextRef.current) {
               const ctx = outputAudioContextRef.current;
               nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime);
-              
               const audioBuffer = await decodeAudioData(decode(base64Audio), ctx, 24000, 1);
               const source = ctx.createBufferSource();
               source.buffer = audioBuffer;
@@ -182,36 +134,25 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
               nextStartTimeRef.current += audioBuffer.duration;
               audioSourcesRef.current.add(source);
             }
-
-            // Handle Interruption
             if (message.serverContent?.interrupted) {
               audioSourcesRef.current.forEach(s => s.stop());
               audioSourcesRef.current.clear();
               nextStartTimeRef.current = 0;
             }
           },
-          onerror: (e) => {
-            console.error('Live session error:', e);
-            stopLiveSession();
-          },
-          onclose: () => {
-            console.debug('Live session closed');
-            stopLiveSession();
-          }
+          onerror: (e) => { console.error('Live session error:', e); stopLiveSession(); },
+          onclose: () => { stopLiveSession(); }
         },
         config: {
           responseModalities: [Modality.AUDIO],
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
-          },
-          systemInstruction: `You are María Fernanda, the exclusive AI Concierge for Karibbean Luxury Operators (KLO). 
-          Respond with elegance, warmth, and precision. You are in a real-time voice conversation in ${lang}. 
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+          systemInstruction: `You are María Fernanda, the exclusive AI Concierge for Karibbean Luxury Operators (KLO).
+          Respond with elegance, warmth, and precision. You are in a real-time voice conversation in ${lang}.
           Always stay in character. Keep responses concise for natural conversation.`,
           outputAudioTranscription: {},
           inputAudioTranscription: {},
         }
       });
-
       sessionRef.current = await sessionPromise;
     } catch (err) {
       console.error("Failed to start live session:", err);
@@ -220,12 +161,13 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
     }
   };
 
+  const currentInputTranscriptionRef = useRef('');
+  const currentOutputTranscriptionRef = useRef('');
+
   const updateLastMessage = (role: 'user' | 'model', text: string) => {
     setMessages(prev => {
       const last = prev[prev.length - 1];
-      if (last && last.role === role && last.isLive) {
-        return [...prev.slice(0, -1), { ...last, text }];
-      }
+      if (last && last.role === role && last.isLive) return [...prev.slice(0, -1), { ...last, text }];
       return [...prev, { role, text, isLive: true }];
     });
   };
@@ -233,70 +175,37 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
   const getUserLocation = (): Promise<GeolocationPosition | null> => {
     return new Promise((resolve) => {
       if (!navigator.geolocation) return resolve(null);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve(pos),
-        () => resolve(null),
-        { timeout: 5000 }
-      );
+      navigator.geolocation.getCurrentPosition((pos) => resolve(pos), () => resolve(null), { timeout: 5000 });
     });
   };
 
   const handleSendText = async (overrideInput?: string) => {
     const textToSend = overrideInput || input;
     if (!textToSend.trim() || isLoading) return;
-    
     const userMessage: Message = { role: 'user', text: textToSend };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
-
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const location = await getUserLocation();
-      
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: [...messages, userMessage].map(m => ({
-          role: m.role === 'user' ? 'user' : 'model',
-          parts: [{ text: m.text }]
-        })),
+        contents: [...messages, userMessage].map(m => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.text }] })),
         config: {
-          systemInstruction: `You are María Fernanda, the exclusive AI Concierge for KLO. Respond in ${lang}. 
-          You have access to Google Maps grounding to provide real-time recommendations for luxury travel, restaurants, and hidden gems in Colombia. 
+          systemInstruction: `You are María Fernanda, the exclusive AI Concierge for KLO. Respond in ${lang}.
+          You have access to Google Maps grounding to provide real-time recommendations for luxury travel, restaurants, and hidden gems in Colombia.
           When providing locations, always include why they are special for an ultra-luxury traveler.`,
           tools: [{ googleMaps: {} }],
-          ...(location && {
-            toolConfig: {
-              retrievalConfig: {
-                latLng: {
-                  latitude: location.coords.latitude,
-                  longitude: location.coords.longitude
-                }
-              }
-            }
-          })
+          ...(location && { toolConfig: { retrievalConfig: { latLng: { latitude: location.coords.latitude, longitude: location.coords.longitude } } } })
         }
       });
-
       const groundingSources: GroundingSource[] = [];
       const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-      if (chunks) {
-        chunks.forEach((chunk: any) => {
-          if (chunk.maps) {
-            groundingSources.push({
-              title: chunk.maps.title,
-              url: chunk.maps.uri,
-              snippet: chunk.maps.placeAnswerSources?.[0]?.reviewSnippets?.[0]?.text
-            });
-          }
-        });
-      }
-
-      setMessages(prev => [...prev, { 
-        role: 'model', 
-        text: response.text || "...",
-        sources: groundingSources
-      }]);
+      if (chunks) chunks.forEach((chunk: any) => {
+        if (chunk.maps) groundingSources.push({ title: chunk.maps.title, url: chunk.maps.uri, snippet: chunk.maps.placeAnswerSources?.[0]?.reviewSnippets?.[0]?.text });
+      });
+      setMessages(prev => [...prev, { role: 'model', text: response.text || "...", sources: groundingSources }]);
     } catch (e) {
       console.error(e);
       setMessages(prev => [...prev, { role: 'model', text: "Lo siento, tuve un problema conectando con mis servicios de mapas. ¿Podrías intentar de nuevo?" }]);
@@ -309,70 +218,196 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
 
   return (
     <div className="fixed bottom-8 right-8 z-50">
+
+      {/* ── Floating Trigger Button ── */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          aria-label="Open Maria — KLO AI Concierge"
+          className="group relative flex items-center justify-center cursor-pointer"
+          style={{
+            width: '64px', height: '64px',
+            background: '#B8963E',
+            border: 'none',
+            borderRadius: '0px',
+            boxShadow: '0 8px 32px rgba(184,150,62,0.40)',
+            transition: 'box-shadow 0.4s ease, transform 0.3s ease',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.08)';
+            (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 16px 48px rgba(184,150,62,0.60)';
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
+            (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 32px rgba(184,150,62,0.40)';
+          }}
+        >
+          {/* Online dot */}
+          <div
+            className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#0a1518] z-10"
+            style={{ background: '#00a8b5' }}
+          />
+          {/* Pulse ring */}
+          <div
+            className="absolute inset-0 animate-ping opacity-30"
+            style={{ background: 'rgba(184,150,62,0.15)', animationDuration: '2s' }}
+          />
+          {/* Chat icon */}
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0A0A0A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="group-hover:rotate-12 transition-transform duration-500">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </button>
+      )}
+
+      {/* ── Chat Panel ── */}
       {isOpen && (
-        <div className="bg-white rounded-3xl shadow-2xl w-80 md:w-[28rem] mb-6 border border-slate-100 overflow-hidden flex flex-col animate-scale-in">
-          {/* Header */}
-          <div className="bg-[#1a2e35] p-6 text-white flex justify-between items-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-luxury-teal/10 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-            <div className="flex items-center space-x-4 relative z-10">
-              <div className="relative">
-                <div className={`w-14 h-14 rounded-2xl bg-luxury-teal flex items-center justify-center font-bold text-lg shadow-inner overflow-hidden border-2 transition-all duration-500 ${isLiveActive ? 'border-luxury-teal scale-110' : 'border-white/20'}`}>
-                   <img src="https://images.pexels.com/photos/1181519/pexels-photo-1181519.jpeg?auto=compress&cs=tinysrgb&w=150" alt="MF" className="w-full h-full object-cover" />
+        <div
+          className="w-80 md:w-[28rem] mb-6 overflow-hidden flex flex-col"
+          style={{
+            borderRadius: '0px',
+            border: '1px solid rgba(184,150,62,0.18)',
+            background: '#0a1518',
+            boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 32px 80px rgba(0,0,0,0.80), 0 0 60px rgba(0,168,181,0.04)',
+            animation: 'klo-slide-up 0.38s cubic-bezier(0.16,1,0.3,1) forwards',
+          }}
+        >
+          {/* Top gold hairline */}
+          <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent 0%, rgba(184,150,62,0.35) 50%, transparent 100%)' }} />
+
+          {/* Teal glow */}
+          <div style={{ position: 'absolute', top: 0, right: 0, width: '160px', height: '160px', background: 'radial-gradient(circle, rgba(0,168,181,0.08) 0%, transparent 70%)', filter: 'blur(8px)', pointerEvents: 'none' }} />
+
+          {/* ── Header ── */}
+          <div
+            style={{
+              padding: '1.25rem 1.5rem',
+              background: 'rgba(26,46,53,0.60)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              borderBottom: '1px solid rgba(0,168,181,0.10)',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              {/* Avatar */}
+              <div style={{ position: 'relative' }}>
+                <div
+                  style={{
+                    width: '44px', height: '44px',
+                    borderRadius: '0px',
+                    overflow: 'hidden',
+                    border: isLiveActive ? '2px solid #00a8b5' : '2px solid rgba(184,150,62,0.30)',
+                    transition: 'border-color 0.5s ease',
+                  }}
+                >
+                  <img
+                    src="https://images.pexels.com/photos/1181519/pexels-photo-1181519.jpeg?auto=compress&cs=tinysrgb&w=150"
+                    alt="María Fernanda"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
                 </div>
+                {/* Live / Online indicator */}
                 {isLiveActive ? (
-                   <div className="absolute -bottom-1 -right-1 flex space-x-0.5 items-center bg-red-500 px-1.5 py-0.5 rounded-full border-2 border-[#1a2e35] animate-pulse">
-                      <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                      <span className="text-[7px] font-black uppercase tracking-tighter">LIVE</span>
-                   </div>
+                  <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', display: 'flex', alignItems: 'center', gap: '3px', background: '#ef4444', padding: '2px 5px', borderRadius: '20px', border: '2px solid #0a1518' }}>
+                    <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'white', animation: 'pulse 1s infinite' }} />
+                    <span style={{ fontSize: '7px', fontWeight: 900, color: 'white', letterSpacing: '0.05em' }}>LIVE</span>
+                  </div>
                 ) : (
-                  <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-400 rounded-full border-2 border-[#1a2e35]"></div>
+                  <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '10px', height: '10px', borderRadius: '50%', background: '#00a8b5', border: '2px solid #0a1518' }} />
                 )}
               </div>
+
+              {/* Name + role */}
               <div>
-                <h4 className="font-bold leading-tight text-lg serif">{t('assistant.name')}</h4>
-                <p className="text-[9px] opacity-60 uppercase tracking-[0.2em] font-black">{isLiveActive ? 'Conversación en Tiempo Real' : t('assistant.role')}</p>
+                <h4 style={{ fontFamily: '"Cormorant Garamond", Georgia, serif', fontWeight: 300, fontSize: '17px', color: 'rgba(244,239,230,0.95)', letterSpacing: '-0.01em', lineHeight: 1.1, marginBottom: '2px' }}>
+                  María Fernanda
+                </h4>
+                <p style={{ fontFamily: '"Inter", sans-serif', fontSize: '8px', fontWeight: 500, color: isLiveActive ? '#00a8b5' : 'rgba(244,239,230,0.30)', letterSpacing: '0.25em', textTransform: 'uppercase' }}>
+                  {isLiveActive ? 'En Tiempo Real' : t('assistant.role')}
+                </p>
               </div>
             </div>
-            <button onClick={() => { setIsOpen(false); if(isLiveActive) stopLiveSession(); }} className="text-white/40 hover:text-white transition-colors p-2 bg-white/5 rounded-full">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+
+            {/* Close button */}
+            <button
+              onClick={() => { setIsOpen(false); if (isLiveActive) stopLiveSession(); }}
+              style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'background 0.2s ease' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.10)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(244,239,230,0.50)" strokeWidth="2" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
           </div>
-          
-          {/* Chat area */}
-          <div ref={scrollRef} className="p-8 h-[28rem] overflow-y-auto bg-slate-50 text-sm text-slate-700 space-y-8 scroll-smooth">
+
+          {/* ── Messages Area ── */}
+          <div
+            ref={scrollRef}
+            style={{
+              flex: 1, minHeight: '320px', maxHeight: '380px',
+              overflowY: 'auto', padding: '1.5rem',
+              background: '#0a1518',
+              display: 'flex', flexDirection: 'column', gap: '1.5rem',
+            }}
+            className="custom-scrollbar"
+          >
+            {/* Initial greeting */}
             {messages.length === 0 && (
-              <div className="bg-white p-6 rounded-3xl rounded-tl-none shadow-sm border border-slate-100 max-w-[85%] animate-fade-in-up">
-                <p className="font-light leading-relaxed">{t('assistant.greeting')}</p>
+              <div style={{ padding: '1.25rem', background: 'rgba(26,46,53,0.50)', backdropFilter: 'blur(12px)', border: '1px solid rgba(0,168,181,0.10)', borderRadius: '0px', maxWidth: '85%', animation: 'klo-fade-in 0.6s ease forwards' }}>
+                <p style={{ fontFamily: '"Inter", sans-serif', fontWeight: 300, fontSize: '13px', lineHeight: 1.7, color: 'rgba(244,239,230,0.75)' }}>
+                  {t('assistant.greeting')}
+                </p>
               </div>
             )}
-            
+
             {messages.map((m, i) => (
-              <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
-                <div className={`p-5 rounded-3xl shadow-sm border border-slate-100 max-w-[90%] transition-all ${
-                  m.role === 'user' ? 'bg-luxury-teal text-white rounded-tr-none' : 'bg-white text-slate-700 rounded-tl-none'
-                }`}>
-                  <p className="font-light leading-relaxed whitespace-pre-wrap">{m.text || "..."}</p>
-                  
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <div
+                  style={{
+                    padding: '0.875rem 1.125rem',
+                    maxWidth: '88%',
+                    borderRadius: '0px',
+                    background: m.role === 'user'
+                      ? 'rgba(0,168,181,0.12)'
+                      : 'rgba(26,46,53,0.60)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    border: m.role === 'user'
+                      ? '1px solid rgba(0,168,181,0.20)'
+                      : '1px solid rgba(255,255,255,0.05)',
+                    color: m.role === 'user' ? 'rgba(244,239,230,0.95)' : 'rgba(244,239,230,0.80)',
+                  }}
+                >
+                  <p style={{ fontFamily: '"Inter", sans-serif', fontWeight: 300, fontSize: '13px', lineHeight: 1.7, letterSpacing: '0.01em', whiteSpace: 'pre-wrap' }}>
+                    {m.text || "..."}
+                  </p>
+
+                  {/* Grounding sources */}
                   {m.sources && m.sources.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
-                      <p className="text-[10px] uppercase tracking-widest font-black text-slate-400">Map Connections</p>
+                    <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      <p style={{ fontFamily: '"Inter", sans-serif', fontSize: '8px', fontWeight: 700, color: 'rgba(184,150,62,0.60)', letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                        Conexiones de Mapa
+                      </p>
                       {m.sources.map((src, si) => (
-                        <a 
-                          key={si} 
-                          href={src.url} 
-                          target="_blank" 
+                        <a
+                          key={si}
+                          href={src.url}
+                          target="_blank"
                           rel="noopener noreferrer"
-                          className="block bg-slate-50 p-3 rounded-xl border border-slate-200 hover:border-luxury-teal transition-all group/source"
+                          style={{ display: 'block', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,168,181,0.15)', marginBottom: '0.375rem', textDecoration: 'none', transition: 'border-color 0.2s ease' }}
+                          onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(0,168,181,0.40)'; }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(0,168,181,0.15)'; }}
                         >
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="font-bold text-slate-900 text-xs">{src.title}</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-luxury-teal opacity-0 group-hover/source:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                            <span style={{ fontFamily: '"Inter", sans-serif', fontWeight: 600, fontSize: '11px', color: 'rgba(244,239,230,0.90)' }}>{src.title}</span>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#00a8b5" strokeWidth="2" strokeLinecap="round">
+                              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
                             </svg>
                           </div>
-                          {src.snippet && <p className="text-[10px] text-slate-500 line-clamp-2 italic">"{src.snippet}"</p>}
+                          {src.snippet && (
+                            <p style={{ fontFamily: '"Inter", sans-serif', fontSize: '10px', color: 'rgba(244,239,230,0.35)', fontStyle: 'italic', lineHeight: 1.4 }}>"{src.snippet}"</p>
+                          )}
                         </a>
                       ))}
                     </div>
@@ -381,110 +416,177 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
               </div>
             ))}
 
-            {isLiveActive && !messages[messages.length-1]?.text && (
-              <div className="flex justify-center py-4">
-                <div className="flex items-center space-x-2 bg-luxury-teal/10 px-4 py-2 rounded-full border border-luxury-teal/20">
-                  <div className="flex space-x-1">
-                    <div className="w-1.5 h-3 bg-luxury-teal rounded-full animate-[voice-wave_0.5s_ease-in-out_infinite]"></div>
-                    <div className="w-1.5 h-4 bg-luxury-teal rounded-full animate-[voice-wave_0.7s_ease-in-out_infinite_0.1s]"></div>
-                    <div className="w-1.5 h-2 bg-luxury-teal rounded-full animate-[voice-wave_0.6s_ease-in-out_infinite_0.2s]"></div>
+            {/* Live listening indicator */}
+            {isLiveActive && (!messages[messages.length - 1]?.text) && (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(0,168,181,0.10)', padding: '0.5rem 1rem', border: '1px solid rgba(0,168,181,0.20)', borderRadius: '0px' }}>
+                  <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                    {[0.5, 0.7, 0.6].map((delay, idx) => (
+                      <div key={idx} style={{ width: '4px', height: `${8 + idx * 3}px`, background: '#00a8b5', borderRadius: '2px', animation: `voice-wave 0.6s ease-in-out infinite ${delay}s` }} />
+                    ))}
                   </div>
-                  <span className="text-[10px] text-luxury-teal font-black uppercase tracking-widest">Escuchando...</span>
+                  <span style={{ fontFamily: '"Inter", sans-serif', fontSize: '9px', fontWeight: 700, color: '#00a8b5', letterSpacing: '0.20em', textTransform: 'uppercase' }}>Escuchando...</span>
                 </div>
               </div>
             )}
 
+            {/* Loading dots */}
             {isLoading && !isLiveActive && (
-              <div className="flex justify-start">
-                <div className="bg-white p-5 rounded-3xl rounded-tl-none shadow-sm border border-slate-100 flex space-x-1.5">
-                  <div className="w-2 h-2 bg-luxury-teal rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-luxury-teal rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                  <div className="w-2 h-2 bg-luxury-teal rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+              <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: '5px', alignItems: 'center', background: 'rgba(26,46,53,0.60)', padding: '0.75rem 1rem', border: '1px solid rgba(0,168,181,0.15)' }}>
+                  {[0, -0.15, -0.30].map((delay, idx) => (
+                    <div key={idx} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00a8b5', animation: `pulse 1s ease infinite ${delay}s` }} />
+                  ))}
                 </div>
               </div>
             )}
           </div>
 
-          {/* Input Area */}
-          <div className="p-6 border-t border-slate-100 bg-white">
-            {messages.length === 0 && !isLiveActive && (
-              <div className="mb-6 flex flex-wrap gap-2">
-                {suggestionList.map((s: string, i: number) => (
-                  <button 
-                    key={i} 
-                    onClick={() => handleSendText(s)}
-                    className="bg-slate-50 border border-slate-200 px-4 py-2 rounded-full text-[10px] font-bold text-slate-500 hover:border-luxury-teal hover:text-luxury-teal transition-all uppercase tracking-widest"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="flex space-x-3 items-center">
-              <button 
-                onClick={startLiveSession}
-                className={`p-4 rounded-2xl transition-all duration-500 shadow-lg active:scale-90 flex-shrink-0 ${isLiveActive ? 'bg-red-500 text-white shadow-red-200 ring-4 ring-red-50' : 'bg-slate-100 text-slate-400 hover:bg-luxury-teal hover:text-white hover:shadow-luxury-teal/20'}`}
-                title={isLiveActive ? "Stop Live Session" : "Start Live Voice Chat"}
-              >
-                {isLiveActive ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                  </svg>
-                )}
-              </button>
-              
-              <div className="flex-grow relative group">
-                <input 
-                  type="text" 
-                  value={input}
-                  disabled={isLiveActive}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendText()}
-                  placeholder={isLiveActive ? "Habla con María Fernanda..." : t('assistant.placeholder')} 
-                  className="w-full bg-slate-100 border-none rounded-2xl px-6 py-4 text-sm focus:ring-2 focus:ring-luxury-teal outline-none transition-all placeholder:text-slate-400 disabled:opacity-50"
-                />
-              </div>
-
-              {!isLiveActive && (
-                <button 
-                  onClick={() => handleSendText()}
-                  disabled={isLoading || !input.trim()}
-                  className="bg-luxury-teal text-white p-4 rounded-2xl hover:brightness-110 shadow-lg shadow-luxury-teal/20 active:scale-90 transition-all disabled:opacity-50 disabled:grayscale"
+          {/* ── Suggestions ── */}
+          {messages.length === 0 && !isLiveActive && suggestionList.length > 0 && (
+            <div style={{ padding: '0.75rem 1.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', background: '#0a1518', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+              {suggestionList.map((s: string, i: number) => (
+                <button
+                  key={i}
+                  onClick={() => handleSendText(s)}
+                  style={{
+                    fontFamily: '"Inter", sans-serif', fontSize: '9px', fontWeight: 600,
+                    letterSpacing: '0.20em', textTransform: 'uppercase',
+                    padding: '0.5rem 0.875rem',
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    color: 'rgba(244,239,230,0.40)',
+                    cursor: 'pointer', transition: 'all 0.3s ease',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'rgba(0,168,181,0.08)';
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(0,168,181,0.30)';
+                    (e.currentTarget as HTMLButtonElement).style.color = '#00a8b5';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.03)';
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.08)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'rgba(244,239,230,0.40)';
+                  }}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                  </svg>
+                  {s}
                 </button>
-              )}
+              ))}
             </div>
+          )}
+
+          {/* ── Input Area ── */}
+          <div style={{
+            padding: '1.25rem 1.5rem',
+            background: 'rgba(10,21,24,0.80)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+            display: 'flex', gap: '0.75rem', alignItems: 'center',
+          }}>
+            {/* Mic button */}
+            <button
+              onClick={startLiveSession}
+              style={{
+                width: '44px', height: '44px', flexShrink: 0, borderRadius: '0px',
+                background: isLiveActive ? '#ef4444' : 'rgba(255,255,255,0.05)',
+                border: isLiveActive ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.4s ease',
+                boxShadow: isLiveActive ? '0 0 0 4px rgba(239,68,68,0.15)' : 'none',
+              }}
+            >
+              {isLiveActive ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none" strokeWidth="2" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(244,239,230,0.40)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+                </svg>
+              )}
+            </button>
+
+            {/* Text input */}
+            <div style={{ flex: 1, position: 'relative' }}>
+              <input
+                type="text"
+                value={input}
+                disabled={isLiveActive}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSendText()}
+                placeholder={isLiveActive ? "Habla con María Fernanda..." : t('assistant.placeholder')}
+                style={{
+                  width: '100%',
+                  padding: '0.875rem 1.25rem',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '0px',
+                  color: 'rgba(244,239,230,0.90)',
+                  fontFamily: '"Inter", sans-serif',
+                  fontWeight: 300,
+                  fontSize: '13px',
+                  outline: 'none',
+                  transition: 'border-color 0.3s ease',
+                }}
+                onFocus={e => { (e.currentTarget as HTMLInputElement).style.borderColor = 'rgba(0,168,181,0.40)'; }}
+                onBlur={e => { (e.currentTarget as HTMLInputElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+              />
+            </div>
+
+            {/* Send button */}
+            {!isLiveActive && (
+              <button
+                onClick={() => handleSendText()}
+                disabled={isLoading || !input.trim()}
+                style={{
+                  width: '44px', height: '44px', flexShrink: 0, borderRadius: '0px',
+                  background: '#00a8b5',
+                  border: 'none',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  opacity: (isLoading || !input.trim()) ? 0.4 : 1,
+                  transition: 'opacity 0.2s ease, transform 0.2s ease',
+                  boxShadow: '0 4px 16px rgba(0,168,181,0.25)',
+                }}
+                onMouseEnter={e => { if (!isLoading && input.trim()) (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.05)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'; }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="none">
+                  <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       )}
-      <button 
-        onClick={() => setIsOpen(!isOpen)}
-        className="group bg-[#1a2e35] text-white w-20 h-20 rounded-[2rem] flex items-center justify-center shadow-[0_20px_60px_-15px_rgba(26,46,53,0.5)] hover:scale-110 hover:-rotate-6 transition-all duration-500 active:scale-95 relative border-4 border-white/10"
-      >
-        <div className="absolute -top-1 -right-1 bg-luxury-teal w-6 h-6 rounded-full animate-pulse border-4 border-white"></div>
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-9 w-9 group-hover:rotate-12 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-        </svg>
-      </button>
 
+      {/* ── Styles ── */}
       <style>{`
+        @keyframes klo-slide-up {
+          from { opacity: 0; transform: translateY(20px) scale(0.98); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes klo-fade-in {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
         @keyframes voice-wave {
-          0%, 100% { transform: scaleY(1); opacity: 0.5; }
-          50% { transform: scaleY(2); opacity: 1; }
+          0%, 100% { transform: scaleY(0.6); opacity: 0.4; }
+          50%       { transform: scaleY(1.4); opacity: 1; }
         }
-        @keyframes fade-in-up {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.4; }
         }
-        .animate-fade-in-up { animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(0,168,181,0.4) transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,168,181,0.4); }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,168,181,0.7); }
       `}</style>
     </div>
   );
