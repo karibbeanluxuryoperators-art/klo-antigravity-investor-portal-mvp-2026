@@ -3,15 +3,9 @@
   "installCommand": "npm install",
   "outputDirectory": "dist",
   "framework": "vite",
-  "rewrites": [
-    {
-      "source": "/experiencias",
-      "destination": "https://karibbean-luxury-operators-experiences.vercel.app"
-    },
-    {
-      "source": "/experiencias/:path*",
-      "destination": "https://karibbean-luxury-operators-experiences.vercel.app/:path*"
+  "functions": {
+    "api/chat.ts": {
+      "maxDuration": 30
     }
-  ]
+  }
 }
-
