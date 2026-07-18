@@ -424,8 +424,40 @@ Run before every commit that touches `server.ts` or `api/**`:
 - [ ] Telegram bot token — same as KLO-FULLSTACK? (If yes, the webhook URL needs to change when domain switches.)
 - [ ] ~~Do we keep the Spanish-first investor copy in the public site, or switch to English-first with ES as fallback?~~ → **Trilingual EN/ES/PT everywhere, no "first" language** ✅
 - [ ] Domain switch timing — DNS cutover vs gradual redirect? (My recommendation: preview at `*.vercel.app` for 1-2 days, then cut.)
-- [ ] Where does the admin email live? Who gets the approval notifications?
+- [ ] ~~Where does the admin email live? Who gets the approval notifications?~~ → **`hola@karibbeanluxuryoperators.lat`** ✅
 - [ ] Pricing — do suppliers see USD only, or COP too?
+
+### Admin email & notification routing (locked in)
+
+**Sender / From address:** `hola@karibbeanluxuryoperators.lat`
+
+Used for:
+- `from` field on all SendGrid emails (approval notifications, booking confirmations, supplier onboarding emails)
+- Display name: `KLO Operations` (or `KLO — Karibbean Luxury Operators` for formal emails)
+- Reply-to: same address until we set up a dedicated `concierge@` later
+
+**Default admin notification recipient:** `hola@karibbeanluxuryoperators.lat` (until you provision separate admin inboxes)
+
+**Env var to add to Vercel:**
+```
+ADMIN_NOTIFICATION_EMAIL=hola@karibbeanluxuryoperators.lat
+SENDGRID_FROM_EMAIL=hola@karibbeanluxuryoperators.lat
+SENDGRID_FROM_NAME=KLO Operations
+```
+
+**Footer / public site contact:** the email appears in:
+- Public site footer (translated: "Contact us" / "Contáctanos" / "Fale conosco")
+- Legal pages contact section
+- `mailto:` link on the AIAssistant widget for "Speak to a human"
+
+**Trilingual copy for the contact line:**
+```ts
+{
+  EN: { contactUs: 'Contact us', contactEmail: 'hola@karibbeanluxuryoperators.lat' },
+  ES: { contactUs: 'Contáctanos', contactEmail: 'hola@karibbeanluxuryoperators.lat' },
+  PT: { contactUs: 'Fale conosco', contactEmail: 'hola@karibbeanluxuryoperators.lat' },
+}[lang]
+```
 
 ### i18n rules (locked in)
 
