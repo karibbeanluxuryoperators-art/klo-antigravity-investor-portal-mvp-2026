@@ -1,0 +1,10 @@
+# Services directory
+
+Holds non-React modules that the React app uses:
+
+- `firebase.ts` — Firebase web SDK init + auth helpers (added in commit 2)
+- `kloBrain.ts` — Maria AI concierge client (added in commit 3)
+- `telegram.ts` — Telegram bot helpers (added in commit 3 if needed)
+
+Imports use the `@/` alias defined in `tsconfig.json`, e.g.
+`import { auth } from '@/services/firebase'`.

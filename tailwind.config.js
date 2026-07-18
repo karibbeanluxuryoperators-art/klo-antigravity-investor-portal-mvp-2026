@@ -4,14 +4,22 @@ export default {
     "./index.html",
     "./*.{js,ts,jsx,tsx}",
     "./components/**/*.{js,ts,jsx,tsx}",
+    "./services/**/*.{js,ts,jsx,tsx}",
     "./public/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
       colors: {
+        // Existing klo-antigravity tokens
         'luxury-teal': '#00a8b5',
         'luxury-navy': '#1a2e35',
         'luxury-gold': '#B8963E',
+        // KLO-FULLSTACK tokens (added for component parity during port)
+        'luxury-black': '#080808',
+        'luxury-slate': '#1a2e35',
+        'gold': '#B8963E',
+        'text-main': '#f5f5f0',
+        'border-main': '#1a2e35',
       },
       fontFamily: {
         'serif': ['Cormorant Garamond', 'Georgia', 'serif'],
