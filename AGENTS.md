@@ -420,12 +420,53 @@ Run before every commit that touches `server.ts` or `api/**`:
 
 - [ ] Which Supabase project does v1 use? (Same as KLO-FULLSTACK staging, or new?)
 - [ ] ~~Which Stripe account? Connect platform already set up?~~ → **Same accounts as KLO-FULLSTACK** ✅
-- [ ] ~~Firebase project same as KLO-FULLSTACK?~~ → **Same** ✅
+- [ ] ~~Firebase project same as KLO-FULLSTACK?~~ → **klo-fullstack-66f70** ✅
 - [ ] Telegram bot token — same as KLO-FULLSTACK? (If yes, the webhook URL needs to change when domain switches.)
 - [ ] ~~Do we keep the Spanish-first investor copy in the public site, or switch to English-first with ES as fallback?~~ → **Trilingual EN/ES/PT everywhere, no "first" language** ✅
 - [ ] Domain switch timing — DNS cutover vs gradual redirect? (My recommendation: preview at `*.vercel.app` for 1-2 days, then cut.)
 - [ ] ~~Where does the admin email live? Who gets the approval notifications?~~ → **`hola@karibbeanluxuryoperators.lat`** ✅
 - [ ] Pricing — do suppliers see USD only, or COP too?
+
+### Firebase project (locked in)
+
+**Project ID:** `klo-fullstack-66f70`
+**Project name:** KLO Fullstack
+**Project number:** 97964985400
+**Web app:** KLO Web (App ID `1:97964985400:web:e1326e408d2102d6462acd`)
+**Support email:** `karibbeanluxuryoperators@gmail.com`
+**Firebase Hosting site:** `klo-fullstack-66f70`
+
+**Web SDK config** (used in `services/firebase.ts`):
+```js
+const firebaseConfig = {
+  apiKey: "<from Vercel env: VITE_FIREBASE_API_KEY>",
+  authDomain: "klo-fullstack-66f70.firebaseapp.com",
+  projectId: "klo-fullstack-66f70",
+  storageBucket: "klo-fullstack-66f70.firebasestorage.app",
+  messagingSenderId: "97964985400",
+  appId: "1:97964985400:web:e1326e408d2102d6462acd",
+  measurementId: "G-N8BXY56CV2"
+};
+```
+
+**Env vars to set in Vercel + local `.env.local`:**
+```
+VITE_FIREBASE_API_KEY=AIza...
+VITE_FIREBASE_AUTH_DOMAIN=klo-fullstack-66f70.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=klo-fullstack-66f70
+VITE_FIREBASE_STORAGE_BUCKET=klo-fullstack-66f70.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=97964985400
+VITE_FIREBASE_APP_ID=1:97964985400:web:e1326e408d2102d6462acd
+VITE_FIREBASE_MEASUREMENT_ID=G-N8BXY56CV2
+```
+
+**Security hardening TODO (do this before opening to external users):**
+- [ ] Add HTTP referrer restrictions on the API key in Google Cloud Console — only `karibbeanluxuryoperators.lat`, `*.karibbeanluxuryoperators.lat`, `localhost:3000` for dev
+- [ ] Enable Firebase App Check to block non-KLO clients from hitting your Firebase resources
+- [ ] Add API key restrictions (only Firebase APIs)
+- [ ] Enable Firebase Auth email enumeration protection (Authentication → Settings → User actions)
+
+**Why only Firebase web config in the client?** Server-side uses a separate service-account credential. If you ever need server-side Firebase Admin SDK calls (for verifying ID tokens), it goes in `FIREBASE_SERVICE_ACCOUNT_JSON` as a single env var (the entire JSON blob) — never commit it.
 
 ### Admin email & notification routing (locked in)
 
