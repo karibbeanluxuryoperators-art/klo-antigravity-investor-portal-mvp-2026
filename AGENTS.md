@@ -419,13 +419,25 @@ Run before every commit that touches `server.ts` or `api/**`:
 ## 10. Open Questions (TODO before v1 ships)
 
 - [ ] Which Supabase project does v1 use? (Same as KLO-FULLSTACK staging, or new?)
-- [ ] Which Stripe account? Connect platform already set up?
-- [ ] Firebase project same as KLO-FULLSTACK?
+- [ ] ~~Which Stripe account? Connect platform already set up?~~ → **Same accounts as KLO-FULLSTACK** ✅
+- [ ] ~~Firebase project same as KLO-FULLSTACK?~~ → **Same** ✅
 - [ ] Telegram bot token — same as KLO-FULLSTACK? (If yes, the webhook URL needs to change when domain switches.)
-- [ ] Do we keep the Spanish-first investor copy in the public site, or switch to English-first with ES as fallback?
-- [ ] Domain switch timing — DNS cutover vs gradual redirect?
+- [ ] ~~Do we keep the Spanish-first investor copy in the public site, or switch to English-first with ES as fallback?~~ → **Trilingual EN/ES/PT everywhere, no "first" language** ✅
+- [ ] Domain switch timing — DNS cutover vs gradual redirect? (My recommendation: preview at `*.vercel.app` for 1-2 days, then cut.)
 - [ ] Where does the admin email live? Who gets the approval notifications?
 - [ ] Pricing — do suppliers see USD only, or COP too?
+
+### i18n rules (locked in)
+
+- **Every user-visible string in every component is trilingual.** No exceptions. No English-only buttons, no Spanish-only error messages.
+- Languages: `EN` (English), `ES` (Español — primary for Colombian market), `PT` (Português — for Brazilian/UHNW LATAM expansion).
+- Pattern: each component declares a local `t = { EN: {...}, ES: {...}, PT: {...} }[lang]` and uses `t.someKey` everywhere. **No `i18next`, `react-intl`, or other library** — bundle weight and learning curve aren't worth it for 3 languages and ~50 components.
+- Toggle pattern: `setLang(l => l === 'EN' ? 'ES' : l === 'ES' ? 'PT' : 'EN')` — the existing `Navbar` and `App.tsx` already do this.
+- When porting a component from `KLO-FULLSTACK`, copy its `t` object **verbatim** — the translations are already done. Don't re-translate; don't add a new language key.
+- AI concierge ("Maria") responds in whichever language the user is currently in. System prompt already handles this: `Always respond in ${lang} language.`
+- Legal pages (Privacy, Terms, GDPR) get the same trilingual treatment. KLO-FULLSTACK has these — port them with the full `t` objects.
+- **Default landing language for new visitors:** ES (Colombia is the primary market). The lang toggle still defaults to ES on first visit via `localStorage` or cookie.
+- Date/currency formatting: use `Intl.DateTimeFormat` and `Intl.NumberFormat` with the appropriate locale, not hardcoded format strings.
 
 ---
 
@@ -437,5 +449,6 @@ Run before every commit that touches `server.ts` or `api/**`:
 4. Find your data in section 3 — that's the table and the API route.
 5. Hit the gotchas (section 7) — 9 times out of 10 the bug is one of those.
 6. Run smoke (section 9). If it fails, that's your answer.
+7. **Adding a string? It's trilingual. Always. (section 10 — i18n rules)**
 
 If still lost: stop, don't add code. Write down what's confusing, what you expected to happen, what actually happened. That diagnosis is more valuable than a guess.
