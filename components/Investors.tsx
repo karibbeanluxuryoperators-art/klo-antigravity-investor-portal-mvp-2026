@@ -18,7 +18,7 @@ interface InvestorAsset {
 
 const Investors: React.FC<InvestorsProps> = ({ t, lang }) => {
   const [isAdminMode, setIsAdminMode] = useState(false);
-  const [assets, setAssets] = useState<InvestorAsset[]>(INVESTOR_ASSETS as InvestorAsset[]);
+  const [assets, setAssets] = useState<InvestorAsset[]>(INVESTOR_ASSETS as unknown as InvestorAsset[]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 

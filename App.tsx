@@ -5,6 +5,23 @@ import Destinations from './components/Destinations';
 import { TRANSLATIONS, getTranslation, PREMIER_SERVICES } from './constants';
 import { Language } from './types';
 import AIAssistant from './components/AIAssistant';
+import { SupplierPortal } from './components/SupplierPortal';
+
+// ── Supplier portal route guard ────────────────────────────────────────────
+// Detects /supplier in the URL and renders the multi-step onboarding wizard
+// instead of the public site. Admin/Supplier dashboard will live under
+// /supplier/dashboard once Firebase auth is wired in commit 2.5+.
+function useSupplierRoute() {
+  const [isSupplier, setIsSupplier] = useState(() =>
+    typeof window !== 'undefined' && window.location.pathname.startsWith('/supplier')
+  );
+  useEffect(() => {
+    const handler = () => setIsSupplier(window.location.pathname.startsWith('/supplier'));
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, []);
+  return isSupplier;
+}
 
 function App() {
   const [lang, setLang] = useState<Language>('es');
@@ -42,6 +59,22 @@ function App() {
 
   if (!isReady) {
     return <div className="min-h-screen bg-slate-900" />;
+  }
+
+  // Supplier portal route — render the multi-step onboarding wizard
+  // instead of the public site. /supplier is the v1 entry point.
+  const isSupplierRoute = useSupplierRoute();
+  if (isSupplierRoute) {
+    // Map public-site lang (lowercase) to portal lang (uppercase)
+    const portalLang: 'EN' | 'ES' | 'PT' = lang.toUpperCase() as 'EN' | 'ES' | 'PT';
+    return (
+      <div className="min-h-screen selection:bg-gold/30">
+        <SupplierPortal
+          lang={portalLang}
+          onBack={() => { window.history.pushState({}, '', '/'); window.location.reload(); }}
+        />
+      </div>
+    );
   }
 
   return (

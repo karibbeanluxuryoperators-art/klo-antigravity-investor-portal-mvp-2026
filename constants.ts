@@ -58,36 +58,42 @@ export const DESTINATIONS: Destination[] = [
 
 export const PREMIER_SERVICES = [
   {
+    id: "flights",
     icon: "✈️",
     titleKey: "services.flights.title",
     descriptionKey: "services.flights.desc",
     imageUrl: "/images/premier-services/api-private-aviation.jpg"
   },
   {
+    id: "accommodation",
     icon: "🏡",
     titleKey: "services.accommodation.title",
     descriptionKey: "services.accommodation.desc",
     imageUrl: "/images/premier-services/api-accomodation.jpg"
   },
   {
+    id: "yachts",
     icon: "🚤",
     titleKey: "services.yachts.title",
     descriptionKey: "services.yachts.desc",
     imageUrl: "/images/premier-services/yate-cartagena.webp"
   },
   {
+    id: "transport",
     icon: "🚗",
     titleKey: "services.transport.title",
     descriptionKey: "services.transport.desc",
     imageUrl: "/images/premier-services/vip-transport.jpg"
   },
   {
+    id: "staff",
     icon: "👨‍🍳",
     titleKey: "services.staff.title",
     descriptionKey: "services.staff.desc",
     imageUrl: "/images/premier-services/vip-staffing.jpg"
   },
   {
+    id: "experiences",
     icon: "✨",
     titleKey: "services.experiences.title",
     descriptionKey: "services.experiences.desc",

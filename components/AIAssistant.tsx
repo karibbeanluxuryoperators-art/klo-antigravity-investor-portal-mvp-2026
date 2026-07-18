@@ -34,6 +34,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
   const [notified, setNotified] = useState(false);
   const [notifiedLang, setNotifiedLang] = useState<"es" | "en" | "pt">("es");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     try { sessionStorage.setItem(STORAGE_KEY_HISTORY, JSON.stringify(messages)); } catch {}
