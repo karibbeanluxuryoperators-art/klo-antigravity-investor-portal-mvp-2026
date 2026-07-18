@@ -421,11 +421,11 @@ Run before every commit that touches `server.ts` or `api/**`:
 - [ ] Which Supabase project does v1 use? (Same as KLO-FULLSTACK staging, or new?)
 - [ ] ~~Which Stripe account? Connect platform already set up?~~ → **Same accounts as KLO-FULLSTACK** ✅
 - [ ] ~~Firebase project same as KLO-FULLSTACK?~~ → **klo-fullstack-66f70** ✅
-- [ ] Telegram bot token — same as KLO-FULLSTACK? (If yes, the webhook URL needs to change when domain switches.)
+- [ ] ~~Telegram bot token — same as KLO-FULLSTACK?~~ → **Same bot** ✅
 - [ ] ~~Do we keep the Spanish-first investor copy in the public site, or switch to English-first with ES as fallback?~~ → **Trilingual EN/ES/PT everywhere, no "first" language** ✅
 - [ ] Domain switch timing — DNS cutover vs gradual redirect? (My recommendation: preview at `*.vercel.app` for 1-2 days, then cut.)
 - [ ] ~~Where does the admin email live? Who gets the approval notifications?~~ → **`hola@karibbeanluxuryoperators.lat`** ✅
-- [ ] Pricing — do suppliers see USD only, or COP too?
+- [ ] ~~Pricing — do suppliers see USD only, or COP too?~~ → **USD only for v1**, add COP/MXN in v1.3+ ✅
 
 ### Firebase project (locked in)
 
@@ -511,6 +511,46 @@ SENDGRID_FROM_NAME=KLO Operations
 - Legal pages (Privacy, Terms, GDPR) get the same trilingual treatment. KLO-FULLSTACK has these — port them with the full `t` objects.
 - **Default landing language for new visitors:** ES (Colombia is the primary market). The lang toggle still defaults to ES on first visit via `localStorage` or cookie.
 - Date/currency formatting: use `Intl.DateTimeFormat` and `Intl.NumberFormat` with the appropriate locale, not hardcoded format strings.
+
+### Pricing (locked in)
+
+**v1: USD only.** All asset `price_per_unit` values stored as USD strings. All UI shows `$1,234.56` format.
+
+**When to revisit (v1.3+):**
+- Suppliers in Colombia start asking for COP settlement
+- Suppliers in Mexico ask for MXN
+- A LATAM expansion plan materializes
+- Stripe Connect MXN/COP accounts are set up
+
+**Why USD-only for v1:**
+- Stripe Connect in non-USD countries is significantly more paperwork (local bank accounts, tax forms)
+- KLO's first 5-10 suppliers will be USD-billing anyway (yachts, jets, US-card holders)
+- Adding COP later is a presentation-layer change, not a schema change — `price_per_unit` is just a string
+
+**Format rules (lock these in code review):**
+- Always use `Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })` — never hardcode `$` or format manually
+- Never store the currency code in the DB — it's USD by convention
+- When we add COP later, we'll add a `currency` column and migrate gradually (no big-bang)
+
+### Telegram bot (locked in)
+
+**Same bot as KLO-FULLSTACK** (`TELEGRAM_BOT_TOKEN` env var, shared with klo-fullstack.vercel.app until domain cutover).
+
+**Why one bot, not two:**
+- The bot is stateless — we only use it for outbound notifications
+- Supplier chat IDs live in the `suppliers` table, not in the bot
+- Two bots = two support surfaces, two re-onboarding flows, two sets of group memberships (when we add supplier groups)
+- Webhook URL is the only thing that changes; one bot handles it cleanly
+
+**Webhook auto-registration:** `server.ts` calls `setWebhook` on startup with `APP_URL/api/telegram/webhook`. As long as `APP_URL` is set in Vercel (or `VERCEL_URL` is set automatically), the bot will receive updates at the right URL.
+
+**Cutover checklist (when you point karibbeanluxuryoperators.lat at the new repo):**
+1. Update `APP_URL` env var in the new Vercel project to `https://karibbeanluxuryoperators.lat`
+2. Old project: server.ts will auto-call setWebhook on next deploy, redirecting telegram traffic to the new URL
+3. Verify: send `/start` to the bot, check that `approval_notifications.sent_telegram` is true
+4. If the old Vercel project is paused/deleted, the webhook is auto-cleaned by Telegram within 24h
+
+**Supplier opt-in flow:** suppliers connect their personal Telegram chat by messaging the bot with `/start` → bot returns their chat ID → they paste it into Supplier Dashboard → Settings → Telegram Chat ID. Already implemented in `SupplierDashboard.tsx`.
 
 ---
 
