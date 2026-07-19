@@ -1,9 +1,9 @@
 // ── KLO Supabase Browser Client ───────────────────────────────────────────────
 // Browser-safe Supabase client (uses the anon key, not the service key).
-// Used by the supplier portal for magic-link authentication.
+// Used by the supplier portal + admin portal for magic-link authentication.
 //
 // Auth model:
-//   - Suppliers sign in by email — no password, no "forgot password" flow.
+//   - Suppliers/admins sign in by email — no password, no "forgot password".
 //   - We call signInWithOtp({ email, options: { emailRedirectTo: ... } }).
 //   - Supabase sends the magic link, the user clicks it, the SPA receives the
 //     access/refresh tokens in the URL hash (#access_token=...).
@@ -11,9 +11,17 @@
 //     (or wait for the onAuthStateChange event with INITIAL_SESSION).
 //   - The supplier row is then looked up by email via /api/suppliers/lookup.
 //
-// Env vars (must be set with VITE_ prefix so Vite exposes them to the bundle):
-//   VITE_SUPABASE_URL        — e.g. https://vygfumqzlnloytmoaxav.supabase.co
-//   VITE_SUPABASE_ANON_KEY   — sb_publishable_... (browser-safe)
+// Config source (v1.7.1+):
+//   The browser needs the Supabase URL + anon key. We fetch them from
+//   GET /api/config on first use. The server reads them from its own
+//   SUPABASE_URL / SUPABASE_ANON_KEY env vars (which are always present in
+//   Vercel — the serverless runtime sets them). The anon key is designed by
+//   Supabase to be public, so shipping it through /api/config is safe.
+//
+//   Why not VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY as Vite env vars?
+//   That would require manually adding the same values to Vercel's project
+//   environment. With the /api/config approach, only the server-side env
+//   vars matter (and those are already in place). One source of truth.
 //
 // Gotcha: do NOT import the service-key Supabase client in the browser. It
 // can read+write every row in every table. Only the server (server.ts) should
@@ -22,34 +30,54 @@
 import { createClient, type SupabaseClient, type Session, type User } from "@supabase/supabase-js";
 import type { KLOUser } from "./firebase";
 
-// Lazy singleton — we only build the client when we actually need it, so
-// SSR / static-parse paths don't crash if the env vars are missing.
+// Lazily fetch config + build the client. We cache both. If the fetch
+// fails (or the server returns empty values), getClient() returns null
+// and the auth gate shows a "Configuration required" state.
 let _client: SupabaseClient | null = null;
+let _clientPromise: Promise<SupabaseClient | null> | null = null;
 
-function getClient(): SupabaseClient | null {
-  if (_client) return _client;
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    // Surface a clear error in the console instead of a silent crash. The
-    // auth gate will catch this and show a "config missing" state.
-    console.error(
-      "[supabase] VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY is missing. " +
-      "Add them to .env.local and to Vercel environment variables."
-    );
+async function fetchConfig(): Promise<{ url: string; anonKey: string } | null> {
+  try {
+    const res = await fetch('/api/config');
+    if (!res.ok) return null;
+    const data = await res.json();
+    const url = data?.supabase?.url;
+    const key = data?.supabase?.anonKey;
+    if (!url || !key) return null;
+    return { url, anonKey: key };
+  } catch (e) {
+    console.error('[supabase] failed to fetch /api/config', e);
     return null;
   }
-  _client = createClient(url, key, {
-    auth: {
-      // Supabase detects the access_token in the URL hash and exchanges it for
-      // a session automatically. Default is true; we set it explicitly for
-      // clarity because this is the centerpiece of the magic-link flow.
-      detectSessionInUrl: true,
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-  });
-  return _client;
+}
+
+async function getClient(): Promise<SupabaseClient | null> {
+  if (_client) return _client;
+  if (!_clientPromise) {
+    _clientPromise = (async () => {
+      const cfg = await fetchConfig();
+      if (!cfg) {
+        console.error(
+          '[supabase] /api/config returned no Supabase URL/anon key. ' +
+          'Make sure SUPABASE_URL and SUPABASE_ANON_KEY are set on the server.'
+        );
+        return null;
+      }
+      _client = createClient(cfg.url, cfg.anonKey, {
+        auth: {
+          // Supabase detects the access_token in the URL hash and exchanges
+          // it for a session automatically. Default is true; we set it
+          // explicitly for clarity because this is the centerpiece of the
+          // magic-link flow.
+          detectSessionInUrl: true,
+          persistSession: true,
+          autoRefreshToken: true,
+        },
+      });
+      return _client;
+    })();
+  }
+  return _clientPromise;
 }
 
 // ── Magic-link sign-in ────────────────────────────────────────────────────────
@@ -67,9 +95,9 @@ export async function sendSupplierMagicLink(
   email: string,
   redirectTo: string
 ): Promise<MagicLinkResult> {
-  const client = getClient();
+  const client = await getClient();
   if (!client) {
-    return { ok: false, error: "Supabase client is not configured. Check VITE_SUPABASE_* env vars." };
+    return { ok: false, error: "Supabase client is not configured. Check server SUPABASE_* env vars." };
   }
   const trimmed = email.trim().toLowerCase();
   if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
@@ -98,7 +126,7 @@ export async function sendSupplierMagicLink(
 
 /** Returns the current session (may be null). Reads from localStorage. */
 export async function getSupplierSession(): Promise<Session | null> {
-  const client = getClient();
+  const client = await getClient();
   if (!client) return null;
   const { data } = await client.auth.getSession();
   return data.session;
@@ -119,24 +147,41 @@ export async function getSupplierUser(): Promise<User | null> {
  *
  * Returns an unsubscribe function.
  */
+/**
+ * Subscribe to auth state changes. The callback fires on:
+ *   - INITIAL_SESSION  — the result of detectSessionInUrl processing the URL
+ *                        hash on the redirect target. This is the event we
+ *                        wait for after a magic-link click.
+ *   - SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED, USER_UPDATED, PASSWORD_RECOVERY
+ *
+ * Returns an unsubscribe function.
+ *
+ * Implementation note: the client is built lazily from /api/config, so
+ * subscribing to auth changes is async. We wait for the client to be
+ * ready before wiring up the onAuthStateChange subscription.
+ */
 export function onSupplierAuthChange(
   callback: (session: Session | null) => void
 ): () => void {
-  const client = getClient();
-  if (!client) {
-    // No client → immediately fire null and return a no-op unsubscribe.
-    callback(null);
-    return () => {};
-  }
-  const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
-    callback(session);
+  let unsubscribe: (() => void) | null = null;
+  let cancelled = false;
+  // Kick off the client build. When ready, wire up the subscription.
+  getClient().then((client) => {
+    if (cancelled || !client) return;
+    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+      callback(session);
+    });
+    unsubscribe = () => subscription.unsubscribe();
   });
-  return () => subscription.unsubscribe();
+  return () => {
+    cancelled = true;
+    if (unsubscribe) unsubscribe();
+  };
 }
 
 /** Sign out and clear the local session. */
 export async function signOutSupplier(): Promise<void> {
-  const client = getClient();
+  const client = await getClient();
   if (!client) return;
   await client.auth.signOut();
 }

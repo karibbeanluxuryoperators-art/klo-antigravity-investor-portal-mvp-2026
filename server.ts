@@ -1174,6 +1174,20 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // v1.7.1: public Supabase config endpoint. The browser needs the Supabase
+  // URL + anon key to instantiate the auth client. Rather than mirroring
+  // these as VITE_* env vars (which requires manual setup in Vercel), we
+  // expose the anon-keyed config via a server endpoint. The anon key is
+  // designed by Supabase to be public; the service key stays server-side.
+  app.get("/api/config", (req, res) => {
+    res.json({
+      supabase: {
+        url: process.env.SUPABASE_URL || "",
+        anonKey: process.env.SUPABASE_ANON_KEY || "",
+      },
+    });
+  });
+
   // Simulated Admin Data
   app.get("/api/admin/stats", (req, res) => {
     res.json({
