@@ -27,6 +27,13 @@ function App() {
   const [lang, setLang] = useState<Language>('es');
   const [isReady, setIsReady] = useState(false);
 
+  // ALL HOOKS MUST BE CALLED UNCONDITIONALLY — before any early return.
+  // React error #310 ("Rendered more hooks than during the previous render")
+  // is triggered when a hook is called after a conditional return. The
+  // supplier-route hook below used to be after `if (!isReady) return ...`
+  // which made it skip on the first render and run on the second.
+  const isSupplierRoute = useSupplierRoute();
+
   // Initialize language from localStorage on mount
   useEffect(() => {
     const savedLang = localStorage.getItem('language') as Language;
@@ -63,7 +70,6 @@ function App() {
 
   // Supplier portal route — render the multi-step onboarding wizard
   // instead of the public site. /supplier is the v1 entry point.
-  const isSupplierRoute = useSupplierRoute();
   if (isSupplierRoute) {
     // Map public-site lang (lowercase) to portal lang (uppercase)
     const portalLang: 'EN' | 'ES' | 'PT' = lang.toUpperCase() as 'EN' | 'ES' | 'PT';
