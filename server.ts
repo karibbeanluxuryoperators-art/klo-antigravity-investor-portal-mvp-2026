@@ -1174,19 +1174,11 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
-  // v1.7.1: public Supabase config endpoint. The browser needs the Supabase
-  // URL + anon key to instantiate the auth client. Rather than mirroring
-  // these as VITE_* env vars (which requires manual setup in Vercel), we
-  // expose the anon-keyed config via a server endpoint. The anon key is
-  // designed by Supabase to be public; the service key stays server-side.
-  app.get("/api/config", (req, res) => {
-    res.json({
-      supabase: {
-        url: process.env.SUPABASE_URL || "",
-        anonKey: process.env.SUPABASE_ANON_KEY || "",
-      },
-    });
-  });
+  // NOTE: /api/config is intentionally NOT registered here. The Vercel
+  // auto-detect of api/index.ts strips the `/api` prefix from req.url
+  // before the inner Express app sees it, so any Express route at
+  // /api/* would not match. The wrapper at api/index.ts short-circuits
+  // /api/config and /api/health directly (see api/_configHandler.ts).
 
   // Simulated Admin Data
   app.get("/api/admin/stats", (req, res) => {

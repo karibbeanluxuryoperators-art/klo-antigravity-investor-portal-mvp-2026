@@ -60,6 +60,19 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return;
   }
 
+  // v1.7.1: public config short-circuit. The browser fetches this to
+  // bootstrap the Supabase client (URL + anon key). We answer it from
+  // the wrapper because the Vercel auto-detect of api/index.ts strips
+  // the `/api` prefix from req.url before the inner Express app sees it
+  // — so the Express route for `/api/config` would not match and the
+  // request would fall through to the SPA catch-all. Handled here
+  // instead, the same way /api/health is.
+  if (url === '/api/config' || url.startsWith('/api/config?')) {
+    // Lazy require — only when this endpoint is actually hit.
+    const { configHandler } = require('./_configHandler.js') as typeof import('./_configHandler.js');
+    return configHandler(req, res);
+  }
+
   if (!app) {
     res.statusCode = 500;
     res.setHeader('content-type', 'application/json');
