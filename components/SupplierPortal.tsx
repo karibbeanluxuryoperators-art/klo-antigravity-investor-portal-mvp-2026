@@ -14,13 +14,176 @@ import {
   Loader2, CheckCircle2, ArrowRight, AlertCircle
 } from 'lucide-react';
 
-const STEPS = [
-  "Welcome",
-  "Profile",
-  "Availability",
-  "Review",
-  "Success"
+// v1.6: Trilingual copy map. Every user-visible string in this component
+// lives here. The existing ternary pattern (`lang === 'EN' ? ... : ...`)
+// is being replaced with a single lookup so the JSX stays readable and
+// adding a translation in the future is one edit, not a 3-way search.
+//
+// Convention: every key is lowercase_snake. The `tx` helper below picks
+// the right translation at render time. Falls back to EN if a key is
+// missing in another language (defensive — should never happen but
+// prevents UI breakage during development).
+type Trilingual = { EN: string; ES: string; PT: string };
+
+const T: Record<string, Trilingual> = {
+  // Step labels (top of wizard)
+  step_welcome:    { EN: 'Welcome',     ES: 'Bienvenida',  PT: 'Boas-vindas' },
+  step_profile:    { EN: 'Profile',     ES: 'Perfil',      PT: 'Perfil' },
+  step_availability: { EN: 'Availability', ES: 'Disponibilidad', PT: 'Disponibilidade' },
+  step_review:     { EN: 'Review',      ES: 'Revisión',    PT: 'Revisão' },
+  step_success:    { EN: 'Success',     ES: 'Éxito',       PT: 'Sucesso' },
+
+  // Step 1 — Type selection
+  s1_title:        { EN: 'Become a KLO Verified Partner', ES: 'Conviértete en Socio Verificado de KLO', PT: 'Torne-se um Parceiro Verificado da KLO' },
+  s1_subtitle:     { EN: "List your villa, yacht, aircraft, vehicle fleet, or staff with the Caribbean's premier ultra-luxury platform.", ES: 'Lista tu villa, yate, aeronave, flota de vehículos o personal con la plataforma de ultra-lujo premier del Caribe.', PT: 'Cadastre sua villa, iate, aeronave, frota de veículos ou equipe na plataforma de ultra-luxo premier do Caribe.' },
+  s1_pillar_villa: { EN: 'Villa Owner',           ES: 'Propietario de Villa', PT: 'Proprietário de Villa' },
+  s1_pillar_yacht: { EN: 'Yacht / Boat Operator', ES: 'Operador de Yates / Embarcaciones', PT: 'Operador de Iates / Embarcações' },
+  s1_pillar_aviation: { EN: 'Private Aviation',   ES: 'Aviación Privada',     PT: 'Aviação Privada' },
+  s1_pillar_staff: { EN: 'Staffing & Services',   ES: 'Personal y Servicios', PT: 'Equipe e Serviços' },
+  s1_pillar_ground:{ EN: 'Ground Transport',      ES: 'Transporte Terrestre', PT: 'Transporte Terrestre' },
+  s1_returning:    { EN: 'Already a partner?',    ES: '¿Ya eres socio?',      PT: 'Já é parceiro?' },
+  s1_signin:       { EN: 'Sign in to your dashboard', ES: 'Inicia sesión en tu panel', PT: 'Entre no seu painel' },
+  s1_save_hint:    { EN: 'Your progress is saved automatically — come back any time to finish.', ES: 'Tu progreso se guarda automáticamente — vuelve cuando quieras para terminar.', PT: 'Seu progresso é salvo automaticamente — volte a qualquer momento para concluir.' },
+
+  // Step 2 — Business Profile
+  s2_title:        { EN: 'Business Profile',      ES: 'Perfil de Negocio',   PT: 'Perfil do Negócio' },
+  s2_partner_badge:{ EN: 'Partner',               ES: 'Socio',               PT: 'Parceiro' },
+  s2_business_name:{ EN: 'Business / Asset Name', ES: 'Nombre del Negocio / Activo', PT: 'Nome do Negócio / Ativo' },
+  s2_business_ph:  { EN: 'e.g. Villa Serenity',   ES: 'ej. Villa Serenity',  PT: 'ex. Villa Serenity' },
+  s2_contact_name: { EN: 'Contact Name',          ES: 'Nombre de Contacto',  PT: 'Nome de Contato' },
+  s2_contact_ph:   { EN: 'Full Name',             ES: 'Nombre Completo',     PT: 'Nome Completo' },
+  s2_email:        { EN: 'Email Address',         ES: 'Correo Electrónico',  PT: 'E-mail' },
+  s2_email_ph:     { EN: 'email@example.com',     ES: 'correo@ejemplo.com',  PT: 'email@exemplo.com' },
+  s2_whatsapp:     { EN: 'WhatsApp Number',       ES: 'Número de WhatsApp',  PT: 'Número de WhatsApp' },
+  s2_whatsapp_ph:  { EN: '+57 300...',            ES: '+57 300...',          PT: '+57 300...' },
+  s2_location:     { EN: 'Location',              ES: 'Ubicación',           PT: 'Localização' },
+  s2_experience:   { EN: 'Years of Experience',   ES: 'Años de Experiencia', PT: 'Anos de Experiência' },
+  s2_experience_ph:{ EN: '5',                     ES: '5',                   PT: '5' },
+  s2_description:  { EN: 'Description (Max 500 chars)', ES: 'Descripción (Máx. 500 caracteres)', PT: 'Descrição (Máx. 500 caracteres)' },
+  s2_description_ph: { EN: 'Describe your luxury offering...', ES: 'Describe tu oferta de lujo...', PT: 'Descreva sua oferta de luxo...' },
+  s2_photo_url:    { EN: 'Primary Photo URL',     ES: 'URL de Foto Principal', PT: 'URL da Foto Principal' },
+  s2_photo_url_ph: { EN: 'https://...',           ES: 'https://...',         PT: 'https://...' },
+  s2_photo_hint:   { EN: 'Full photo upload coming soon', ES: 'Carga de fotos próximamente', PT: 'Upload de fotos em breve' },
+
+  // Type-specific (VILLA)
+  v_bedrooms:      { EN: 'Bedrooms',              ES: 'Habitaciones',        PT: 'Quartos' },
+  v_max_guests:    { EN: 'Max Guests',            ES: 'Máx. Huéspedes',      PT: 'Máx. Hóspedes' },
+  v_price:         { EN: 'Price per Night (USD)', ES: 'Precio por Noche (USD)', PT: 'Preço por Noite (USD)' },
+  v_amenities:     { EN: 'Amenities',             ES: 'Comodidades',         PT: 'Comodidades' },
+
+  // Type-specific (YACHT)
+  ya_length:       { EN: 'Vessel Length (ft)',   ES: 'Eslora (ft)',         PT: 'Comprimento (ft)' },
+  ya_max_guests:   { EN: 'Max Guests',            ES: 'Máx. Huéspedes',      PT: 'Máx. Hóspedes' },
+  ya_price:        { EN: 'Price per Day (USD)',   ES: 'Precio por Día (USD)', PT: 'Preço por Dia (USD)' },
+  ya_home_port:    { EN: 'Home Port',             ES: 'Puerto Base',         PT: 'Porto Base' },
+  ya_crew:         { EN: 'Crew Included?',        ES: '¿Tripulación Incluida?', PT: 'Tripulação Incluída?' },
+  ya_features:     { EN: 'Features',              ES: 'Características',     PT: 'Características' },
+
+  // Type-specific (AVIATION)
+  av_type:         { EN: 'Aircraft Type',         ES: 'Tipo de Aeronave',    PT: 'Tipo de Aeronave' },
+  av_tail:         { EN: 'Tail Number',           ES: 'Número de Cola',      PT: 'Número de Cauda' },
+  av_max_pax:      { EN: 'Max Passengers',        ES: 'Máx. Pasajeros',      PT: 'Máx. Passageiros' },
+  av_price:        { EN: 'Price per Hour (USD)',  ES: 'Precio por Hora (USD)', PT: 'Preço por Hora (USD)' },
+  av_home_base:    { EN: 'Home Base (IATA)',      ES: 'Base (IATA)',         PT: 'Base (IATA)' },
+  av_home_base_ph: { EN: 'CTG',                   ES: 'CTG',                 PT: 'CTG' },
+  av_range:        { EN: 'Range (nm)',            ES: 'Alcance (nm)',        PT: 'Alcance (nm)' },
+
+  // Type-specific (STAFF)
+  st_role:         { EN: 'Role',                  ES: 'Rol',                 PT: 'Função' },
+  st_daily_rate:   { EN: 'Daily Rate (USD)',      ES: 'Tarifa Diaria (USD)', PT: 'Diária (USD)' },
+  st_languages:    { EN: 'Languages Spoken',      ES: 'Idiomas',             PT: 'Idiomas Falados' },
+  st_certs:        { EN: 'Certifications',        ES: 'Certificaciones',     PT: 'Certificações' },
+  st_certs_ph:     { EN: 'e.g. Michelin Star, PADI Instructor...', ES: 'ej. Estrella Michelin, Instructor PADI...', PT: 'ex. Estrela Michelin, Instrutor PADI...' },
+
+  // Type-specific (GROUND)
+  gr_vehicle:      { EN: 'Vehicle Type',          ES: 'Tipo de Vehículo',    PT: 'Tipo de Veículo' },
+  gr_passengers:   { EN: 'Number of Passengers',  ES: 'Número de Pasajeros', PT: 'Número de Passageiros' },
+  gr_price:        { EN: 'Price per Day (USD)',   ES: 'Precio por Día (USD)', PT: 'Preço por Dia (USD)' },
+  gr_plate:        { EN: 'License Plate',         ES: 'Placa',               PT: 'Placa' },
+  gr_plate_ph:     { EN: 'e.g. ABC-1234',         ES: 'ej. ABC-1234',        PT: 'ex. ABC-1234' },
+  gr_driver_inc:   { EN: 'Driver Included?',      ES: '¿Conductor Incluido?', PT: 'Motorista Incluído?' },
+  gr_armored_label:{ EN: 'Is this vehicle armored?', ES: '¿Este vehículo es blindado?', PT: 'Este veículo é blindado?' },
+  gr_armored_help: { EN: 'Does the vehicle have ballistic protection?', ES: '¿El vehículo tiene protección balística?', PT: 'O veículo tem proteção balística?' },
+  gr_driver_lang:  { EN: 'Driver Languages Spoken', ES: 'Idiomas del Conductor', PT: 'Idiomas do Motorista' },
+
+  // Yes/No
+  yes:             { EN: 'yes',                   ES: 'sí',                  PT: 'sim' },
+  no:              { EN: 'no',                    ES: 'no',                  PT: 'não' },
+
+  // Step 3 — Availability
+  s3_title:        { EN: 'Connect Your Availability', ES: 'Conecta tu Disponibilidad', PT: 'Conecte sua Disponibilidade' },
+  s3_subtitle:     { EN: 'Choose how you want to manage your bookings.', ES: 'Elige cómo quieres gestionar tus reservas.', PT: 'Escolha como gerenciar suas reservas.' },
+  s3_google_title: { EN: 'Connect Google Calendar', ES: 'Conectar Google Calendar', PT: 'Conectar Google Calendar' },
+  s3_google_body:  { EN: 'Your bookings and blocked dates will sync automatically every 24 hours.', ES: 'Tus reservas y fechas bloqueadas se sincronizarán automáticamente cada 24 horas.', PT: 'Suas reservas e datas bloqueadas serão sincronizadas automaticamente a cada 24 horas.' },
+  s3_google_cta:   { EN: 'Connect Google',        ES: 'Conectar Google',     PT: 'Conectar Google' },
+  s3_google_locked:{ EN: 'You can connect Google Calendar after your application is approved', ES: 'Puedes conectar Google Calendar después de que tu solicitud sea aprobada', PT: 'Você pode conectar o Google Calendar depois que sua candidatura for aprovada' },
+  s3_manual_title: { EN: 'Set Manually',          ES: 'Configurar Manualmente', PT: 'Configurar Manualmente' },
+  s3_available:    { EN: 'Available',             ES: 'Disponible',          PT: 'Disponível' },
+  s3_blocked:      { EN: 'Blocked',               ES: 'Bloqueado',           PT: 'Bloqueado' },
+  s3_seasonal:     { EN: 'Seasonal Pricing',      ES: 'Precios por Temporada', PT: 'Preços por Temporada' },
+  s3_seasonal_help:{ EN: 'Do you have different pricing by season?', ES: '¿Tienes precios diferentes por temporada?', PT: 'Você tem preços diferentes por temporada?' },
+  s3_high_season:  { EN: 'High Season (Dec-Apr)', ES: 'Alta Temporada (Dic-Abr)', PT: 'Alta Temporada (Dez-Abr)' },
+  s3_low_season:   { EN: 'Low Season (May-Nov)',  ES: 'Baja Temporada (May-Nov)', PT: 'Baixa Temporada (Mai-Nov)' },
+
+  // Step 4 — Review
+  s4_title:        { EN: 'Review & Submit',       ES: 'Revisar y Enviar',    PT: 'Revisar e Enviar' },
+  s4_subtitle:     { EN: 'Please verify all information before submitting for verification.', ES: 'Por favor verifica toda la información antes de enviar para verificación.', PT: 'Verifique todas as informações antes de enviar para verificação.' },
+  s4_business:     { EN: 'Business Details',      ES: 'Detalles del Negocio', PT: 'Detalhes do Negócio' },
+  s4_asset:        { EN: 'Asset Details',         ES: 'Detalles del Activo', PT: 'Detalhes do Ativo' },
+  s4_label_business:{EN: 'Business',              ES: 'Negocio',             PT: 'Negócio' },
+  s4_label_contact:{ EN: 'Contact',               ES: 'Contacto',            PT: 'Contato' },
+  s4_label_email:  { EN: 'Email',                 ES: 'Correo',              PT: 'E-mail' },
+  s4_label_whatsapp:{EN: 'WhatsApp',              ES: 'WhatsApp',            PT: 'WhatsApp' },
+  s4_label_location:{EN: 'Location',              ES: 'Ubicación',           PT: 'Localização' },
+  s4_label_type:   { EN: 'Type',                  ES: 'Tipo',                PT: 'Tipo' },
+  s4_label_bedrooms:{EN: 'Bedrooms',              ES: 'Habitaciones',        PT: 'Quartos' },
+  s4_label_guests: { EN: 'Guests',                ES: 'Huéspedes',           PT: 'Hóspedes' },
+  s4_label_price:  { EN: 'Price',                 ES: 'Precio',              PT: 'Preço' },
+  s4_label_length: { EN: 'Length',                ES: 'Eslora',              PT: 'Comprimento' },
+  s4_label_tail:   { EN: 'Tail #',                ES: 'Cola #',              PT: 'Cauda #' },
+  s4_label_rate:   { EN: 'Rate',                  ES: 'Tarifa',              PT: 'Tarifa' },
+  s4_label_vehicle:{EN: 'Vehicle',                ES: 'Vehículo',            PT: 'Veículo' },
+  s4_label_passengers:{EN: 'Passengers',          ES: 'Pasajeros',           PT: 'Passageiros' },
+  s4_label_plate:  { EN: 'Plate',                 ES: 'Placa',               PT: 'Placa' },
+  s4_label_driver: { EN: 'Driver',                ES: 'Conductor',           PT: 'Motorista' },
+  s4_label_armored:{EN: 'Armored',                ES: 'Blindado',            PT: 'Blindado' },
+  s4_label_languages:{EN: 'Languages',            ES: 'Idiomas',             PT: 'Idiomas' },
+  s4_per_night:    { EN: '/night',                ES: '/noche',              PT: '/noite' },
+  s4_per_day:      { EN: '/day',                  ES: '/día',                PT: '/dia' },
+  s4_per_hour:     { EN: '/hour',                 ES: '/hora',               PT: '/hora' },
+  s4_terms_title:  { EN: 'KLO Partnership Terms', ES: 'Términos de Asociación KLO', PT: 'Termos de Parceria KLO' },
+  s4_terms_body_en:{ EN: "As a KLO Verified Partner, you retain 80% of every booking. KLO's 20% management fee covers client acquisition, platform access, payment processing, and dedicated concierge support. Payouts are processed within 48 hours of guest check-in via Stripe. You will have access to a partner dashboard to track bookings and revenue in real time.", ES: "Como Socio Verificado de KLO, usted retiene el 80% de cada reserva. La tarifa de gestión del 20% de KLO cubre la adquisición de clientes, acceso a la plataforma, procesamiento de pagos y soporte de conserjería dedicado. Los pagos se procesan dentro de las 48 horas posteriores al check-in del huésped a través de Stripe. Tendrá acceso a un panel de socio para rastrear reservas e ingresos en tiempo real.", PT: "Como Parceiro Verificado KLO, você retém 80% de cada reserva. A taxa de gestão de 20% da KLO cobre aquisição de clientes, acesso à plataforma, processamento de pagamentos e suporte de concierge dedicado. Os pagamentos são processados em até 48 horas após o check-in do hóspede via Stripe. Você terá acesso a um painel de parceiro para acompanhar reservas e receitas em tempo real." },
+  s4_agree:        { EN: 'I agree to KLO Partnership Terms', ES: 'Acepto los Términos de Asociación KLO', PT: 'Aceito os Termos de Parceria KLO' },
+  s4_submit:       { EN: 'Submit for Verification', ES: 'Enviar para Verificación', PT: 'Enviar para Verificação' },
+  s4_submitting:   { EN: 'Submitting…',           ES: 'Enviando…',           PT: 'Enviando…' },
+
+  // Step 5 — Success
+  s5_title:        { EN: 'Application Received',  ES: 'Solicitud Recibida',  PT: 'Solicitação Recebida' },
+  s5_body:         { EN: 'Our team will verify your assets within 48 hours. You will receive a WhatsApp confirmation at', ES: 'Nuestro equipo verificará tus activos dentro de 48 horas. Recibirás una confirmación por WhatsApp al', PT: 'Nossa equipe verificará seus ativos em até 48 horas. Você receberá uma confirmação pelo WhatsApp no' },
+  s5_dashboard:    { EN: 'Go to your dashboard',  ES: 'Ir a tu panel',       PT: 'Ir para o seu painel' },
+  s5_whatsapp:     { EN: 'Contact via WhatsApp',  ES: 'Contactar por WhatsApp', PT: 'Contatar pelo WhatsApp' },
+  s5_explore:      { EN: 'Explore KLO Marketplace', ES: 'Explorar KLO',      PT: 'Explorar KLO' },
+
+  // Common buttons
+  back:            { EN: 'Back',                  ES: 'Atrás',               PT: 'Voltar' },
+  back_home:       { EN: 'Back to Home',          ES: 'Volver al Inicio',    PT: 'Voltar ao Início' },
+  continue:        { EN: 'Continue',              ES: 'Continuar',           PT: 'Continuar' },
+
+  // Errors
+  err_generic:     { EN: 'An unexpected error occurred during submission.', ES: 'Ocurrió un error inesperado durante el envío.', PT: 'Ocorreu um erro inesperado durante o envio.' },
+};
+
+const STEPS: Trilingual[] = [
+  T.step_welcome,
+  T.step_profile,
+  T.step_availability,
+  T.step_review,
+  T.step_success,
 ];
+
+// `tx` is created inside the component to close over the current `lang`.
+// Use as `tx(T.s2_email)` to get the right-language string with EN fallback.
+type Tx = Record<Language, string>;
 
 const LOCATIONS = ["Cartagena", "Santa Marta", "Bogotá", "Barranquilla", "San Andrés", "Other"];
 const AIRCRAFT_TYPES = ["Turboprop", "Light Jet", "Midsize Jet", "Heavy Jet", "Ultra Long Range", "Helicopter"];
@@ -58,6 +221,10 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
   onGoToLogin,
   onGoToDashboard,
 }) => {
+  // v1.6: trilingual resolver. Closes over `lang` so JSX call sites stay
+  // readable: `tx(T.s2_email)` instead of `T.s2_email[lang] || T.s2_email.EN`.
+  const tx = (entry: Tx | undefined): string =>
+    (entry && (entry[lang] || entry.EN)) || '';
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(0);
   const [type, setType] = useState<string | null>(null);
@@ -328,7 +495,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
       setStep(5);
     } catch (error: any) {
       // STEP 4: On any error, show the error message in the UI without crashing
-      setSubmitError(error.message || 'An unexpected error occurred during submission.');
+      setSubmitError(error.message || tx(T.err_generic));
     } finally {
       setIsSubmitting(false);
     }
@@ -367,19 +534,19 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
             className="w-full h-full object-contain"
           />
         </motion.div>
-        <h1 className="text-5xl font-serif italic tracking-wide text-text-main">Become a KLO Verified Partner</h1>
+        <h1 className="text-5xl font-serif italic tracking-wide text-text-main">{tx(T.s1_title)}</h1>
         <p className="text-text-main/60 font-sans font-light text-xl max-w-2xl mx-auto leading-relaxed">
-          List your villa, yacht, aircraft, vehicle fleet, or staff with the Caribbean's premier ultra-luxury platform.
+          {tx(T.s1_subtitle)}
         </p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
         {[
-          { id: 'VILLA', label: 'Villa Owner', icon: Home, color: 'bg-gold/10 text-gold' },
-          { id: 'YACHT', label: 'Yacht / Boat Operator', icon: Ship, color: 'bg-text-main/5 text-text-main/60' },
-          { id: 'AVIATION', label: 'Private Aviation', icon: Plane, color: 'bg-text-main/5 text-text-main/70' },
-          { id: 'STAFF', label: 'Staffing & Services', icon: Users, color: 'bg-text-main/5 text-text-main/50' },
-          { id: 'GROUND', label: 'Ground Transport', icon: Car, color: 'bg-text-main/5 text-text-main/40' },
+          { id: 'VILLA', labelKey: 's1_pillar_villa', icon: Home, color: 'bg-gold/10 text-gold' },
+          { id: 'YACHT', labelKey: 's1_pillar_yacht', icon: Ship, color: 'bg-text-main/5 text-text-main/60' },
+          { id: 'AVIATION', labelKey: 's1_pillar_aviation', icon: Plane, color: 'bg-text-main/5 text-text-main/70' },
+          { id: 'STAFF', labelKey: 's1_pillar_staff', icon: Users, color: 'bg-text-main/5 text-text-main/50' },
+          { id: 'GROUND', labelKey: 's1_pillar_ground', icon: Car, color: 'bg-text-main/5 text-text-main/40' },
         ].map((item) => (
           <motion.button
             key={item.id}
@@ -391,7 +558,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
             <div className={`w-20 h-20 ${item.color} rounded-xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform`}>
               <item.icon size={40} />
             </div>
-            <h3 className="text-xl font-sans font-medium text-text-main">{item.label}</h3>
+            <h3 className="text-xl font-sans font-medium text-text-main">{tx(T[item.labelKey as keyof typeof T])}</h3>
             <div className="w-10 h-1 bg-gold/20 mx-auto group-hover:w-20 transition-all" />
           </motion.button>
         ))}
@@ -404,22 +571,18 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
       <div className="max-w-2xl mx-auto pt-4 space-y-3 text-center">
         {onGoToLogin && (
           <p className="text-text-main/50 text-sm">
-            {lang === 'EN' ? 'Already a partner?' : lang === 'ES' ? '¿Ya eres socio?' : 'Já é parceiro?'}{' '}
+            {tx(T.s1_returning)}{' '}
             <button
               type="button"
               onClick={onGoToLogin}
               className="text-gold hover:text-white font-semibold transition-colors underline underline-offset-2"
             >
-              {lang === 'EN' ? 'Sign in to your dashboard' : lang === 'ES' ? 'Inicia sesión en tu panel' : 'Entre no seu painel'}
+              {tx(T.s1_signin)}
             </button>
           </p>
         )}
         <p className="text-text-main/30 text-[11px] italic">
-          {lang === 'EN'
-            ? 'Your progress is saved automatically — come back any time to finish.'
-            : lang === 'ES'
-            ? 'Tu progreso se guarda automáticamente — vuelve cuando quieras para terminar.'
-            : 'Seu progresso é salvo automaticamente — volte a qualquer momento para concluir.'}
+          {tx(T.s1_save_hint)}
         </p>
       </div>
     </div>
@@ -428,9 +591,9 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
   const renderStep2 = () => (
     <div className="max-w-4xl mx-auto space-y-12">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-serif italic tracking-wide text-text-main">Business Profile</h2>
+        <h2 className="text-3xl font-serif italic tracking-wide text-text-main">{tx(T.s2_title)}</h2>
         <div className="px-4 py-1 bg-gold/10 text-gold rounded text-[11px] font-sans font-semibold uppercase tracking-tight">
-          {type} Partner
+          {type} {tx(T.s2_partner_badge)}
         </div>
       </div>
 
@@ -438,45 +601,45 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
         {/* Common Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
-            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Business / Asset Name</label>
-            <input name="business_name" value={formData.business_name} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder="e.g. Villa Serenity" />
+            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_business_name)}</label>
+            <input name="business_name" value={formData.business_name} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.s2_business_ph)} />
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Contact Name</label>
-            <input name="contact_name" value={formData.contact_name} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder="Full Name" />
+            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_contact_name)}</label>
+            <input name="contact_name" value={formData.contact_name} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.s2_contact_ph)} />
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Email Address</label>
-            <input name="email" type="email" value={formData.email} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder="email@example.com" />
+            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_email)}</label>
+            <input name="email" type="email" value={formData.email} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.s2_email_ph)} />
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">WhatsApp Number</label>
-            <input name="whatsapp" value={formData.whatsapp} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder="+57 300..." />
+            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_whatsapp)}</label>
+            <input name="whatsapp" value={formData.whatsapp} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.s2_whatsapp_ph)} />
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Location</label>
+            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_location)}</label>
             <select name="location" value={formData.location} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light appearance-none text-text-main">
               {LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Years of Experience</label>
-            <input name="experience" type="number" value={formData.experience} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder="5" />
+            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_experience)}</label>
+            <input name="experience" type="number" value={formData.experience} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.s2_experience_ph)} />
           </div>
         </div>
 
         <div className="space-y-2">
-          <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Description (Max 500 chars)</label>
-          <textarea name="description" maxLength={500} value={formData.description} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light h-32 resize-none text-text-main" placeholder="Describe your luxury offering..." />
+          <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_description)}</label>
+          <textarea name="description" maxLength={500} value={formData.description} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light h-32 resize-none text-text-main" placeholder={tx(T.s2_description_ph)} />
         </div>
 
         <div className="space-y-2">
-          <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Primary Photo URL</label>
+          <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_photo_url)}</label>
           <div className="relative">
-            <input name="photo_url" value={formData.photo_url} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 pl-14 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder="https://..." />
+            <input name="photo_url" value={formData.photo_url} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 pl-14 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.s2_photo_url_ph)} />
             <Camera className="absolute left-6 top-1/2 -translate-y-1/2 text-text-main/20" size={20} />
           </div>
-          <p className="text-[11px] text-text-main/30 italic font-sans">Full photo upload coming soon</p>
+          <p className="text-[11px] text-text-main/30 italic font-sans">{tx(T.s2_photo_hint)}</p>
         </div>
 
         <div className="h-[1px] bg-border-main w-full" />
@@ -486,20 +649,20 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           <div className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Bedrooms</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.v_bedrooms)}</label>
                 <input name="bedrooms" type="number" value={formData.bedrooms} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Max Guests</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.v_max_guests)}</label>
                 <input name="max_guests" type="number" value={formData.max_guests} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Price per Night (USD)</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.v_price)}</label>
                 <input name="price_per_night" type="number" value={formData.price_per_night} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
               </div>
             </div>
             <div className="space-y-4">
-              <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Amenities</label>
+              <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.v_amenities)}</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {VILLA_AMENITIES.map(a => (
                   <button key={a} onClick={() => handleCheckboxChange('amenities', a)} className={`p-4 rounded-xl border text-[11px] font-sans uppercase tracking-tight transition-all ${formData.amenities.includes(a) ? 'bg-gold border-gold text-luxury-black font-semibold' : 'border-border-main hover:border-gold/30 text-text-main/60'}`}>
@@ -515,36 +678,36 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           <div className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Vessel Length (ft)</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.ya_length)}</label>
                 <input name="vessel_length" type="number" value={formData.vessel_length} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Max Guests</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.ya_max_guests)}</label>
                 <input name="max_guests" type="number" value={formData.max_guests} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Price per Day (USD)</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.ya_price)}</label>
                 <input name="price_per_day" type="number" value={formData.price_per_day} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Home Port</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.ya_home_port)}</label>
                 <input name="home_port" value={formData.home_port} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Crew Included?</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.ya_crew)}</label>
                 <div className="flex gap-4">
-                  {['yes', 'no'].map(o => (
-                    <button key={o} onClick={() => setFormData((prev: any) => ({ ...prev, crew_included: o }))} className={`flex-1 py-4 rounded-xl border text-[11px] font-sans uppercase tracking-tight transition-all ${formData.crew_included === o ? 'bg-gold border-gold text-luxury-black font-semibold' : 'border-border-main text-text-main/60'}`}>
-                      {o}
+                  {[T.yes, T.no].map(o => (
+                    <button key={o.EN} onClick={() => setFormData((prev: any) => ({ ...prev, crew_included: o.EN }))} className={`flex-1 py-4 rounded-xl border text-[11px] font-sans uppercase tracking-tight transition-all ${formData.crew_included === o.EN ? 'bg-gold border-gold text-luxury-black font-semibold' : 'border-border-main text-text-main/60'}`}>
+                      {tx(o)}
                     </button>
                   ))}
                 </div>
               </div>
             </div>
             <div className="space-y-4">
-              <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Features</label>
+              <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.ya_features)}</label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {YACHT_FEATURES.map(f => (
                   <button key={f} onClick={() => handleCheckboxChange('features', f)} className={`p-4 rounded-xl border text-[11px] font-sans uppercase tracking-tight transition-all ${formData.features.includes(f) ? 'bg-gold border-gold text-luxury-black font-semibold' : 'border-border-main hover:border-gold/30 text-text-main/60'}`}>
@@ -560,31 +723,31 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           <div className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Aircraft Type</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.av_type)}</label>
                 <select name="aircraft_type" value={formData.aircraft_type} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light appearance-none text-text-main">
                   {AIRCRAFT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Tail Number</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.av_tail)}</label>
                 <input name="tail_number" value={formData.tail_number} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Max Passengers</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.av_max_pax)}</label>
                 <input name="max_passengers" type="number" value={formData.max_passengers} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Price per Hour (USD)</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.av_price)}</label>
                 <input name="price_per_hour" type="number" value={formData.price_per_hour} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Home Base (IATA)</label>
-                <input name="home_base" value={formData.home_base} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder="CTG" />
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.av_home_base)}</label>
+                <input name="home_base" value={formData.home_base} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.av_home_base_ph)} />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Range (nm)</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.av_range)}</label>
                 <input name="range" type="number" value={formData.range} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
               </div>
             </div>
@@ -595,18 +758,18 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           <div className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Role</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.st_role)}</label>
                 <select name="role" value={formData.role} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light appearance-none text-text-main">
                   {STAFF_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Daily Rate (USD)</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.st_daily_rate)}</label>
                 <input name="daily_rate" type="number" value={formData.daily_rate} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
               </div>
             </div>
             <div className="space-y-4">
-              <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Languages Spoken</label>
+              <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.st_languages)}</label>
               <div className="flex flex-wrap gap-4">
                 {LANGUAGES.map(l => (
                   <button key={l} onClick={() => handleCheckboxChange('languages', l)} className={`w-16 h-16 rounded-xl border text-[11px] font-sans font-semibold transition-all ${formData.languages.includes(l) ? 'bg-gold border-gold text-luxury-black' : 'border-border-main hover:border-gold/30 text-text-main/60'}`}>
@@ -616,8 +779,8 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Certifications</label>
-              <input name="certifications" value={formData.certifications} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder="e.g. Michelin Star, PADI Instructor..." />
+              <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.st_certs)}</label>
+              <input name="certifications" value={formData.certifications} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.st_certs_ph)} />
             </div>
           </div>
         )}
@@ -626,32 +789,32 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           <div className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Vehicle Type</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.gr_vehicle)}</label>
                 <select name="vehicle_type" value={formData.vehicle_type} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light appearance-none text-text-main">
                   {VEHICLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Number of Passengers</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.gr_passengers)}</label>
                 <input name="max_passengers_ground" type="number" value={formData.max_passengers_ground} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Price per Day (USD)</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.gr_price)}</label>
                 <input name="price_per_day_ground" type="number" value={formData.price_per_day_ground} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">License Plate</label>
-                <input name="license_plate" value={formData.license_plate} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder="e.g. ABC-1234" />
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.gr_plate)}</label>
+                <input name="license_plate" value={formData.license_plate} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.gr_plate_ph)} />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Driver Included?</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.gr_driver_inc)}</label>
                 <div className="flex gap-4">
-                  {['yes', 'no'].map(o => (
-                    <button key={o} onClick={() => setFormData((prev: any) => ({ ...prev, driver_included: o }))} className={`flex-1 py-4 rounded-xl border text-[11px] font-sans uppercase tracking-tight transition-all ${formData.driver_included === o ? 'bg-gold border-gold text-luxury-black font-semibold' : 'border-border-main text-text-main/60'}`}>
-                      {o}
+                  {[T.yes, T.no].map(o => (
+                    <button key={o.EN} onClick={() => setFormData((prev: any) => ({ ...prev, driver_included: o.EN }))} className={`flex-1 py-4 rounded-xl border text-[11px] font-sans uppercase tracking-tight transition-all ${formData.driver_included === o.EN ? 'bg-gold border-gold text-luxury-black font-semibold' : 'border-border-main text-text-main/60'}`}>
+                      {tx(o)}
                     </button>
                   ))}
                 </div>
@@ -662,11 +825,11 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Is this vehicle armored?</label>
+                    <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.gr_armored_label)}</label>
                   </div>
-                  <p className="text-xs text-text-main/40 font-light">Does the vehicle have ballistic protection?</p>
+                  <p className="text-xs text-text-main/40 font-light">{tx(T.gr_armored_help)}</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setFormData((prev: any) => ({ ...prev, is_armored: !prev.is_armored }))}
                   className={`w-16 h-8 rounded-full transition-all relative ${formData.is_armored ? 'bg-gold' : 'bg-text-main/10'}`}
                 >
@@ -677,7 +840,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
 
             {formData.driver_included === 'yes' && (
               <div className="space-y-4">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Driver Languages Spoken</label>
+                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.gr_driver_lang)}</label>
                 <div className="flex flex-wrap gap-4">
                   {DRIVER_LANGUAGES.map(l => (
                     <button key={l} onClick={() => handleCheckboxChange('driver_languages', l)} className={`w-16 h-16 rounded-xl border text-[11px] font-sans font-semibold transition-all ${formData.driver_languages.includes(l) ? 'bg-gold border-gold text-luxury-black' : 'border-border-main hover:border-gold/30 text-text-main/60'}`}>
@@ -693,10 +856,10 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
 
         <div className="flex justify-between pt-8">
           <button onClick={prevStep} className="flex items-center gap-2 text-[11px] font-sans uppercase tracking-tight font-semibold text-text-main/40 hover:text-text-main transition-colors">
-            <ChevronLeft size={16} /> Back
+            <ChevronLeft size={16} /> {tx(T.back)}
           </button>
           <button onClick={nextStep} className="px-12 py-4 bg-gold text-luxury-black rounded font-medium text-xs tracking-wide flex items-center gap-3 hover:bg-white transition-all">
-            Continue <ChevronRight size={16} />
+            {tx(T.continue)} <ChevronRight size={16} />
           </button>
         </div>
     </div>
@@ -783,8 +946,8 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
     return (
       <div className="max-w-4xl mx-auto space-y-12">
         <div className="text-center space-y-4">
-          <h2 className="text-4xl font-serif text-text-main">Connect Your Availability</h2>
-          <p className="text-text-main/40 font-light">Choose how you want to manage your bookings.</p>
+          <h2 className="text-4xl font-serif text-text-main">{tx(T.s3_title)}</h2>
+          <p className="text-text-main/40 font-light">{tx(T.s3_subtitle)}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -793,20 +956,20 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
               <Globe size={40} />
             </div>
             <div className="space-y-2">
-              <h3 className="text-xl font-serif text-text-main">Connect Google Calendar</h3>
+              <h3 className="text-xl font-serif text-text-main">{tx(T.s3_google_title)}</h3>
               <p className="text-xs text-text-main/40 font-light leading-relaxed">
-                Your bookings and blocked dates will sync automatically every 24 hours.
+                {tx(T.s3_google_body)}
               </p>
             </div>
-            <button 
+            <button
               disabled
               className="w-full py-4 border border-border-main rounded-xl text-[11px] font-sans font-semibold uppercase tracking-tight transition-all flex items-center justify-center gap-3 text-text-main/20 cursor-not-allowed"
             >
               <ExternalLink size={16} />
-              Connect Google
+              {tx(T.s3_google_cta)}
             </button>
             <p className="text-[11px] text-gold font-sans font-semibold uppercase tracking-tight">
-              You can connect Google Calendar after your application is approved
+              {tx(T.s3_google_locked)}
             </p>
           </div>
 
@@ -815,14 +978,14 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
               <div className="w-12 h-12 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center">
                 <Calendar size={24} />
               </div>
-              <h3 className="text-xl font-serif text-text-main">Set Manually</h3>
+              <h3 className="text-xl font-serif text-text-main">{tx(T.s3_manual_title)}</h3>
             </div>
             <div className="grid grid-cols-1 gap-8">
               {renderCalendarGrid(currentMonth, currentYear)}
             </div>
             <div className="flex items-center gap-4 text-[10px] uppercase tracking-widest font-bold text-text-main">
-              <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500 rounded-full" /> Available</div>
-              <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-full" /> Blocked</div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500 rounded-full" /> {tx(T.s3_available)}</div>
+              <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-full" /> {tx(T.s3_blocked)}</div>
             </div>
           </div>
         </div>
@@ -830,8 +993,8 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
         <div className="bg-luxury-slate border border-border-main rounded-2xl p-10 space-y-8">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <h3 className="text-xl font-sans font-medium text-text-main">Seasonal Pricing</h3>
-              <p className="text-xs text-text-main/40 font-light">Do you have different pricing by season?</p>
+              <h3 className="text-xl font-sans font-medium text-text-main">{tx(T.s3_seasonal)}</h3>
+              <p className="text-xs text-text-main/40 font-light">{tx(T.s3_seasonal_help)}</p>
             </div>
             <button 
               onClick={() => setFormData((prev: any) => ({ ...prev, seasonal_pricing: !prev.seasonal_pricing }))}
@@ -845,14 +1008,14 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
             {formData.seasonal_pricing && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="grid grid-cols-1 md:grid-cols-2 gap-8 overflow-hidden">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">High Season (Dec-Apr)</label>
+                  <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s3_high_season)}</label>
                   <div className="relative">
                     <input name="high_season_price" type="number" value={formData.high_season_price} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 pl-12 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder="0" />
                     <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 text-text-main/20" size={16} />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Low Season (May-Nov)</label>
+                  <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s3_low_season)}</label>
                   <div className="relative">
                     <input name="low_season_price" type="number" value={formData.low_season_price} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 pl-12 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder="0" />
                     <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 text-text-main/20" size={16} />
@@ -865,10 +1028,10 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
 
         <div className="flex justify-between pt-8">
           <button onClick={prevStep} className="flex items-center gap-2 text-[11px] font-sans uppercase tracking-tight text-text-main/40 hover:text-text-main transition-colors">
-            <ChevronLeft size={16} /> Back
+            <ChevronLeft size={16} /> {tx(T.back)}
           </button>
           <button onClick={nextStep} className="px-12 py-4 bg-gold text-luxury-black rounded font-medium text-xs tracking-wide flex items-center gap-3 hover:bg-white transition-all">
-            Continue <ChevronRight size={16} />
+            {tx(T.continue)} <ChevronRight size={16} />
           </button>
         </div>
       </div>
@@ -878,21 +1041,21 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
   const renderStep4 = () => (
     <div className="max-w-4xl mx-auto space-y-12">
       <div className="text-center space-y-4">
-        <h2 className="text-4xl font-serif text-text-main">Review & Submit</h2>
-        <p className="text-text-main/40 font-light">Please verify all information before submitting for verification.</p>
+        <h2 className="text-4xl font-serif text-text-main">{tx(T.s4_title)}</h2>
+        <p className="text-text-main/40 font-light">{tx(T.s4_subtitle)}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="bg-luxury-slate border border-border-main rounded-2xl p-10 space-y-8">
-          <h3 className="text-xl font-serif border-b border-border-main pb-4 text-text-main">Business Details</h3>
+          <h3 className="text-xl font-serif border-b border-border-main pb-4 text-text-main">{tx(T.s4_business)}</h3>
           <div className="space-y-4 text-text-main">
             {[
-              { label: 'Business', value: formData.business_name },
-              { label: 'Contact', value: formData.contact_name },
-              { label: 'Email', value: formData.email },
-              { label: 'WhatsApp', value: formData.whatsapp },
-              { label: 'Location', value: formData.location },
-              { label: 'Type', value: type },
+              { label: tx(T.s4_label_business), value: formData.business_name },
+              { label: tx(T.s4_label_contact), value: formData.contact_name },
+              { label: tx(T.s4_label_email), value: formData.email },
+              { label: tx(T.s4_label_whatsapp), value: formData.whatsapp },
+              { label: tx(T.s4_label_location), value: formData.location },
+              { label: tx(T.s4_label_type), value: type },
             ].map(i => (
               <div key={i.label} className="flex justify-between items-center">
                 <span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{i.label}</span>
@@ -903,51 +1066,50 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
         </div>
 
         <div className="bg-luxury-slate border border-border-main rounded-2xl p-10 space-y-8">
-          <h3 className="text-xl font-sans font-medium border-b border-border-main pb-4 text-text-main">Asset Details</h3>
+          <h3 className="text-xl font-sans font-medium border-b border-border-main pb-4 text-text-main">{tx(T.s4_asset)}</h3>
           <div className="space-y-4">
             {type === 'VILLA' && (
               <>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Bedrooms</span><span className="text-sm font-medium text-text-main">{formData.bedrooms}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Guests</span><span className="text-sm font-medium text-text-main">{formData.max_guests}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Price</span><span className="text-sm font-medium text-text-main">${formData.price_per_night}/night</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_bedrooms)}</span><span className="text-sm font-medium text-text-main">{formData.bedrooms}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_guests)}</span><span className="text-sm font-medium text-text-main">{formData.max_guests}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_price)}</span><span className="text-sm font-medium text-text-main">${formData.price_per_night}{tx(T.s4_per_night)}</span></div>
               </>
             )}
             {type === 'YACHT' && (
               <>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Length</span><span className="text-sm font-medium text-text-main">{formData.vessel_length}ft</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Guests</span><span className="text-sm font-medium text-text-main">{formData.max_guests}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Price</span><span className="text-sm font-medium text-text-main">${formData.price_per_day}/day</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_length)}</span><span className="text-sm font-medium text-text-main">{formData.vessel_length}ft</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_guests)}</span><span className="text-sm font-medium text-text-main">{formData.max_guests}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_price)}</span><span className="text-sm font-medium text-text-main">${formData.price_per_day}{tx(T.s4_per_day)}</span></div>
               </>
             )}
             {type === 'AVIATION' && (
               <>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Type</span><span className="text-sm font-medium text-text-main">{formData.aircraft_type}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Tail #</span><span className="text-sm font-medium text-text-main">{formData.tail_number}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Price</span><span className="text-sm font-medium text-text-main">${formData.price_per_hour}/hour</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_type)}</span><span className="text-sm font-medium text-text-main">{formData.aircraft_type}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_tail)}</span><span className="text-sm font-medium text-text-main">{formData.tail_number}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_price)}</span><span className="text-sm font-medium text-text-main">${formData.price_per_hour}{tx(T.s4_per_hour)}</span></div>
               </>
             )}
             {type === 'STAFF' && (
               <>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Role</span><span className="text-sm font-medium text-text-main">{formData.role}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Rate</span><span className="text-sm font-medium text-text-main">${formData.daily_rate}/day</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_type)}</span><span className="text-sm font-medium text-text-main">{formData.role}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_rate)}</span><span className="text-sm font-medium text-text-main">${formData.daily_rate}{tx(T.s4_per_day)}</span></div>
               </>
             )}
             {type === 'GROUND' && (
               <>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Vehicle</span><span className="text-sm font-medium text-text-main">{formData.vehicle_type}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Passengers</span><span className="text-sm font-medium text-text-main">{formData.max_passengers_ground}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Plate</span><span className="text-sm font-medium text-text-main">{formData.license_plate}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Price</span><span className="text-sm font-medium text-text-main">${formData.price_per_day_ground}/day</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Driver</span><span className="text-sm font-medium font-sans text-text-main">{formData.driver_included}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_vehicle)}</span><span className="text-sm font-medium text-text-main">{formData.vehicle_type}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_passengers)}</span><span className="text-sm font-medium text-text-main">{formData.max_passengers_ground}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_plate)}</span><span className="text-sm font-medium text-text-main">{formData.license_plate}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_price)}</span><span className="text-sm font-medium text-text-main">${formData.price_per_day_ground}{tx(T.s4_per_day)}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_driver)}</span><span className="text-sm font-medium font-sans text-text-main">{formData.driver_included === 'yes' ? tx(T.yes) : tx(T.no)}</span></div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Armored</span>
+                  <span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_armored)}</span>
                   <span className="text-sm font-medium flex items-center gap-2 text-text-main">
-                    {formData.is_armored ? 'YES' : 'NO'}
-
+                    {formData.is_armored ? tx(T.yes).toUpperCase() : tx(T.no).toUpperCase()}
                   </span>
                 </div>
                 {formData.driver_included === 'yes' && (
-                  <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">Languages</span><span className="text-sm font-medium text-text-main">{formData.driver_languages.join(', ')}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_languages)}</span><span className="text-sm font-medium text-text-main">{formData.driver_languages.join(', ')}</span></div>
                 )}
               </>
             )}
@@ -960,23 +1122,19 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           <div className="w-12 h-12 bg-gold/10 text-gold rounded-xl flex items-center justify-center">
             <Shield size={24} />
           </div>
-          <h3 className="text-xl font-sans font-medium text-text-main">KLO Partnership Terms</h3>
+          <h3 className="text-xl font-sans font-medium text-text-main">{tx(T.s4_terms_title)}</h3>
         </div>
         <p className="text-sm text-text-main/60 font-light leading-relaxed">
-          {lang === 'EN' 
-            ? "As a KLO Verified Partner, you retain 80% of every booking. KLO's 20% management fee covers client acquisition, platform access, payment processing, and dedicated concierge support. Payouts are processed within 48 hours of guest check-in via Stripe. You will have access to a partner dashboard to track bookings and revenue in real time."
-            : lang === 'ES'
-            ? "Como Socio Verificado de KLO, usted retiene el 80% de cada reserva. La tarifa de gestión del 20% de KLO cubre la adquisición de clientes, acceso a la plataforma, procesamiento de pagos y soporte de conserjería dedicado. Los pagos se procesan dentro de las 48 horas posteriores al check-in del huésped a través de Stripe."
-            : "Como Parceiro Verificado KLO, você retém 80% de cada reserva. A taxa de gestão de 20% da KLO cobre aquisição de clientes, acesso à plataforma, processamento de pagamentos e suporte de concierge dedicado. Os pagamentos são processados em até 48 horas após o check-in do hóspede via Stripe."}
+          {tx(T.s4_terms_body_en)}
         </p>
         <label className="flex items-center gap-4 cursor-pointer group">
-          <div 
+          <div
             onClick={() => setAgreedToTerms(!agreedToTerms)}
             className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${agreedToTerms ? 'bg-gold border-gold' : 'border-border-main group-hover:border-gold/50'}`}
           >
             {agreedToTerms && <Check size={16} className="text-luxury-black" />}
           </div>
-          <span className="text-[11px] font-sans uppercase tracking-tight font-semibold text-text-main">I agree to KLO Partnership Terms</span>
+          <span className="text-[11px] font-sans uppercase tracking-tight font-semibold text-text-main">{tx(T.s4_agree)}</span>
         </label>
       </div>
 
@@ -993,15 +1151,15 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
 
       <div className="flex justify-between pt-8">
         <button onClick={prevStep} className="flex items-center gap-2 text-[11px] font-sans uppercase tracking-tight font-semibold text-text-main/40 hover:text-text-main transition-colors">
-          <ChevronLeft size={16} /> Back
+          <ChevronLeft size={16} /> {tx(T.back)}
         </button>
-        <button 
+        <button
           onClick={handleSubmit}
           disabled={!agreedToTerms || isSubmitting}
           className="px-16 py-6 bg-gold text-luxury-black rounded font-medium text-xs tracking-wide flex items-center gap-3 hover:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-gold/20"
         >
           {isSubmitting ? <Loader2 className="animate-spin" /> : <Star size={18} />}
-          Submit for Verification
+          {isSubmitting ? tx(T.s4_submitting) : tx(T.s4_submit)}
         </button>
       </div>
     </div>
@@ -1014,9 +1172,9 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
       </motion.div>
       
       <div className="space-y-4">
-        <h1 className="text-5xl font-serif text-white">Application Received</h1>
+        <h1 className="text-5xl font-serif text-white">{tx(T.s5_title)}</h1>
         <p className="text-white/60 font-sans font-light text-xl leading-relaxed">
-          Our team will verify your assets within 48 hours. You will receive a WhatsApp confirmation at <span className="text-gold font-semibold">{formData.whatsapp}</span>.
+          {tx(T.s5_body)} <span className="text-gold font-semibold">{formData.whatsapp}</span>.
         </p>
       </div>
 
@@ -1030,7 +1188,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
             onClick={onGoToDashboard}
             className="w-full py-6 bg-gold text-luxury-black rounded font-medium text-xs tracking-wide flex items-center justify-center gap-3 hover:bg-white transition-all shadow-2xl shadow-gold/20"
           >
-            {lang === 'EN' ? 'Go to your dashboard' : lang === 'ES' ? 'Ir a tu panel' : 'Ir para o seu painel'}
+            {tx(T.s5_dashboard)}
             <ArrowRight size={18} />
           </button>
         )}
@@ -1040,13 +1198,13 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           rel="noopener noreferrer"
           className="w-full py-6 bg-emerald-500 text-white rounded font-medium text-xs tracking-wide flex items-center justify-center gap-3 hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-500/20"
         >
-          <MessageSquare size={18} /> Contact via WhatsApp
+          <MessageSquare size={18} /> {tx(T.s5_whatsapp)}
         </a>
         <button
           onClick={() => onBack ? onBack() : window.location.href = '/'}
           className="w-full py-6 bg-white/5 border border-white/10 text-white rounded font-medium text-xs tracking-wide flex items-center justify-center gap-3 hover:bg-white/10 transition-all"
         >
-          Explore KLO Marketplace <ArrowRight size={18} />
+          {tx(T.s5_explore)} <ArrowRight size={18} />
         </button>
       </div>
     </div>
@@ -1062,7 +1220,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           onClick={() => onBack ? onBack() : window.location.href = '/'}
           className="flex items-center gap-2 px-5 py-2.5 bg-luxury-slate/80 backdrop-blur-md border border-border-main rounded-full text-[11px] font-sans uppercase tracking-tight font-semibold hover:bg-luxury-slate transition-all text-text-main shadow-sm"
         >
-          <Home size={14} /> Back to Home
+          <Home size={14} /> {tx(T.back_home)}
         </button>
       </div>
 
@@ -1080,7 +1238,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
                 const isCurrent = step === stepNum;
                 const isLast = i === 3;
                 return (
-                  <React.Fragment key={label}>
+                  <React.Fragment key={label.EN}>
                     <div className="flex items-center gap-3 shrink-0">
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
@@ -1098,7 +1256,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
                           isCurrent ? 'text-gold' : isComplete ? 'text-text-main/60' : 'text-text-main/30'
                         }`}
                       >
-                        {label}
+                        {tx(label)}
                       </span>
                     </div>
                     {!isLast && (
