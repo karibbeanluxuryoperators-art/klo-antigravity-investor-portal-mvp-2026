@@ -66,11 +66,20 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   // the `/api` prefix from req.url before the inner Express app sees it
   // — so the Express route for `/api/config` would not match and the
   // request would fall through to the SPA catch-all. Handled here
-  // instead, the same way /api/health is.
+  // instead, the same way /api/health is. Inlined (not a separate
+  // file) because Vercel's bundler doesn't pick up sibling .ts files
+  // referenced via require from the auto-detected entry.
   if (url === '/api/config' || url.startsWith('/api/config?')) {
-    // Lazy require — only when this endpoint is actually hit.
-    const { configHandler } = require('./_configHandler.js') as typeof import('./_configHandler.js');
-    return configHandler(req, res);
+    res.statusCode = 200;
+    res.setHeader('content-type', 'application/json');
+    res.setHeader('cache-control', 'no-store');
+    res.end(JSON.stringify({
+      supabase: {
+        url: process.env.SUPABASE_URL || '',
+        anonKey: process.env.SUPABASE_ANON_KEY || '',
+      },
+    }));
+    return;
   }
 
   if (!app) {
