@@ -341,12 +341,55 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
     try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch { /* ignore */ }
   };
 
+  // v1.6: validation per step. Returns the error message key, or null
+  // if the current step is valid. Used by nextStep to gate progression.
+  const validateStep = (targetStep: number): string | null => {
+    // Step 1 → 2: a pillar must be selected (the click already enforces this)
+    if (targetStep === 2 && !type) {
+      return lang === 'EN' ? 'Please select a partner type.' : lang === 'ES' ? 'Por favor selecciona un tipo de socio.' : 'Por favor, selecione um tipo de parceiro.';
+    }
+    // Step 2 → 3: required business-profile fields
+    if (targetStep === 3) {
+      if (!formData.business_name?.trim()) {
+        return lang === 'EN' ? 'Business / asset name is required.' : lang === 'ES' ? 'El nombre del negocio es obligatorio.' : 'O nome do negócio é obrigatório.';
+      }
+      if (!formData.contact_name?.trim()) {
+        return lang === 'EN' ? 'Contact name is required.' : lang === 'ES' ? 'El nombre de contacto es obligatorio.' : 'O nome de contato é obrigatório.';
+      }
+      if (!formData.email?.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        return lang === 'EN' ? 'Please enter a valid email address.' : lang === 'ES' ? 'Por favor ingresa un correo válido.' : 'Por favor, insira um e-mail válido.';
+      }
+      if (!formData.whatsapp?.trim() || formData.whatsapp === '+57 ') {
+        return lang === 'EN' ? 'WhatsApp number is required.' : lang === 'ES' ? 'El número de WhatsApp es obligatorio.' : 'O número de WhatsApp é obrigatório.';
+      }
+    }
+    // Step 3 → 4: any of the type-specific required fields. We do basic
+    // checks per pillar — only the price field, since it's the most
+    // commonly missed.
+    if (targetStep === 4) {
+      const price = formData.price_per_night || formData.price_per_day ||
+                    formData.price_per_hour || formData.price_per_day_ground ||
+                    formData.daily_rate;
+      if (!price) {
+        return lang === 'EN' ? 'Price is required.' : lang === 'ES' ? 'El precio es obligatorio.' : 'O preço é obrigatório.';
+      }
+    }
+    return null;
+  };
+
   const nextStep = () => {
+    const err = validateStep(step + 1);
+    if (err) {
+      setSubmitError(err);
+      return;
+    }
+    setSubmitError(null);
     setDirection(1);
     setStep(s => Math.min(s + 1, 5));
   };
 
   const prevStep = () => {
+    setSubmitError(null);
     setDirection(-1);
     setStep(s => Math.max(s - 1, 1));
   };

@@ -57,12 +57,11 @@ const Investors: React.FC<InvestorsProps> = ({ t, lang }) => {
             <h2 className="text-4xl md:text-6xl font-bold mb-8 serif italic">{t('investors.title')}</h2>
             <p className="text-white/40 text-xl font-light">{t('investors.subtitle')}</p>
           </div>
-          <button
-            onClick={() => setIsAdminMode(!isAdminMode)}
-            className="px-8 py-3 border border-white/10 rounded-full text-[10px] font-bold tracking-widest uppercase hover:bg-white hover:text-slate-900 transition-all active:scale-95"
-          >
-            {isAdminMode ? 'Exit Management' : 'Manage Assets'}
-          </button>
+          {/* v1.6: "Manage Assets" button removed — it was an unauthenticated
+              upload control sitting on the public investor page (security
+              risk + visual confusion for non-admin visitors). Investor asset
+              management now lives in the proper /admin portal (wiring in a
+              follow-up commit). */}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
@@ -171,6 +170,8 @@ const Investors: React.FC<InvestorsProps> = ({ t, lang }) => {
             </div>
           </div>
         )}
+        {/* v1.6: management panel removed — see comment above. Asset CRUD now
+            lives in the proper /admin portal. */}
       </div>
     </section>
   );
