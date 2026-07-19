@@ -577,3 +577,6 @@ SENDGRID_FROM_NAME=KLO Operations
 7. **Adding a string? It's trilingual. Always. (section 10 — i18n rules)**
 
 If still lost: stop, don't add code. Write down what's confusing, what you expected to happen, what actually happened. That diagnosis is more valuable than a guess.
+ 
+ < ! - -   t o u c h :   t r i g g e r   r e d e p l o y   a f t e r   e n v   v a r   u p d a t e   a t   2 0 2 6 - 0 7 - 1 9 T 1 2 : 0 4 : 4 5 . 3 4 2 9 4 7 3 - 0 5 : 0 0   - - >  
+ 
