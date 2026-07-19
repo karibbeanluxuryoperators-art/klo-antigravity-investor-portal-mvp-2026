@@ -132,6 +132,17 @@ export async function getSupplierSession(): Promise<Session | null> {
   return data.session;
 }
 
+/**
+ * v1.7.1: returns whether the Supabase client was successfully built.
+ * Gates call this to distinguish "no session" (needs sign-in) from
+ * "config missing" (show the config-required error). Both states return
+ * null from getSupplierSession, so we need this extra probe.
+ */
+export async function isSupabaseConfigured(): Promise<boolean> {
+  const client = await getClient();
+  return client !== null;
+}
+
 /** Returns the current user, or null if no session. */
 export async function getSupplierUser(): Promise<User | null> {
   const session = await getSupplierSession();

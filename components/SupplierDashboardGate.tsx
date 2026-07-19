@@ -13,6 +13,7 @@ import {
   onSupplierAuthChange,
   signOutSupplier,
   supabaseUserToKLO,
+  isSupabaseConfigured,
 } from '../services/supabase';
 import type { KLOUser } from '../services/firebase';
 import { SupplierDashboard } from './SupplierDashboard';
@@ -50,7 +51,7 @@ const T = {
     refresh: 'Refresh',
     signOut: 'Sign out',
     configTitle: 'Configuration required',
-    configBody: 'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.',
+    configBody: 'Supabase is not configured. The /api/config endpoint returned no URL or anon key. Check the server environment.',
     eyebrow: 'Partner Portal',
   },
   ES: {
@@ -66,7 +67,7 @@ const T = {
     refresh: 'Actualizar',
     signOut: 'Cerrar sesión',
     configTitle: 'Configuración requerida',
-    configBody: 'Supabase no está configurado. Define VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.',
+    configBody: 'Supabase no está configurado. El endpoint /api/config no devolvió URL ni clave anónima. Verifica el entorno del servidor.',
     eyebrow: 'Portal de Socios',
   },
   PT: {
@@ -82,7 +83,7 @@ const T = {
     refresh: 'Atualizar',
     signOut: 'Sair',
     configTitle: 'Configuração necessária',
-    configBody: 'Supabase não está configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.',
+    configBody: 'Supabase não está configurado. O endpoint /api/config não retornou URL nem chave anônima. Verifique o ambiente do servidor.',
     eyebrow: 'Portal de Parceiros',
   },
 } as const;
@@ -108,8 +109,14 @@ export const SupplierDashboardGate: React.FC<SupplierDashboardGateProps> = ({
     let cancelled = false;
 
     const initialize = async () => {
-      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        if (!cancelled) setState({ kind: 'config-missing' });
+      // v1.7.1: replaced the VITE_SUPABASE_* env check with a client build
+      // probe. The client is built lazily from /api/config (which the
+      // server answers from SUPABASE_URL / SUPABASE_ANON_KEY). If the
+      // client build fails (config empty, network error), we show the
+      // config-missing state; otherwise we look up the session.
+      const configured = await isSupabaseConfigured();
+      if (!cancelled && !configured) {
+        setState({ kind: 'config-missing' });
         return;
       }
       const initial = await getSupplierSession();

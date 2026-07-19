@@ -19,6 +19,7 @@ import {
   getSupplierSession,
   onSupplierAuthChange,
   signOutSupplier,
+  isSupabaseConfigured,
 } from '../services/supabase';
 import { SuppliersManagement } from './SuppliersManagement';
 import {
@@ -53,7 +54,7 @@ const T = {
     notAuthBody: 'Your account ({email}) is not on the admin allowlist. If you should have access, contact the site owner.',
     notAuthCta: 'Sign out',
     configTitle: 'Configuration required',
-    configBody: 'Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.',
+    configBody: 'Supabase is not configured. The /api/config endpoint returned no URL or anon key. Check the server environment.',
   },
   ES: {
     back: 'Volver al Inicio',
@@ -66,7 +67,7 @@ const T = {
     notAuthBody: 'Tu cuenta ({email}) no está en la lista de administradores. Si deberías tener acceso, contacta al propietario del sitio.',
     notAuthCta: 'Cerrar sesión',
     configTitle: 'Configuración requerida',
-    configBody: 'Supabase no está configurado. Define VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.',
+    configBody: 'Supabase no está configurado. El endpoint /api/config no devolvió URL ni clave anónima. Verifica el entorno del servidor.',
   },
   PT: {
     back: 'Voltar ao Início',
@@ -79,7 +80,7 @@ const T = {
     notAuthBody: 'Sua conta ({email}) não está na lista de administradores. Se deveria ter acesso, contate o proprietário do site.',
     notAuthCta: 'Sair',
     configTitle: 'Configuração necessária',
-    configBody: 'Supabase não está configurado. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY.',
+    configBody: 'Supabase não está configurado. O endpoint /api/config não retornou URL nem chave anônima. Verifique o ambiente do servidor.',
   },
 } as const;
 
@@ -105,8 +106,11 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
     let cancelled = false;
 
     const initialize = async () => {
-      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        if (!cancelled) setState({ kind: 'config-missing' });
+      // v1.7.1: replaced the VITE_SUPABASE_* env check with a client build
+      // probe. See services/supabase.ts.
+      const configured = await isSupabaseConfigured();
+      if (!cancelled && !configured) {
+        setState({ kind: 'config-missing' });
         return;
       }
       const initial = await getSupplierSession();
