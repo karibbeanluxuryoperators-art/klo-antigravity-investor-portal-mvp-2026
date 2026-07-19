@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.env.local
+.env.example
+.vercel
+.git
+.github
+docs
+*.log
+.DS_Store
