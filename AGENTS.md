@@ -81,9 +81,21 @@ The platform is currently **3 portals + 1 public site**, all backed by the same 
 
 | Repo | URL | Role |
 |---|---|---|
-| `klo-antigravity-investor-portal-mvp-2026` (this one) | (canonical domain) | **The platform.** Public site + all 3 portals. Lives at `karibbeanluxuryoperators.lat` once v1 ships. |
+| `klo-antigravity-investor-portal-mvp-2026` (this one) | `karibbeanluxuryoperators.lat` | **The platform.** Public site + all 3 portals. **Vercel project: `klo-antigravity-investor-portal-mvp-2026`** under team `karibbeanluxuryoperators-8256`. |
 | `KLO-FULLSTACK` | `klo-fullstack.vercel.app` | **The reference implementation.** Used to port supplier code into this repo. Stays as a working staging environment until v1 ships. |
 | `KLO-Private-Charters` | separate | Unrelated commercial experiment. Ignore. |
+
+**Vercel team:** `karibbeanluxuryoperators-8256`
+**Vercel project ID:** `klo-antigravity-investor-portal-mvp-2026` (lowercase, with hyphens)
+
+**Other projects in the same Vercel team (do NOT touch these):**
+- `klo-bot` (paused)
+- `klo-production` (paused, us-east-1)
+- `KLO-Production` (active, ca-central-1, but NOT the canonical domain)
+- `MVP-Flow` (paused, unrelated)
+- `supabase-yellow-window` (paused)
+
+When the user says "the site" or "deploy" or "production", they mean the `klo-antigravity-investor-portal-mvp-2026` Vercel project serving `karibbeanluxuryoperators.lat`.
 
 **Rule:** do not copy code from `KLO-FULLSTACK` into this repo without committing the architectural intent to a feature branch in this repo first.
 
