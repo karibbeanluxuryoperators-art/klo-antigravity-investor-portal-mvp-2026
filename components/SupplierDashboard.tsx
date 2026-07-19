@@ -318,10 +318,45 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-luxury-black flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin text-gold" size={40} />
-          <p className="text-xs uppercase tracking-widest text-text-main/40">Loading your dashboard...</p>
+      <div className="min-h-screen bg-luxury-black">
+        {/* v1.5: skeleton shell that mirrors the real layout, so the page
+            doesn't flash blank while /api/suppliers/lookup and
+            /api/suppliers/:id/assets are in flight. Three pulse layers:
+            header bar, 4 stat cards, two content rows. */}
+        <div className="bg-luxury-slate border-b border-border-main">
+          <div className="max-w-7xl mx-auto px-6 py-6">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-5 h-5 rounded bg-white/5 animate-pulse" />
+              <div className="space-y-2">
+                <div className="h-6 w-48 rounded bg-white/5 animate-pulse" />
+                <div className="h-3 w-32 rounded bg-white/5 animate-pulse" />
+              </div>
+            </div>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="h-9 w-20 rounded-t-xl bg-white/3 animate-pulse" />
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+          {/* 4 stat-card skeletons */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="bg-luxury-slate border border-border-main rounded-2xl p-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="h-3 w-20 rounded bg-white/5 animate-pulse" />
+                  <div className="w-4 h-4 rounded bg-white/5 animate-pulse" />
+                </div>
+                <div className="h-8 w-16 rounded bg-white/5 animate-pulse" />
+              </div>
+            ))}
+          </div>
+          {/* Two content rows */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-luxury-slate border border-border-main rounded-2xl h-64 animate-pulse" />
+            <div className="bg-luxury-slate border border-border-main rounded-2xl h-64 animate-pulse" />
+          </div>
         </div>
       </div>
     );
@@ -362,6 +397,12 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                 <ChevronRight size={20} className="rotate-180" />
               </button>
               <div>
+                {/* v1.5: small trilingual greeting above the business name.
+                    Keeps the existing title hierarchy but adds the human
+                    touch the handoff asked for ("Welcome back, {name}"). */}
+                <p className="text-[10px] text-gold/80 uppercase tracking-[0.3em] font-semibold mb-1">
+                  {lang === 'EN' ? `Welcome back, ${user.name?.split(' ')[0] || 'Partner'}` : lang === 'ES' ? `Bienvenido de nuevo, ${user.name?.split(' ')[0] || 'Socio'}` : `Bem-vindo de volta, ${user.name?.split(' ')[0] || 'Parceiro'}`}
+                </p>
                 <h1 className="text-2xl font-serif italic text-text-main">
                   {supplierData?.business_name || user.name}
                 </h1>
@@ -551,13 +592,23 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
               </div>
 
               {filteredAssets.length === 0 ? (
-                <div className="py-20 text-center">
+                <div className="py-20 text-center space-y-4">
                   <Package size={48} className="text-text-main/10 mx-auto mb-4" />
-                  <p className="text-text-main/30 text-sm">
-                    {assets.length === 0
-                      ? (lang === 'EN' ? 'No assets yet — add your first one!' : lang === 'ES' ? 'Sin activos aún' : 'Nenhum ativo ainda')
-                      : (lang === 'EN' ? 'No assets match your search' : lang === 'ES' ? 'Sin resultados' : 'Nenhum resultado')}
-                  </p>
+                  {assets.length === 0 ? (
+                    <>
+                      <p className="text-text-main/50 text-sm">
+                        {lang === 'EN' ? 'You have not listed any assets yet.' : lang === 'ES' ? 'Aún no has listado ningún activo.' : 'Você ainda não listou nenhum ativo.'}
+                      </p>
+                      <button onClick={() => openEditModal()}
+                        className="inline-flex items-center gap-2 px-8 py-4 bg-gold text-luxury-black rounded-full font-semibold text-xs uppercase tracking-widest hover:bg-white transition-all">
+                        <Plus size={14} /> {lang === 'EN' ? 'List your first asset' : lang === 'ES' ? 'Lista tu primer activo' : 'Liste seu primeiro ativo'}
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-text-main/30 text-sm">
+                      {lang === 'EN' ? 'No assets match your search' : lang === 'ES' ? 'Sin resultados' : 'Nenhum resultado'}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

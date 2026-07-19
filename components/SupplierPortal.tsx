@@ -11,7 +11,7 @@ import {
   Home, Ship, Plane, Users, Car, ChevronLeft, ChevronRight, 
   Check, Calendar, Globe, Shield, DollarSign, Camera, 
   MapPin, Clock, Star, Info, MessageSquare, ExternalLink,
-  Loader2, CheckCircle2, ArrowRight
+  Loader2, CheckCircle2, ArrowRight, AlertCircle
 } from 'lucide-react';
 
 const STEPS = [
@@ -40,9 +40,24 @@ const YACHT_FEATURES = ["Water toys", "Jet ski", "Dive equipment", "Fishing gear
 interface SupplierPortalProps {
   onBack?: () => void;
   lang?: Language;
+  // v1.5: navigation hooks for the magic-link auth + dashboard. The App
+  // router wires these to /supplier/login and /supplier/dashboard. Keeping
+  // them as callbacks (instead of pushing the router into the component)
+  // means this file stays router-agnostic and easy to test.
+  onGoToLogin?: () => void;
+  onGoToDashboard?: () => void;
 }
 
-export const SupplierPortal: React.FC<SupplierPortalProps> = ({ onBack, lang = 'EN' }) => {
+// v1.5: localStorage key for the onboarding draft. Persists between visits
+// so suppliers can come back and finish. Cleared on successful submit.
+const DRAFT_STORAGE_KEY = 'klo_supplier_onboarding_draft_v1';
+
+export const SupplierPortal: React.FC<SupplierPortalProps> = ({
+  onBack,
+  lang = 'EN',
+  onGoToLogin,
+  onGoToDashboard,
+}) => {
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState(0);
   const [type, setType] = useState<string | null>(null);
@@ -111,6 +126,53 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({ onBack, lang = '
     low_season_price: '',
     manual_availability: []
   });
+
+  // v1.5: load any previously saved onboarding draft on mount. We only
+  // restore `type` and `formData` — `step`, `agreedToTerms`, etc. are
+  // session-local. The "Save and continue later" hint in Step 1 nudges the
+  // user that this is happening automatically.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        if (typeof parsed.type === 'string') setType(parsed.type);
+        if (parsed.formData && typeof parsed.formData === 'object') {
+          setFormData((prev: any) => ({ ...prev, ...parsed.formData }));
+        }
+      }
+    } catch (e) {
+      // Bad JSON or storage disabled — silently ignore. The user can still
+      // fill the form from scratch; we just lose the resume.
+      console.warn('Could not load onboarding draft', e);
+    }
+  }, []);
+
+  // v1.5: auto-save the draft on every meaningful change. We keep the writes
+  // cheap (one localStorage call per render with new data) by guarding on
+  // the value identity.
+  useEffect(() => {
+    try {
+      // Skip the very first save until the user has actually typed something.
+      // We detect "untouched" by checking that no required field has a value.
+      const hasUserInput =
+        formData.business_name || formData.contact_name || formData.email ||
+        (formData.whatsapp && formData.whatsapp !== '+57 ');
+      if (!hasUserInput && !type) return;
+      localStorage.setItem(
+        DRAFT_STORAGE_KEY,
+        JSON.stringify({ type, formData, savedAt: new Date().toISOString() })
+      );
+    } catch (e) {
+      // localStorage might be unavailable (private mode, quota). We swallow
+      // the error — auto-save is best-effort, the user can still submit.
+    }
+  }, [formData, type]);
+
+  const clearDraft = () => {
+    try { localStorage.removeItem(DRAFT_STORAGE_KEY); } catch { /* ignore */ }
+  };
 
   const nextStep = () => {
     setDirection(1);
@@ -261,6 +323,8 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({ onBack, lang = '
           `WhatsApp: ${formData.whatsapp}`
         ), '_blank');
 
+      // v1.5: successful submit — clear the draft so a future session starts clean.
+      clearDraft();
       setStep(5);
     } catch (error: any) {
       // STEP 4: On any error, show the error message in the UI without crashing
@@ -326,6 +390,32 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({ onBack, lang = '
             <div className="w-10 h-1 bg-gold/20 mx-auto group-hover:w-20 transition-all" />
           </motion.button>
         ))}
+      </div>
+
+      {/* v1.5: returning supplier + save-and-resume hints. Both pieces are
+          small but unlock the v1.5 polish promise: a supplier who already
+          applied can come back without losing their draft, and one who
+          already has an account can sign in instead of re-applying. */}
+      <div className="max-w-2xl mx-auto pt-4 space-y-3 text-center">
+        {onGoToLogin && (
+          <p className="text-text-main/50 text-sm">
+            {lang === 'EN' ? 'Already a partner?' : lang === 'ES' ? '¿Ya eres socio?' : 'Já é parceiro?'}{' '}
+            <button
+              type="button"
+              onClick={onGoToLogin}
+              className="text-gold hover:text-white font-semibold transition-colors underline underline-offset-2"
+            >
+              {lang === 'EN' ? 'Sign in to your dashboard' : lang === 'ES' ? 'Inicia sesión en tu panel' : 'Entre no seu painel'}
+            </button>
+          </p>
+        )}
+        <p className="text-text-main/30 text-[11px] italic">
+          {lang === 'EN'
+            ? 'Your progress is saved automatically — come back any time to finish.'
+            : lang === 'ES'
+            ? 'Tu progreso se guarda automáticamente — vuelve cuando quieras para terminar.'
+            : 'Seu progresso é salvo automaticamente — volte a qualquer momento para concluir.'}
+        </p>
       </div>
     </div>
   );
@@ -886,9 +976,14 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({ onBack, lang = '
       </div>
 
       {submitError && (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-xs text-center">
-          {submitError}
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl"
+        >
+          <AlertCircle size={16} className="text-red-400 mt-0.5 shrink-0" />
+          <p className="text-sm text-red-300 leading-relaxed">{submitError}</p>
+        </motion.div>
       )}
 
       <div className="flex justify-between pt-8">
@@ -921,15 +1016,28 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({ onBack, lang = '
       </div>
 
       <div className="grid grid-cols-1 gap-6 pt-12">
-        <a 
-          href={`https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER}`} 
-          target="_blank" 
+        {/* v1.5: primary CTA — go straight to the supplier dashboard. Most
+            suppliers will want to see their application in the dashboard
+            right away, so this is the prominent top action. */}
+        {onGoToDashboard && (
+          <button
+            type="button"
+            onClick={onGoToDashboard}
+            className="w-full py-6 bg-gold text-luxury-black rounded font-medium text-xs tracking-wide flex items-center justify-center gap-3 hover:bg-white transition-all shadow-2xl shadow-gold/20"
+          >
+            {lang === 'EN' ? 'Go to your dashboard' : lang === 'ES' ? 'Ir a tu panel' : 'Ir para o seu painel'}
+            <ArrowRight size={18} />
+          </button>
+        )}
+        <a
+          href={`https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER}`}
+          target="_blank"
           rel="noopener noreferrer"
           className="w-full py-6 bg-emerald-500 text-white rounded font-medium text-xs tracking-wide flex items-center justify-center gap-3 hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-500/20"
         >
           <MessageSquare size={18} /> Contact via WhatsApp
         </a>
-        <button 
+        <button
           onClick={() => onBack ? onBack() : window.location.href = '/'}
           className="w-full py-6 bg-white/5 border border-white/10 text-white rounded font-medium text-xs tracking-wide flex items-center justify-center gap-3 hover:bg-white/10 transition-all"
         >
@@ -941,28 +1049,72 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({ onBack, lang = '
 
   return (
     <div className="min-h-screen bg-luxury-black pb-40 relative text-text-main">
-      {/* Home Button */}
-      <div className="absolute top-8 left-8 z-[70]">
-        <button 
+      {/* v1.5 Home Button — moved up and given a higher z-index so it sits
+          above the sticky stepper. The stepper fills the top bar, the home
+          button is a small floating chip at the top-left corner. */}
+      <div className="absolute top-4 left-4 sm:top-4 sm:left-6 z-[70]">
+        <button
           onClick={() => onBack ? onBack() : window.location.href = '/'}
-          className="flex items-center gap-2 px-6 py-3 bg-luxury-slate/50 border border-border-main rounded-full text-[11px] font-sans uppercase tracking-tight font-semibold hover:bg-luxury-slate transition-all text-text-main shadow-sm"
+          className="flex items-center gap-2 px-5 py-2.5 bg-luxury-slate/80 backdrop-blur-md border border-border-main rounded-full text-[11px] font-sans uppercase tracking-tight font-semibold hover:bg-luxury-slate transition-all text-text-main shadow-sm"
         >
           <Home size={14} /> Back to Home
         </button>
       </div>
 
-      {/* Progress Bar */}
+      {/* v1.5 Stepper — proper step indicator with checkmarks for completed
+          steps and a highlighted current step. Replaces the thin gold bar
+          that shipped in v1.0. Sticky at the top, low z-index so it sits
+          above page content but below the home button. Hidden on success. */}
       {step < 5 && (
-        <div className="fixed top-0 left-0 w-full h-1 bg-white/5 z-[60]">
-          <motion.div 
-            initial={{ width: 0 }}
-            animate={{ width: `${(step / 4) * 100}%` }}
-            className="h-full bg-gold shadow-[0_0_10px_rgba(212,175,55,0.5)]"
-          />
+        <div className="fixed top-0 left-0 right-0 z-[60] bg-luxury-black/80 backdrop-blur-md border-b border-border-main/50">
+          <div className="max-w-3xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between gap-2">
+              {STEPS.slice(0, 4).map((label, i) => {
+                const stepNum = i + 1;
+                const isComplete = step > stepNum;
+                const isCurrent = step === stepNum;
+                const isLast = i === 3;
+                return (
+                  <React.Fragment key={label}>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                          isComplete
+                            ? 'bg-gold text-luxury-black'
+                            : isCurrent
+                            ? 'bg-gold/20 text-gold border-2 border-gold'
+                            : 'bg-white/5 text-text-main/30 border border-border-main'
+                        }`}
+                      >
+                        {isComplete ? <Check size={14} /> : stepNum}
+                      </div>
+                      <span
+                        className={`text-[11px] font-sans uppercase tracking-widest font-semibold hidden sm:inline transition-colors ${
+                          isCurrent ? 'text-gold' : isComplete ? 'text-text-main/60' : 'text-text-main/30'
+                        }`}
+                      >
+                        {label}
+                      </span>
+                    </div>
+                    {!isLast && (
+                      <div className="flex-1 h-px bg-border-main relative overflow-hidden">
+                        <motion.div
+                          className="absolute inset-y-0 left-0 bg-gold"
+                          initial={false}
+                          animate={{ width: step > stepNum ? '100%' : '0%' }}
+                          transition={{ duration: 0.4, ease: 'easeOut' }}
+                        />
+                      </div>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="pt-32 px-6 max-w-7xl mx-auto">
+      <div className="pt-40 px-6 max-w-7xl mx-auto">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={step}

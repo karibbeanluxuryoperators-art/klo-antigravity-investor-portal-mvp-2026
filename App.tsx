@@ -6,21 +6,38 @@ import { TRANSLATIONS, getTranslation, PREMIER_SERVICES } from './constants';
 import { Language } from './types';
 import AIAssistant from './components/AIAssistant';
 import { SupplierPortal } from './components/SupplierPortal';
+import { SupplierLogin } from './components/SupplierLogin';
+import { SupplierDashboardGate } from './components/SupplierDashboardGate';
 
 // ── Supplier portal route guard ────────────────────────────────────────────
-// Detects /supplier in the URL and renders the multi-step onboarding wizard
-// instead of the public site. Admin/Supplier dashboard will live under
-// /supplier/dashboard once Firebase auth is wired in commit 2.5+.
-function useSupplierRoute() {
-  const [isSupplier, setIsSupplier] = useState(() =>
-    typeof window !== 'undefined' && window.location.pathname.startsWith('/supplier')
-  );
+// Detects the supplier route family in the URL and returns the subroute so
+// the App can render the right surface.
+//
+//   /supplier           → 'portal'    (multi-step onboarding wizard)
+//   /supplier/login     → 'login'     (magic-link sign-in page)
+//   /supplier/dashboard → 'dashboard' (auth-gated dashboard, uses Supabase session)
+//   anything else       → null        (render the public site)
+//
+// We use `popstate` for back/forward, but the Login ↔ Dashboard ↔ Portal
+// transitions are full-page navigations (window.location.href = ...) so
+// Supabase's `detectSessionInUrl` can process the access_token hash on each
+// fresh page load. A SPA route change would not trigger that handler.
+function useSupplierRoute(): 'portal' | 'login' | 'dashboard' | null {
+  const compute = (): 'portal' | 'login' | 'dashboard' | null => {
+    if (typeof window === 'undefined') return null;
+    const p = window.location.pathname;
+    if (p === '/supplier/login' || p === '/supplier/login/') return 'login';
+    if (p === '/supplier/dashboard' || p === '/supplier/dashboard/') return 'dashboard';
+    if (p === '/supplier' || p === '/supplier/' || p.startsWith('/supplier/')) return 'portal';
+    return null;
+  };
+  const [subroute, setSubroute] = useState<'portal' | 'login' | 'dashboard' | null>(compute);
   useEffect(() => {
-    const handler = () => setIsSupplier(window.location.pathname.startsWith('/supplier'));
+    const handler = () => setSubroute(compute());
     window.addEventListener('popstate', handler);
     return () => window.removeEventListener('popstate', handler);
   }, []);
-  return isSupplier;
+  return subroute;
 }
 
 function App() {
@@ -32,7 +49,7 @@ function App() {
   // is triggered when a hook is called after a conditional return. The
   // supplier-route hook below used to be after `if (!isReady) return ...`
   // which made it skip on the first render and run on the second.
-  const isSupplierRoute = useSupplierRoute();
+  const supplierSubroute = useSupplierRoute();
 
   // Initialize language from localStorage on mount
   useEffect(() => {
@@ -68,16 +85,51 @@ function App() {
     return <div className="min-h-screen bg-slate-900" />;
   }
 
-  // Supplier portal route — render the multi-step onboarding wizard
-  // instead of the public site. /supplier is the v1 entry point.
-  if (isSupplierRoute) {
-    // Map public-site lang (lowercase) to portal lang (uppercase)
+  // Supplier routes — render the right surface for the subroute. All three
+  // live in this single guard so we keep the public-site render below untouched.
+  if (supplierSubroute) {
+    // Map public-site lang (lowercase) to portal lang (uppercase) — every
+    // ported component expects the KLO-FULLSTACK uppercase shape.
     const portalLang: 'EN' | 'ES' | 'PT' = lang.toUpperCase() as 'EN' | 'ES' | 'PT';
+    const goHome = () => { window.location.href = '/'; };
+    const goToPortal = () => { window.location.href = '/supplier'; };
+    const goToLogin = () => { window.location.href = '/supplier/login'; };
+    const goToDashboard = () => { window.location.href = '/supplier/dashboard'; };
+
+    if (supplierSubroute === 'login') {
+      return (
+        <div className="min-h-screen selection:bg-gold/30">
+          <SupplierLogin
+            lang={portalLang}
+            onBack={goHome}
+            onSignedIn={goToDashboard}
+            onNewSupplier={goToPortal}
+          />
+        </div>
+      );
+    }
+
+    if (supplierSubroute === 'dashboard') {
+      return (
+        <div className="min-h-screen selection:bg-gold/30">
+          <SupplierDashboardGate
+            lang={portalLang}
+            onBack={goHome}
+            onSignIn={goToLogin}
+            onNotPartner={goToPortal}
+          />
+        </div>
+      );
+    }
+
+    // Default: the onboarding portal.
     return (
       <div className="min-h-screen selection:bg-gold/30">
         <SupplierPortal
           lang={portalLang}
-          onBack={() => { window.history.pushState({}, '', '/'); window.location.reload(); }}
+          onBack={goHome}
+          onGoToLogin={goToLogin}
+          onGoToDashboard={goToDashboard}
         />
       </div>
     );
