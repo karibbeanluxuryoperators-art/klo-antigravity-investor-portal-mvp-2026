@@ -194,11 +194,11 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'APPROVED':
-      case 'CONFIRMED': return 'bg-gold/10 text-gold border-gold/20';
-      case 'PENDING': return 'bg-white/10 text-white border-white/20';
+      case 'CONFIRMED': return 'bg-[#B8963E]/10 text-[#B8963E] border-gold/20';
+      case 'PENDING': return 'bg-slate-100 text-white border-white/20';
       case 'REJECTED':
       case 'CANCELLED': return 'bg-red-500/10 text-red-500 border-red-500/20';
-      default: return 'bg-white/5 text-white/40 border-white/10';
+      default: return 'bg-white/5 text-slate-500 border-slate-200';
     }
   };
 
@@ -212,26 +212,26 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={() => setSelectedBooking(null)}
-          className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         />
         <motion.div 
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative w-full max-w-2xl bg-luxury-black border border-white/10 rounded-3xl overflow-hidden shadow-2xl"
+          className="relative w-full max-w-2xl bg-luxury-black border border-slate-200 rounded-3xl overflow-hidden shadow-2xl"
         >
-          <div className="p-8 border-b border-white/5 bg-white/5 flex items-center justify-between">
+          <div className="p-8 border-b border-slate-200 bg-white/5 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gold/10 text-gold rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-[#B8963E]/10 text-[#B8963E] rounded-xl flex items-center justify-center">
                 <ClipboardList size={24} />
               </div>
               <div>
-                <h3 className="text-2xl font-serif text-white uppercase tracking-widest">Booking Details</h3>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">ID: {selectedBooking.id}</p>
+                <h3 className="text-2xl font-serif text-slate-900 uppercase tracking-widest">{lang === "EN" ? "Booking Details" : lang === "ES" ? "Detalles de Reserva" : "Detalhes da Reserva"}</h3>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">ID: {selectedBooking.id}</p>
               </div>
             </div>
             <button onClick={() => setSelectedBooking(null)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
-              <X size={24} className="text-white/40" />
+              <X size={24} className="text-slate-500" />
             </button>
           </div>
 
@@ -239,14 +239,14 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <h4 className="text-[10px] uppercase tracking-widest text-gold font-bold">Asset Information</h4>
-                  <div className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-3">
+                  <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">Asset Information</h4>
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 border border-slate-200 space-y-3">
                     <div className="flex items-center gap-3">
-                      <Package size={16} className="text-white/40" />
-                      <span className="text-sm text-white">{selectedBooking.asset_name}</span>
+                      <Package size={16} className="text-slate-500" />
+                      <span className="text-sm text-slate-900">{selectedBooking.asset_name}</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="px-2 py-0.5 bg-white/10 rounded text-[8px] text-white/60 uppercase font-bold tracking-widest">
+                      <div className="px-2 py-0.5 bg-slate-100 rounded text-[8px] text-slate-500 uppercase font-bold tracking-widest">
                         {selectedBooking.asset_type}
                       </div>
                     </div>
@@ -254,15 +254,15 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="text-[10px] uppercase tracking-widest text-gold font-bold">Guest Details</h4>
-                  <div className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-3">
+                  <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">Guest Details</h4>
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 border border-slate-200 space-y-3">
                     <div className="flex items-center gap-3">
-                      <User size={16} className="text-white/40" />
-                      <span className="text-sm text-white">{selectedBooking.guest_name}</span>
+                      <User size={16} className="text-slate-500" />
+                      <span className="text-sm text-slate-900">{selectedBooking.guest_name}</span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Mail size={16} className="text-white/40" />
-                      <span className="text-sm text-white/60">{selectedBooking.guest_email}</span>
+                      <Mail size={16} className="text-slate-500" />
+                      <span className="text-sm text-slate-500">{selectedBooking.guest_email}</span>
                     </div>
                   </div>
                 </div>
@@ -270,27 +270,27 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
 
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <h4 className="text-[10px] uppercase tracking-widest text-gold font-bold">Journey Dates</h4>
-                  <div className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-3">
+                  <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">Journey Dates</h4>
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 border border-slate-200 space-y-3">
                     <div className="flex items-center gap-3">
-                      <Calendar size={16} className="text-white/40" />
-                      <div className="text-sm text-white">
+                      <Calendar size={16} className="text-slate-500" />
+                      <div className="text-sm text-slate-900">
                         {new Date(selectedBooking.start_date).toLocaleDateString()} - {new Date(selectedBooking.end_date).toLocaleDateString()}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Clock size={16} className="text-white/40" />
-                      <span className="text-xs text-white/60">Duration: {Math.ceil((new Date(selectedBooking.end_date).getTime() - new Date(selectedBooking.start_date).getTime()) / (1000 * 60 * 60 * 24))} days</span>
+                      <Clock size={16} className="text-slate-500" />
+                      <span className="text-xs text-slate-500">Duration: {Math.ceil((new Date(selectedBooking.end_date).getTime() - new Date(selectedBooking.start_date).getTime()) / (1000 * 60 * 60 * 24))} days</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="text-[10px] uppercase tracking-widest text-gold font-bold">Financials</h4>
-                  <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+                  <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">Financials</h4>
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 border border-slate-200">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-white/40 uppercase tracking-widest">Total Price</span>
-                      <span className="text-xl text-gold font-light">{selectedBooking.total_price}</span>
+                      <span className="text-[10px] text-slate-500 uppercase tracking-widest">Total Price</span>
+                      <span className="text-xl text-[#B8963E] font-light">{selectedBooking.total_price}</span>
                     </div>
                   </div>
                 </div>
@@ -298,18 +298,18 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-[10px] uppercase tracking-widest text-gold font-bold">Management Notes</h4>
+              <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">Management Notes</h4>
               <div className="relative">
                 <textarea 
                   value={bookingNotes}
                   onChange={(e) => setBookingNotes(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl p-6 text-sm text-white font-light h-32 resize-none focus:outline-none focus:border-gold/50 transition-all"
+                  className="w-full bg-white/5 border border-slate-200 rounded-xl p-6 text-sm text-white font-light h-32 resize-none focus:outline-none focus:border-gold/50 transition-all"
                   placeholder="Add internal notes about this booking..."
                 />
                 <button 
                   onClick={handleSaveNotes}
                   disabled={isSavingNotes}
-                  className="absolute bottom-4 right-4 p-3 bg-gold text-luxury-black rounded-xl hover:bg-white transition-all disabled:opacity-50"
+                  className="absolute bottom-4 right-4 p-3 bg-[#B8963E] text-white rounded-xl hover:bg-white transition-all disabled:opacity-50"
                 >
                   {isSavingNotes ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                 </button>
@@ -349,7 +349,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
   if (isLoading && (activeView === 'SUPPLIERS' ? suppliers.length === 0 : bookings.length === 0)) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-gold" size={32} />
+        <Loader2 className="animate-spin text-[#B8963E]" size={32} />
       </div>
     );
   }
@@ -362,37 +362,37 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
             onClick={() => setActiveView('SUPPLIERS')}
             className={`text-left transition-all ${activeView === 'SUPPLIERS' ? 'opacity-100' : 'opacity-30 hover:opacity-50'}`}
           >
-            <h2 className="text-4xl font-serif text-white uppercase tracking-widest mb-2">Suppliers</h2>
-            <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Network Management</p>
+            <h2 className="text-4xl font-serif text-slate-900 uppercase tracking-widest mb-2">{lang === "EN" ? "Suppliers" : lang === "ES" ? "Socios" : "Parceiros"}</h2>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Network Management</p>
           </button>
-          <div className="w-[1px] h-12 bg-white/10" />
+          <div className="w-[1px] h-12 bg-slate-100" />
           <button 
             onClick={() => setActiveView('BOOKINGS')}
             className={`text-left transition-all ${activeView === 'BOOKINGS' ? 'opacity-100' : 'opacity-30 hover:opacity-50'}`}
           >
-            <h2 className="text-4xl font-serif text-white uppercase tracking-widest mb-2">Bookings</h2>
-            <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Journey Orchestration</p>
+            <h2 className="text-4xl font-serif text-slate-900 uppercase tracking-widest mb-2">{lang === "EN" ? "Bookings" : lang === "ES" ? "Reservas" : "Reservas"}</h2>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Journey Orchestration</p>
           </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" size={18} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
               placeholder={activeView === 'SUPPLIERS' ? "Search partners..." : "Search bookings..."}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-gold/50 transition-all w-full lg:w-64 text-sm text-white"
+              className="bg-white/5 border border-slate-200 rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-gold/50 transition-all w-full lg:w-64 text-sm text-white"
             />
           </div>
-          <div className="flex bg-white/5 rounded-full p-1 border border-white/10">
+          <div className="flex bg-white/5 rounded-full p-1 border border-slate-200">
             {(activeView === 'SUPPLIERS' ? ['ALL', 'PENDING', 'APPROVED', 'REJECTED'] : ['ALL', 'PENDING', 'CONFIRMED', 'CANCELLED']).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f as any)}
                 className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
-                  filter === f ? 'bg-gold text-luxury-black' : 'text-white/40 hover:text-white'
+                  filter === f ? 'bg-[#B8963E] text-white' : 'text-slate-500 hover:text-white'
                 }`}
               >
                 {f}
@@ -414,15 +414,15 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {isLoading ? (
             <div className="col-span-full py-20 flex flex-col items-center justify-center gap-4">
-              <Loader2 className="animate-spin text-gold" size={48} />
-              <p className="text-xs uppercase tracking-[0.2em] text-white/40">Fetching Partners...</p>
+              <Loader2 className="animate-spin text-[#B8963E]" size={48} />
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Fetching Partners...</p>
             </div>
           ) : filteredSuppliers.length === 0 ? (
             <div className="col-span-full py-20 flex flex-col items-center justify-center text-center gap-6">
-              <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-white/20">
+              <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-slate-300">
                 <AlertCircle size={40} />
               </div>
-              <p className="text-sm uppercase tracking-widest text-white/40">
+              <p className="text-sm uppercase tracking-widest text-slate-500">
                 {suppliers.length === 0 ? 'No suppliers yet' : 'No suppliers found matching your criteria'}
               </p>
             </div>
@@ -440,11 +440,11 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                   <div className="p-8 space-y-6 flex-1">
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gold/10 rounded-xl flex items-center justify-center text-gold font-serif text-2xl">
+                        <div className="w-14 h-14 bg-[#B8963E]/10 rounded-xl flex items-center justify-center text-[#B8963E] font-serif text-2xl">
                           {supplier.business_name.charAt(0)}
                         </div>
                         <div>
-                          <h3 className="text-xl font-serif text-white flex items-center gap-2">
+                          <h3 className="text-xl font-serif text-slate-900 flex items-center gap-2">
                             {supplier.business_name}
                             {supplier.google_calendar_id && (
                               <div title="Google Calendar Connected">
@@ -452,7 +452,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                               </div>
                             )}
                           </h3>
-                          <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">{supplier.contact_name}</p>
+                          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{supplier.contact_name}</p>
                         </div>
                       </div>
                       <span className={`text-[8px] px-3 py-1 rounded-full border uppercase tracking-widest font-bold ${getStatusColor(supplier.status)}`}>
@@ -462,12 +462,12 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
 
                     <div className="space-y-4">
                       <div className="flex items-center gap-3">
-                        <Package size={16} className="text-gold" />
-                        <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">{supplier.asset_type}</span>
+                        <Package size={16} className="text-[#B8963E]" />
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{supplier.asset_type}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <MapPin size={16} className="text-gold" />
-                        <span className="text-xs text-white/60">{supplier.location}</span>
+                        <MapPin size={16} className="text-[#B8963E]" />
+                        <span className="text-xs text-slate-500">{supplier.location}</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <MessageSquare size={16} className="text-emerald-400" />
@@ -481,8 +481,8 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                         </a>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Clock size={16} className="text-white/20" />
-                        <span className="text-[10px] text-white/40 uppercase tracking-widest">
+                        <Clock size={16} className="text-slate-300" />
+                        <span className="text-[10px] text-slate-500 uppercase tracking-widest">
                           Submitted: {new Date(supplier.created_at).toLocaleDateString()}
                         </span>
                       </div>
@@ -518,7 +518,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                     ) : (
                       <button 
                         onClick={() => onViewAssets(supplier.id)}
-                        className="w-full py-4 bg-white/5 text-white/60 rounded-xl font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 hover:bg-white/10 transition-all border border-white/10"
+                        className="w-full py-4 bg-white/5 text-slate-500 rounded-xl font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 hover:bg-slate-100 transition-all border border-slate-200"
                       >
                         <Package size={16} /> View Inventory
                       </button>
@@ -534,13 +534,13 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-white/5 bg-white/5">
-                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Guest</th>
-                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Asset</th>
-                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Dates</th>
-                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Total</th>
-                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-white/40 font-bold">Status</th>
-                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-white/40 font-bold text-right">Details</th>
+                <tr className="border-b border-slate-200 bg-white/5">
+                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">Guest</th>
+                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">Asset</th>
+                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">Dates</th>
+                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">Total</th>
+                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">Status</th>
+                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold text-right">Details</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -551,29 +551,29 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                   }}>
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-white/40 font-bold">
+                        <div className="w-10 h-10 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-center text-slate-500 font-bold">
                           <User size={20} />
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-white">{booking.guest_name}</div>
-                          <div className="text-[10px] text-white/40">{booking.guest_email}</div>
+                          <div className="text-sm font-medium text-slate-900">{booking.guest_name}</div>
+                          <div className="text-[10px] text-slate-500">{booking.guest_email}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-8 py-6">
                       <div>
-                        <div className="text-sm text-white">{booking.asset_name}</div>
-                        <div className="text-[8px] text-white/40 uppercase tracking-widest">{booking.asset_type}</div>
+                        <div className="text-sm text-slate-900">{booking.asset_name}</div>
+                        <div className="text-[8px] text-slate-500 uppercase tracking-widest">{booking.asset_type}</div>
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <div className="flex items-center gap-2 text-xs text-white/60">
-                        <Calendar size={12} className="text-gold" />
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <Calendar size={12} className="text-[#B8963E]" />
                         {new Date(booking.start_date).toLocaleDateString()}
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <span className="text-sm font-bold text-gold">{booking.total_price}</span>
+                      <span className="text-sm font-bold text-[#B8963E]">{booking.total_price}</span>
                     </td>
                     <td className="px-8 py-6">
                       <span className={`text-[8px] px-2 py-1 rounded-full border uppercase tracking-widest font-bold ${getStatusColor(booking.status)}`}>
@@ -581,7 +581,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                       </span>
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <button className="p-2 text-white/20 hover:text-white transition-colors">
+                      <button className="p-2 text-slate-300 hover:text-white transition-colors">
                         <FileText size={18} />
                       </button>
                     </td>
@@ -590,7 +590,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                 {filteredBookings.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-8 py-20 text-center">
-                      <div className="flex flex-col items-center gap-4 text-white/20">
+                      <div className="flex flex-col items-center gap-4 text-slate-300">
                         <AlertCircle size={48} />
                         <p className="text-sm uppercase tracking-widest">
                           {bookings.length === 0 ? 'No bookings yet' : 'No bookings found matching your criteria'}
@@ -610,3 +610,25 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
     </div>
   );
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

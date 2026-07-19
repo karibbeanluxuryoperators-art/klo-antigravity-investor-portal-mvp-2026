@@ -8,6 +8,7 @@ import AIAssistant from './components/AIAssistant';
 import { SupplierPortal } from './components/SupplierPortal';
 import { SupplierLogin } from './components/SupplierLogin';
 import { SupplierDashboardGate } from './components/SupplierDashboardGate';
+import { AdminGate } from './components/AdminGate';
 
 // ── Supplier portal route guard ────────────────────────────────────────────
 // Detects the supplier route family in the URL and returns the subroute so
@@ -22,16 +23,17 @@ import { SupplierDashboardGate } from './components/SupplierDashboardGate';
 // transitions are full-page navigations (window.location.href = ...) so
 // Supabase's `detectSessionInUrl` can process the access_token hash on each
 // fresh page load. A SPA route change would not trigger that handler.
-function useSupplierRoute(): 'portal' | 'login' | 'dashboard' | null {
-  const compute = (): 'portal' | 'login' | 'dashboard' | null => {
+function useSupplierRoute(): 'portal' | 'login' | 'dashboard' | 'admin' | null {
+  const compute = (): 'portal' | 'login' | 'dashboard' | 'admin' | null => {
     if (typeof window === 'undefined') return null;
     const p = window.location.pathname;
     if (p === '/supplier/login' || p === '/supplier/login/') return 'login';
     if (p === '/supplier/dashboard' || p === '/supplier/dashboard/') return 'dashboard';
+    if (p === '/admin' || p === '/admin/') return 'admin';
     if (p === '/supplier' || p === '/supplier/' || p.startsWith('/supplier/')) return 'portal';
     return null;
   };
-  const [subroute, setSubroute] = useState<'portal' | 'login' | 'dashboard' | null>(compute);
+  const [subroute, setSubroute] = useState<'portal' | 'login' | 'dashboard' | 'admin' | null>(compute);
   useEffect(() => {
     const handler = () => setSubroute(compute());
     window.addEventListener('popstate', handler);
@@ -117,6 +119,18 @@ function App() {
             onBack={goHome}
             onSignIn={goToLogin}
             onNotPartner={goToPortal}
+          />
+        </div>
+      );
+    }
+
+    if (supplierSubroute === 'admin') {
+      return (
+        <div className="min-h-screen">
+          <AdminGate
+            lang={portalLang}
+            onBack={goHome}
+            onSignIn={goToLogin}
           />
         </div>
       );

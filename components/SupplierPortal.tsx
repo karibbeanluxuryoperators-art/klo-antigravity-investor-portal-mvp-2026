@@ -577,32 +577,32 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
             className="w-full h-full object-contain"
           />
         </motion.div>
-        <h1 className="text-5xl font-serif italic tracking-wide text-text-main">{tx(T.s1_title)}</h1>
-        <p className="text-text-main/60 font-sans font-light text-xl max-w-2xl mx-auto leading-relaxed">
+        <h1 className="text-5xl md:text-6xl font-serif italic tracking-wide text-slate-900">{tx(T.s1_title)}</h1>
+        <p className="text-slate-500 font-sans font-light text-xl max-w-2xl mx-auto leading-relaxed">
           {tx(T.s1_subtitle)}
         </p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
         {[
-          { id: 'VILLA', labelKey: 's1_pillar_villa', icon: Home, color: 'bg-gold/10 text-gold' },
-          { id: 'YACHT', labelKey: 's1_pillar_yacht', icon: Ship, color: 'bg-text-main/5 text-text-main/60' },
-          { id: 'AVIATION', labelKey: 's1_pillar_aviation', icon: Plane, color: 'bg-text-main/5 text-text-main/70' },
-          { id: 'STAFF', labelKey: 's1_pillar_staff', icon: Users, color: 'bg-text-main/5 text-text-main/50' },
-          { id: 'GROUND', labelKey: 's1_pillar_ground', icon: Car, color: 'bg-text-main/5 text-text-main/40' },
+          { id: 'VILLA', labelKey: 's1_pillar_villa', icon: Home, color: 'bg-[#B8963E]/10 text-[#B8963E]' },
+          { id: 'YACHT', labelKey: 's1_pillar_yacht', icon: Ship, color: 'bg-luxury-teal/10 text-luxury-teal' },
+          { id: 'AVIATION', labelKey: 's1_pillar_aviation', icon: Plane, color: 'bg-luxury-navy/10 text-luxury-navy' },
+          { id: 'STAFF', labelKey: 's1_pillar_staff', icon: Users, color: 'bg-amber-100 text-amber-700' },
+          { id: 'GROUND', labelKey: 's1_pillar_ground', icon: Car, color: 'bg-slate-100 text-slate-700' },
         ].map((item) => (
           <motion.button
             key={item.id}
             whileHover={{ y: -10, scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => handleTypeSelect(item.id)}
-            className="bg-luxury-slate border border-border-main rounded-xl p-8 text-center space-y-6 group hover:border-gold/50 transition-all duration-500"
+            className="bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-6 group hover:border-[#B8963E]/50 hover:shadow-xl transition-all duration-500"
           >
             <div className={`w-20 h-20 ${item.color} rounded-xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform`}>
               <item.icon size={40} />
             </div>
-            <h3 className="text-xl font-sans font-medium text-text-main">{tx(T[item.labelKey as keyof typeof T])}</h3>
-            <div className="w-10 h-1 bg-gold/20 mx-auto group-hover:w-20 transition-all" />
+            <h3 className="text-xl font-sans font-medium text-slate-900">{tx(T[item.labelKey as keyof typeof T])}</h3>
+            <div className="w-10 h-1 bg-[#B8963E]/20 mx-auto group-hover:w-20 transition-all" />
           </motion.button>
         ))}
       </div>
@@ -613,18 +613,18 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           already has an account can sign in instead of re-applying. */}
       <div className="max-w-2xl mx-auto pt-4 space-y-3 text-center">
         {onGoToLogin && (
-          <p className="text-text-main/50 text-sm">
+          <p className="text-slate-500 text-sm">
             {tx(T.s1_returning)}{' '}
             <button
               type="button"
               onClick={onGoToLogin}
-              className="text-gold hover:text-white font-semibold transition-colors underline underline-offset-2"
+              className="text-luxury-teal hover:text-slate-900 font-semibold transition-colors underline underline-offset-2"
             >
               {tx(T.s1_signin)}
             </button>
           </p>
         )}
-        <p className="text-text-main/30 text-[11px] italic">
+        <p className="text-slate-400 text-[11px] italic">
           {tx(T.s1_save_hint)}
         </p>
       </div>
@@ -634,55 +634,55 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
   const renderStep2 = () => (
     <div className="max-w-4xl mx-auto space-y-12">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-serif italic tracking-wide text-text-main">{tx(T.s2_title)}</h2>
-        <div className="px-4 py-1 bg-gold/10 text-gold rounded text-[11px] font-sans font-semibold uppercase tracking-tight">
+        <h2 className="text-3xl md:text-4xl font-serif italic tracking-wide text-slate-900">{tx(T.s2_title)}</h2>
+        <div className="px-4 py-1.5 bg-[#B8963E]/10 text-[#B8963E] rounded-full text-[10px] font-sans font-semibold uppercase tracking-[0.3em] border border-[#B8963E]/30">
           {type} {tx(T.s2_partner_badge)}
         </div>
       </div>
 
-      <div className="bg-luxury-slate border border-border-main rounded-2xl p-10 space-y-10">
+      <div className="bg-white border border-slate-200 rounded-2xl p-10 space-y-10 shadow-sm">
         {/* Common Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
-            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_business_name)}</label>
-            <input name="business_name" value={formData.business_name} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.s2_business_ph)} />
+            <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s2_business_name)}</label>
+            <input name="business_name" value={formData.business_name} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" placeholder={tx(T.s2_business_ph)} />
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_contact_name)}</label>
-            <input name="contact_name" value={formData.contact_name} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.s2_contact_ph)} />
+            <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s2_contact_name)}</label>
+            <input name="contact_name" value={formData.contact_name} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" placeholder={tx(T.s2_contact_ph)} />
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_email)}</label>
-            <input name="email" type="email" value={formData.email} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.s2_email_ph)} />
+            <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s2_email)}</label>
+            <input name="email" type="email" value={formData.email} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" placeholder={tx(T.s2_email_ph)} />
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_whatsapp)}</label>
-            <input name="whatsapp" value={formData.whatsapp} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.s2_whatsapp_ph)} />
+            <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s2_whatsapp)}</label>
+            <input name="whatsapp" value={formData.whatsapp} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" placeholder={tx(T.s2_whatsapp_ph)} />
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_location)}</label>
-            <select name="location" value={formData.location} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light appearance-none text-text-main">
+            <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s2_location)}</label>
+            <select name="location" value={formData.location} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light appearance-none text-slate-900">
               {LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_experience)}</label>
-            <input name="experience" type="number" value={formData.experience} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.s2_experience_ph)} />
+            <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s2_experience)}</label>
+            <input name="experience" type="number" value={formData.experience} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" placeholder={tx(T.s2_experience_ph)} />
           </div>
         </div>
 
         <div className="space-y-2">
-          <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_description)}</label>
-          <textarea name="description" maxLength={500} value={formData.description} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light h-32 resize-none text-text-main" placeholder={tx(T.s2_description_ph)} />
+          <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s2_description)}</label>
+          <textarea name="description" maxLength={500} value={formData.description} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light h-32 resize-none text-slate-900" placeholder={tx(T.s2_description_ph)} />
         </div>
 
         <div className="space-y-2">
-          <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s2_photo_url)}</label>
+          <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s2_photo_url)}</label>
           <div className="relative">
-            <input name="photo_url" value={formData.photo_url} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 pl-14 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.s2_photo_url_ph)} />
-            <Camera className="absolute left-6 top-1/2 -translate-y-1/2 text-text-main/20" size={20} />
+            <input name="photo_url" value={formData.photo_url} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 pl-14 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" placeholder={tx(T.s2_photo_url_ph)} />
+            <Camera className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
           </div>
-          <p className="text-[11px] text-text-main/30 italic font-sans">{tx(T.s2_photo_hint)}</p>
+          <p className="text-[11px] text-slate-400 italic font-sans">{tx(T.s2_photo_hint)}</p>
         </div>
 
         <div className="h-[1px] bg-border-main w-full" />
@@ -692,23 +692,23 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           <div className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.v_bedrooms)}</label>
-                <input name="bedrooms" type="number" value={formData.bedrooms} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.v_bedrooms)}</label>
+                <input name="bedrooms" type="number" value={formData.bedrooms} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.v_max_guests)}</label>
-                <input name="max_guests" type="number" value={formData.max_guests} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.v_max_guests)}</label>
+                <input name="max_guests" type="number" value={formData.max_guests} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.v_price)}</label>
-                <input name="price_per_night" type="number" value={formData.price_per_night} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.v_price)}</label>
+                <input name="price_per_night" type="number" value={formData.price_per_night} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" />
               </div>
             </div>
             <div className="space-y-4">
-              <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.v_amenities)}</label>
+              <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.v_amenities)}</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {VILLA_AMENITIES.map(a => (
-                  <button key={a} onClick={() => handleCheckboxChange('amenities', a)} className={`p-4 rounded-xl border text-[11px] font-sans uppercase tracking-tight transition-all ${formData.amenities.includes(a) ? 'bg-gold border-gold text-luxury-black font-semibold' : 'border-border-main hover:border-gold/30 text-text-main/60'}`}>
+                  <button key={a} onClick={() => handleCheckboxChange('amenities', a)} className={`p-4 rounded-xl border text-[10px] font-sans uppercase tracking-[0.2em] transition-all ${formData.amenities.includes(a) ? "bg-[#B8963E] border-[#B8963E] text-white font-semibold" : "border-slate-200 hover:border-[#B8963E]/50 text-slate-500"}`}>
                     {a}
                   </button>
                 ))}
@@ -721,25 +721,25 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           <div className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.ya_length)}</label>
-                <input name="vessel_length" type="number" value={formData.vessel_length} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.ya_length)}</label>
+                <input name="vessel_length" type="number" value={formData.vessel_length} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.ya_max_guests)}</label>
-                <input name="max_guests" type="number" value={formData.max_guests} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.ya_max_guests)}</label>
+                <input name="max_guests" type="number" value={formData.max_guests} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.ya_price)}</label>
-                <input name="price_per_day" type="number" value={formData.price_per_day} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.ya_price)}</label>
+                <input name="price_per_day" type="number" value={formData.price_per_day} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.ya_home_port)}</label>
-                <input name="home_port" value={formData.home_port} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.ya_home_port)}</label>
+                <input name="home_port" value={formData.home_port} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.ya_crew)}</label>
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.ya_crew)}</label>
                 <div className="flex gap-4">
                   {[T.yes, T.no].map(o => (
                     <button key={o.EN} onClick={() => setFormData((prev: any) => ({ ...prev, crew_included: o.EN }))} className={`flex-1 py-4 rounded-xl border text-[11px] font-sans uppercase tracking-tight transition-all ${formData.crew_included === o.EN ? 'bg-gold border-gold text-luxury-black font-semibold' : 'border-border-main text-text-main/60'}`}>
@@ -750,10 +750,10 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
               </div>
             </div>
             <div className="space-y-4">
-              <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.ya_features)}</label>
+              <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.ya_features)}</label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {YACHT_FEATURES.map(f => (
-                  <button key={f} onClick={() => handleCheckboxChange('features', f)} className={`p-4 rounded-xl border text-[11px] font-sans uppercase tracking-tight transition-all ${formData.features.includes(f) ? 'bg-gold border-gold text-luxury-black font-semibold' : 'border-border-main hover:border-gold/30 text-text-main/60'}`}>
+                  <button key={f} onClick={() => handleCheckboxChange('features', f)} className={`p-4 rounded-xl border text-[10px] font-sans uppercase tracking-[0.2em] transition-all ${formData.features.includes(f) ? "bg-[#B8963E] border-[#B8963E] text-white font-semibold" : "border-slate-200 hover:border-[#B8963E]/50 text-slate-500"}`}>
                     {f}
                   </button>
                 ))}
@@ -766,32 +766,32 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           <div className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.av_type)}</label>
-                <select name="aircraft_type" value={formData.aircraft_type} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light appearance-none text-text-main">
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.av_type)}</label>
+                <select name="aircraft_type" value={formData.aircraft_type} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light appearance-none text-slate-900">
                   {AIRCRAFT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.av_tail)}</label>
-                <input name="tail_number" value={formData.tail_number} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.av_tail)}</label>
+                <input name="tail_number" value={formData.tail_number} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.av_max_pax)}</label>
-                <input name="max_passengers" type="number" value={formData.max_passengers} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.av_max_pax)}</label>
+                <input name="max_passengers" type="number" value={formData.max_passengers} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.av_price)}</label>
-                <input name="price_per_hour" type="number" value={formData.price_per_hour} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.av_price)}</label>
+                <input name="price_per_hour" type="number" value={formData.price_per_hour} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.av_home_base)}</label>
-                <input name="home_base" value={formData.home_base} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.av_home_base_ph)} />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.av_home_base)}</label>
+                <input name="home_base" value={formData.home_base} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" placeholder={tx(T.av_home_base_ph)} />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.av_range)}</label>
-                <input name="range" type="number" value={formData.range} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.av_range)}</label>
+                <input name="range" type="number" value={formData.range} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" />
               </div>
             </div>
           </div>
@@ -801,29 +801,29 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           <div className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.st_role)}</label>
-                <select name="role" value={formData.role} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light appearance-none text-text-main">
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.st_role)}</label>
+                <select name="role" value={formData.role} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light appearance-none text-slate-900">
                   {STAFF_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.st_daily_rate)}</label>
-                <input name="daily_rate" type="number" value={formData.daily_rate} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.st_daily_rate)}</label>
+                <input name="daily_rate" type="number" value={formData.daily_rate} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" />
               </div>
             </div>
             <div className="space-y-4">
-              <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.st_languages)}</label>
+              <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.st_languages)}</label>
               <div className="flex flex-wrap gap-4">
                 {LANGUAGES.map(l => (
-                  <button key={l} onClick={() => handleCheckboxChange('languages', l)} className={`w-16 h-16 rounded-xl border text-[11px] font-sans font-semibold transition-all ${formData.languages.includes(l) ? 'bg-gold border-gold text-luxury-black' : 'border-border-main hover:border-gold/30 text-text-main/60'}`}>
+                  <button key={l} onClick={() => handleCheckboxChange('languages', l)} className={`w-16 h-16 rounded-xl border text-[11px] font-sans font-semibold transition-all ${formData.languages.includes(l) ? "bg-[#B8963E] border-[#B8963E] text-white" : "border-slate-200 hover:border-[#B8963E]/50 text-slate-500"}`}>
                     {l}
                   </button>
                 ))}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.st_certs)}</label>
-              <input name="certifications" value={formData.certifications} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.st_certs_ph)} />
+              <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.st_certs)}</label>
+              <input name="certifications" value={formData.certifications} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" placeholder={tx(T.st_certs_ph)} />
             </div>
           </div>
         )}
@@ -832,28 +832,28 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           <div className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.gr_vehicle)}</label>
-                <select name="vehicle_type" value={formData.vehicle_type} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light appearance-none text-text-main">
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.gr_vehicle)}</label>
+                <select name="vehicle_type" value={formData.vehicle_type} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light appearance-none text-slate-900">
                   {VEHICLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.gr_passengers)}</label>
-                <input name="max_passengers_ground" type="number" value={formData.max_passengers_ground} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.gr_passengers)}</label>
+                <input name="max_passengers_ground" type="number" value={formData.max_passengers_ground} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.gr_price)}</label>
-                <input name="price_per_day_ground" type="number" value={formData.price_per_day_ground} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.gr_price)}</label>
+                <input name="price_per_day_ground" type="number" value={formData.price_per_day_ground} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.gr_plate)}</label>
-                <input name="license_plate" value={formData.license_plate} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder={tx(T.gr_plate_ph)} />
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.gr_plate)}</label>
+                <input name="license_plate" value={formData.license_plate} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" placeholder={tx(T.gr_plate_ph)} />
               </div>
               <div className="space-y-2">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.gr_driver_inc)}</label>
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.gr_driver_inc)}</label>
                 <div className="flex gap-4">
                   {[T.yes, T.no].map(o => (
                     <button key={o.EN} onClick={() => setFormData((prev: any) => ({ ...prev, driver_included: o.EN }))} className={`flex-1 py-4 rounded-xl border text-[11px] font-sans uppercase tracking-tight transition-all ${formData.driver_included === o.EN ? 'bg-gold border-gold text-luxury-black font-semibold' : 'border-border-main text-text-main/60'}`}>
@@ -868,25 +868,25 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.gr_armored_label)}</label>
+                    <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.gr_armored_label)}</label>
                   </div>
-                  <p className="text-xs text-text-main/40 font-light">{tx(T.gr_armored_help)}</p>
+                  <p className="text-xs text-slate-500 font-light">{tx(T.gr_armored_help)}</p>
                 </div>
                 <button
                   onClick={() => setFormData((prev: any) => ({ ...prev, is_armored: !prev.is_armored }))}
-                  className={`w-16 h-8 rounded-full transition-all relative ${formData.is_armored ? 'bg-gold' : 'bg-text-main/10'}`}
+                  className={`w-16 h-8 rounded-full transition-all relative ${formData.is_armored ? "bg-[#B8963E]" : "bg-slate-200"}`}
                 >
-                  <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${formData.is_armored ? 'left-9' : 'left-1'}`} />
+                  <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${formData.is_armored ? "left-9" : "left-1"}`} />
                 </button>
               </div>
             </div>
 
             {formData.driver_included === 'yes' && (
               <div className="space-y-4">
-                <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.gr_driver_lang)}</label>
+                <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.gr_driver_lang)}</label>
                 <div className="flex flex-wrap gap-4">
                   {DRIVER_LANGUAGES.map(l => (
-                    <button key={l} onClick={() => handleCheckboxChange('driver_languages', l)} className={`w-16 h-16 rounded-xl border text-[11px] font-sans font-semibold transition-all ${formData.driver_languages.includes(l) ? 'bg-gold border-gold text-luxury-black' : 'border-border-main hover:border-gold/30 text-text-main/60'}`}>
+                    <button key={l} onClick={() => handleCheckboxChange('driver_languages', l)} className={`w-16 h-16 rounded-xl border text-[11px] font-sans font-semibold transition-all ${formData.driver_languages.includes(l) ? "bg-[#B8963E] border-[#B8963E] text-white" : "border-slate-200 hover:border-[#B8963E]/50 text-slate-500"}`}>
                       {l}
                     </button>
                   ))}
@@ -898,10 +898,10 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
       </div>
 
         <div className="flex justify-between pt-8">
-          <button onClick={prevStep} className="flex items-center gap-2 text-[11px] font-sans uppercase tracking-tight font-semibold text-text-main/40 hover:text-text-main transition-colors">
+          <button onClick={prevStep} className="flex items-center gap-2 text-[10px] font-sans uppercase tracking-[0.3em] font-semibold text-slate-400 hover:text-slate-900 transition-colors">
             <ChevronLeft size={16} /> {tx(T.back)}
           </button>
-          <button onClick={nextStep} className="px-12 py-4 bg-gold text-luxury-black rounded font-medium text-xs tracking-wide flex items-center gap-3 hover:bg-white transition-all">
+          <button onClick={nextStep} className="px-12 py-4 bg-[#B8963E] text-white rounded-full font-semibold text-[11px] uppercase tracking-[0.3em] flex items-center gap-3 hover:bg-white hover:text-slate-900 transition-all duration-300">
             {tx(T.continue)} <ChevronRight size={16} />
           </button>
         </div>
@@ -924,9 +924,9 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
       
       return (
         <div className="space-y-4">
-          <h4 className="text-sm font-sans font-medium uppercase tracking-tight text-center text-text-main">{monthName} {year}</h4>
+          <h4 className="text-sm font-sans font-medium uppercase tracking-[0.2em] text-center text-slate-700">{monthName} {year}</h4>
           <div className="grid grid-cols-7 gap-2">
-            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => <div key={d} className="text-[10px] text-center text-text-main/20 font-medium">{d}</div>)}
+            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => <div key={d} className="text-[10px] text-center text-slate-300 font-medium">{d}</div>)}
             {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} />)}
             {Array.from({ length: days }).map((_, i) => {
               const day = i + 1;
@@ -989,59 +989,59 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
     return (
       <div className="max-w-4xl mx-auto space-y-12">
         <div className="text-center space-y-4">
-          <h2 className="text-4xl font-serif text-text-main">{tx(T.s3_title)}</h2>
-          <p className="text-text-main/40 font-light">{tx(T.s3_subtitle)}</p>
+          <h2 className="text-4xl font-serif text-slate-900">{tx(T.s3_title)}</h2>
+          <p className="text-slate-500 font-light">{tx(T.s3_subtitle)}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-luxury-slate border border-border-main rounded-2xl p-10 space-y-8 flex flex-col items-center text-center opacity-60">
+          <div className="bg-white border border-slate-200 rounded-2xl p-10 space-y-8 shadow-sm flex flex-col items-center text-center opacity-60">
             <div className="w-20 h-20 rounded-xl flex items-center justify-center bg-blue-500/10 text-blue-500">
               <Globe size={40} />
             </div>
             <div className="space-y-2">
-              <h3 className="text-xl font-serif text-text-main">{tx(T.s3_google_title)}</h3>
-              <p className="text-xs text-text-main/40 font-light leading-relaxed">
+              <h3 className="text-xl font-serif text-slate-900">{tx(T.s3_google_title)}</h3>
+              <p className="text-xs text-slate-500 font-light leading-relaxed">
                 {tx(T.s3_google_body)}
               </p>
             </div>
             <button
               disabled
-              className="w-full py-4 border border-border-main rounded-xl text-[11px] font-sans font-semibold uppercase tracking-tight transition-all flex items-center justify-center gap-3 text-text-main/20 cursor-not-allowed"
+              className="w-full py-4 border border-slate-200 rounded-xl text-[10px] font-sans font-semibold uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 text-slate-300 cursor-not-allowed"
             >
               <ExternalLink size={16} />
               {tx(T.s3_google_cta)}
             </button>
-            <p className="text-[11px] text-gold font-sans font-semibold uppercase tracking-tight">
+            <p className="text-[10px] text-luxury-teal font-sans font-semibold uppercase tracking-[0.3em]">
               {tx(T.s3_google_locked)}
             </p>
           </div>
 
-          <div className="bg-luxury-slate border border-border-main rounded-2xl p-10 space-y-8">
+          <div className="bg-white border border-slate-200 rounded-2xl p-10 space-y-8 shadow-sm">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center">
                 <Calendar size={24} />
               </div>
-              <h3 className="text-xl font-serif text-text-main">{tx(T.s3_manual_title)}</h3>
+              <h3 className="text-xl font-serif text-slate-900">{tx(T.s3_manual_title)}</h3>
             </div>
             <div className="grid grid-cols-1 gap-8">
               {renderCalendarGrid(currentMonth, currentYear)}
             </div>
-            <div className="flex items-center gap-4 text-[10px] uppercase tracking-widest font-bold text-text-main">
+            <div className="flex items-center gap-4 text-[10px] uppercase tracking-[0.3em] font-bold text-slate-700">
               <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-500 rounded-full" /> {tx(T.s3_available)}</div>
               <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-full" /> {tx(T.s3_blocked)}</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-luxury-slate border border-border-main rounded-2xl p-10 space-y-8">
+        <div className="bg-white border border-slate-200 rounded-2xl p-10 space-y-8 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <h3 className="text-xl font-sans font-medium text-text-main">{tx(T.s3_seasonal)}</h3>
-              <p className="text-xs text-text-main/40 font-light">{tx(T.s3_seasonal_help)}</p>
+              <h3 className="text-xl font-sans font-medium text-slate-900">{tx(T.s3_seasonal)}</h3>
+              <p className="text-xs text-slate-500 font-light">{tx(T.s3_seasonal_help)}</p>
             </div>
             <button 
               onClick={() => setFormData((prev: any) => ({ ...prev, seasonal_pricing: !prev.seasonal_pricing }))}
-              className={`w-16 h-8 rounded-full transition-all relative ${formData.seasonal_pricing ? 'bg-gold' : 'bg-text-main/10'}`}
+              className={`w-16 h-8 rounded-full transition-all relative ${formData.seasonal_pricing ? "bg-[#B8963E]" : "bg-slate-200"}`}
             >
               <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${formData.seasonal_pricing ? 'left-9' : 'left-1'}`} />
             </button>
@@ -1051,17 +1051,17 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
             {formData.seasonal_pricing && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="grid grid-cols-1 md:grid-cols-2 gap-8 overflow-hidden">
                 <div className="space-y-2">
-                  <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s3_high_season)}</label>
+                  <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s3_high_season)}</label>
                   <div className="relative">
-                    <input name="high_season_price" type="number" value={formData.high_season_price} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 pl-12 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder="0" />
-                    <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 text-text-main/20" size={16} />
+                    <input name="high_season_price" type="number" value={formData.high_season_price} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 pl-12 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" placeholder="0" />
+                    <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s3_low_season)}</label>
+                  <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s3_low_season)}</label>
                   <div className="relative">
-                    <input name="low_season_price" type="number" value={formData.low_season_price} onChange={handleInputChange} className="w-full bg-luxury-slate/50 border border-border-main rounded-lg py-4 px-6 pl-12 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main" placeholder="0" />
-                    <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 text-text-main/20" size={16} />
+                    <input name="low_season_price" type="number" value={formData.low_season_price} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg py-4 px-5 pl-12 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900" placeholder="0" />
+                    <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                   </div>
                 </div>
               </motion.div>
@@ -1070,10 +1070,10 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
         </div>
 
         <div className="flex justify-between pt-8">
-          <button onClick={prevStep} className="flex items-center gap-2 text-[11px] font-sans uppercase tracking-tight text-text-main/40 hover:text-text-main transition-colors">
+          <button onClick={prevStep} className="flex items-center gap-2 text-[10px] font-sans uppercase tracking-[0.3em] text-slate-400 hover:text-slate-900 transition-colors">
             <ChevronLeft size={16} /> {tx(T.back)}
           </button>
-          <button onClick={nextStep} className="px-12 py-4 bg-gold text-luxury-black rounded font-medium text-xs tracking-wide flex items-center gap-3 hover:bg-white transition-all">
+          <button onClick={nextStep} className="px-12 py-4 bg-[#B8963E] text-white rounded-full font-semibold text-[11px] uppercase tracking-[0.3em] flex items-center gap-3 hover:bg-white hover:text-slate-900 transition-all duration-300">
             {tx(T.continue)} <ChevronRight size={16} />
           </button>
         </div>
@@ -1084,14 +1084,14 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
   const renderStep4 = () => (
     <div className="max-w-4xl mx-auto space-y-12">
       <div className="text-center space-y-4">
-        <h2 className="text-4xl font-serif text-text-main">{tx(T.s4_title)}</h2>
-        <p className="text-text-main/40 font-light">{tx(T.s4_subtitle)}</p>
+        <h2 className="text-4xl font-serif text-slate-900">{tx(T.s4_title)}</h2>
+        <p className="text-slate-500 font-light">{tx(T.s4_subtitle)}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-luxury-slate border border-border-main rounded-2xl p-10 space-y-8">
-          <h3 className="text-xl font-serif border-b border-border-main pb-4 text-text-main">{tx(T.s4_business)}</h3>
-          <div className="space-y-4 text-text-main">
+        <div className="bg-white border border-slate-200 rounded-2xl p-10 space-y-8 shadow-sm">
+          <h3 className="text-xl font-serif border-b border-slate-200 pb-4 text-slate-900">{tx(T.s4_business)}</h3>
+          <div className="space-y-4 text-slate-900">
             {[
               { label: tx(T.s4_label_business), value: formData.business_name },
               { label: tx(T.s4_label_contact), value: formData.contact_name },
@@ -1101,58 +1101,58 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
               { label: tx(T.s4_label_type), value: type },
             ].map(i => (
               <div key={i.label} className="flex justify-between items-center">
-                <span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{i.label}</span>
+                <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{i.label}</span>
                 <span className="text-sm font-medium">{i.value}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-luxury-slate border border-border-main rounded-2xl p-10 space-y-8">
-          <h3 className="text-xl font-sans font-medium border-b border-border-main pb-4 text-text-main">{tx(T.s4_asset)}</h3>
+        <div className="bg-white border border-slate-200 rounded-2xl p-10 space-y-8 shadow-sm">
+          <h3 className="text-xl font-sans font-medium border-b border-slate-200 pb-4 text-slate-900">{tx(T.s4_asset)}</h3>
           <div className="space-y-4">
             {type === 'VILLA' && (
               <>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_bedrooms)}</span><span className="text-sm font-medium text-text-main">{formData.bedrooms}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_guests)}</span><span className="text-sm font-medium text-text-main">{formData.max_guests}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_price)}</span><span className="text-sm font-medium text-text-main">${formData.price_per_night}{tx(T.s4_per_night)}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_bedrooms)}</span><span className="text-sm font-medium text-slate-900">{formData.bedrooms}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_guests)}</span><span className="text-sm font-medium text-slate-900">{formData.max_guests}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_price)}</span><span className="text-sm font-medium text-slate-900">${formData.price_per_night}{tx(T.s4_per_night)}</span></div>
               </>
             )}
             {type === 'YACHT' && (
               <>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_length)}</span><span className="text-sm font-medium text-text-main">{formData.vessel_length}ft</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_guests)}</span><span className="text-sm font-medium text-text-main">{formData.max_guests}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_price)}</span><span className="text-sm font-medium text-text-main">${formData.price_per_day}{tx(T.s4_per_day)}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_length)}</span><span className="text-sm font-medium text-slate-900">{formData.vessel_length}ft</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_guests)}</span><span className="text-sm font-medium text-slate-900">{formData.max_guests}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_price)}</span><span className="text-sm font-medium text-slate-900">${formData.price_per_day}{tx(T.s4_per_day)}</span></div>
               </>
             )}
             {type === 'AVIATION' && (
               <>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_type)}</span><span className="text-sm font-medium text-text-main">{formData.aircraft_type}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_tail)}</span><span className="text-sm font-medium text-text-main">{formData.tail_number}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_price)}</span><span className="text-sm font-medium text-text-main">${formData.price_per_hour}{tx(T.s4_per_hour)}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_type)}</span><span className="text-sm font-medium text-slate-900">{formData.aircraft_type}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_tail)}</span><span className="text-sm font-medium text-slate-900">{formData.tail_number}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_price)}</span><span className="text-sm font-medium text-slate-900">${formData.price_per_hour}{tx(T.s4_per_hour)}</span></div>
               </>
             )}
             {type === 'STAFF' && (
               <>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_type)}</span><span className="text-sm font-medium text-text-main">{formData.role}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_rate)}</span><span className="text-sm font-medium text-text-main">${formData.daily_rate}{tx(T.s4_per_day)}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_type)}</span><span className="text-sm font-medium text-slate-900">{formData.role}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_rate)}</span><span className="text-sm font-medium text-slate-900">${formData.daily_rate}{tx(T.s4_per_day)}</span></div>
               </>
             )}
             {type === 'GROUND' && (
               <>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_vehicle)}</span><span className="text-sm font-medium text-text-main">{formData.vehicle_type}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_passengers)}</span><span className="text-sm font-medium text-text-main">{formData.max_passengers_ground}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_plate)}</span><span className="text-sm font-medium text-text-main">{formData.license_plate}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_price)}</span><span className="text-sm font-medium text-text-main">${formData.price_per_day_ground}{tx(T.s4_per_day)}</span></div>
-                <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_driver)}</span><span className="text-sm font-medium font-sans text-text-main">{formData.driver_included === 'yes' ? tx(T.yes) : tx(T.no)}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_vehicle)}</span><span className="text-sm font-medium text-slate-900">{formData.vehicle_type}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_passengers)}</span><span className="text-sm font-medium text-slate-900">{formData.max_passengers_ground}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_plate)}</span><span className="text-sm font-medium text-slate-900">{formData.license_plate}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_price)}</span><span className="text-sm font-medium text-slate-900">${formData.price_per_day_ground}{tx(T.s4_per_day)}</span></div>
+                <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_driver)}</span><span className="text-sm font-medium font-sans text-slate-900">{formData.driver_included === 'yes' ? tx(T.yes) : tx(T.no)}</span></div>
                 <div className="flex justify-between items-center">
-                  <span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_armored)}</span>
-                  <span className="text-sm font-medium flex items-center gap-2 text-text-main">
+                  <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_armored)}</span>
+                  <span className="text-sm font-medium flex items-center gap-2 text-slate-900">
                     {formData.is_armored ? tx(T.yes).toUpperCase() : tx(T.no).toUpperCase()}
                   </span>
                 </div>
                 {formData.driver_included === 'yes' && (
-                  <div className="flex justify-between items-center"><span className="text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">{tx(T.s4_label_languages)}</span><span className="text-sm font-medium text-text-main">{formData.driver_languages.join(', ')}</span></div>
+                  <div className="flex justify-between items-center"><span className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.s4_label_languages)}</span><span className="text-sm font-medium text-slate-900">{formData.driver_languages.join(', ')}</span></div>
                 )}
               </>
             )}
@@ -1160,24 +1160,24 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
         </div>
       </div>
 
-      <div className="bg-luxury-slate border border-border-main rounded-2xl p-10 space-y-8">
+      <div className="bg-white border border-slate-200 rounded-2xl p-10 space-y-8 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gold/10 text-gold rounded-xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-[#B8963E]/10 text-[#B8963E] rounded-xl flex items-center justify-center">
             <Shield size={24} />
           </div>
-          <h3 className="text-xl font-sans font-medium text-text-main">{tx(T.s4_terms_title)}</h3>
+          <h3 className="text-xl font-sans font-medium text-slate-900">{tx(T.s4_terms_title)}</h3>
         </div>
-        <p className="text-sm text-text-main/60 font-light leading-relaxed">
+        <p className="text-sm text-slate-600 font-light leading-relaxed">
           {tx(T.s4_terms_body_en)}
         </p>
         <label className="flex items-center gap-4 cursor-pointer group">
           <div
             onClick={() => setAgreedToTerms(!agreedToTerms)}
-            className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${agreedToTerms ? 'bg-gold border-gold' : 'border-border-main group-hover:border-gold/50'}`}
+            className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${agreedToTerms ? "bg-[#B8963E] border-[#B8963E]" : "border-slate-300 group-hover:border-[#B8963E]/50"}`}
           >
-            {agreedToTerms && <Check size={16} className="text-luxury-black" />}
+            {agreedToTerms && <Check size={16} className="text-white" />}
           </div>
-          <span className="text-[11px] font-sans uppercase tracking-tight font-semibold text-text-main">{tx(T.s4_agree)}</span>
+          <span className="text-[10px] font-sans uppercase tracking-[0.3em] font-semibold text-slate-700">{tx(T.s4_agree)}</span>
         </label>
       </div>
 
@@ -1185,21 +1185,21 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl"
+          className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl"
         >
-          <AlertCircle size={16} className="text-red-400 mt-0.5 shrink-0" />
-          <p className="text-sm text-red-300 leading-relaxed">{submitError}</p>
+          <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
+          <p className="text-sm text-red-700 leading-relaxed">{submitError}</p>
         </motion.div>
       )}
 
       <div className="flex justify-between pt-8">
-        <button onClick={prevStep} className="flex items-center gap-2 text-[11px] font-sans uppercase tracking-tight font-semibold text-text-main/40 hover:text-text-main transition-colors">
+        <button onClick={prevStep} className="flex items-center gap-2 text-[10px] font-sans uppercase tracking-[0.3em] font-semibold text-slate-400 hover:text-slate-900 transition-colors">
           <ChevronLeft size={16} /> {tx(T.back)}
         </button>
         <button
           onClick={handleSubmit}
           disabled={!agreedToTerms || isSubmitting}
-          className="px-16 py-6 bg-gold text-luxury-black rounded font-medium text-xs tracking-wide flex items-center gap-3 hover:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-gold/20"
+          className="px-16 py-5 bg-[#B8963E] text-white rounded-full font-semibold text-[11px] uppercase tracking-[0.3em] flex items-center gap-3 hover:bg-white hover:text-slate-900 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? <Loader2 className="animate-spin" /> : <Star size={18} />}
           {isSubmitting ? tx(T.s4_submitting) : tx(T.s4_submit)}
@@ -1210,13 +1210,13 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
 
   const renderStep5 = () => (
     <div className="max-w-2xl mx-auto py-20 px-6 text-center space-y-12">
-      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', damping: 12 }} className="w-24 h-24 bg-gold rounded-xl flex items-center justify-center mx-auto shadow-2xl shadow-gold/30">
-        <CheckCircle2 size={64} className="text-luxury-black" />
+      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', damping: 12 }} className="w-24 h-24 bg-[#B8963E] rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-[#B8963E]/30">
+        <CheckCircle2 size={64} className="text-white" />
       </motion.div>
       
       <div className="space-y-4">
-        <h1 className="text-5xl font-serif text-white">{tx(T.s5_title)}</h1>
-        <p className="text-white/60 font-sans font-light text-xl leading-relaxed">
+        <h1 className="text-5xl font-serif text-slate-900">{tx(T.s5_title)}</h1>
+        <p className="text-slate-600 font-sans font-light text-xl leading-relaxed">
           {tx(T.s5_body)} <span className="text-gold font-semibold">{formData.whatsapp}</span>.
         </p>
       </div>
@@ -1229,7 +1229,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           <button
             type="button"
             onClick={onGoToDashboard}
-            className="w-full py-6 bg-gold text-luxury-black rounded font-medium text-xs tracking-wide flex items-center justify-center gap-3 hover:bg-white transition-all shadow-2xl shadow-gold/20"
+            className="w-full py-5 bg-[#B8963E] text-white rounded-full font-semibold text-[11px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 hover:bg-slate-900 transition-all duration-300"
           >
             {tx(T.s5_dashboard)}
             <ArrowRight size={18} />
@@ -1239,13 +1239,13 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           href={`https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full py-6 bg-emerald-500 text-white rounded font-medium text-xs tracking-wide flex items-center justify-center gap-3 hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-500/20"
+          className="w-full py-5 bg-[#25D366] text-white rounded-full font-semibold text-[11px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 hover:bg-[#1ebe5d] transition-all duration-300"
         >
           <MessageSquare size={18} /> {tx(T.s5_whatsapp)}
         </a>
         <button
           onClick={() => onBack ? onBack() : window.location.href = '/'}
-          className="w-full py-6 bg-white/5 border border-white/10 text-white rounded font-medium text-xs tracking-wide flex items-center justify-center gap-3 hover:bg-white/10 transition-all"
+          className="w-full py-5 border border-slate-200 text-slate-700 rounded-full font-semibold text-[11px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all"
         >
           {tx(T.s5_explore)} <ArrowRight size={18} />
         </button>
@@ -1254,25 +1254,31 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
   );
 
   return (
-    <div className="min-h-screen bg-luxury-black pb-40 relative text-text-main">
-      {/* v1.5 Home Button — moved up and given a higher z-index so it sits
-          above the sticky stepper. The stepper fills the top bar, the home
-          button is a small floating chip at the top-left corner. */}
-      <div className="absolute top-4 left-4 sm:top-4 sm:left-6 z-[70]">
-        <button
-          onClick={() => onBack ? onBack() : window.location.href = '/'}
-          className="flex items-center gap-2 px-5 py-2.5 bg-luxury-slate/80 backdrop-blur-md border border-border-main rounded-full text-[11px] font-sans uppercase tracking-tight font-semibold hover:bg-luxury-slate transition-all text-text-main shadow-sm"
-        >
-          <Home size={14} /> {tx(T.back_home)}
-        </button>
+    // v1.7: redesigned to match the public-site design language (light bg,
+    // slate text, gold accents, teal section labels, Cormorant serif
+    // display). The dense form still uses dark cards on light bg for
+    // contrast, but the overall feel is "this is the same KLO."
+    <div className="min-h-screen bg-slate-50 text-slate-900 relative">
+      {/* Light-theme sticky top nav with the pelican logo + back-home chip */}
+      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100">
+        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+          <a href="/" className="flex items-center transition-opacity hover:opacity-80">
+            <img src="/klo-logo.png" alt="KLO" className="h-10 w-auto" />
+          </a>
+          <button
+            onClick={() => onBack ? onBack() : window.location.href = '/'}
+            className="flex items-center gap-2 px-5 py-2 border border-slate-200 rounded-full text-[10px] font-sans uppercase tracking-[0.3em] font-semibold text-slate-700 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all"
+          >
+            <Home size={14} /> {tx(T.back_home)}
+          </button>
+        </div>
       </div>
 
-      {/* v1.5 Stepper — proper step indicator with checkmarks for completed
-          steps and a highlighted current step. Replaces the thin gold bar
-          that shipped in v1.0. Sticky at the top, low z-index so it sits
-          above page content but below the home button. Hidden on success. */}
+      {/* v1.7 Stepper — light theme. Teal-accented step circles with
+          checkmarks for completed steps, current step highlighted in
+          luxury-teal. Sits below the top nav (which is also light). */}
       {step < 5 && (
-        <div className="fixed top-0 left-0 right-0 z-[60] bg-luxury-black/80 backdrop-blur-md border-b border-border-main/50">
+        <div className="sticky top-[73px] left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100">
           <div className="max-w-3xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between gap-2">
               {STEPS.slice(0, 4).map((label, i) => {
@@ -1286,26 +1292,26 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
                       <div
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
                           isComplete
-                            ? 'bg-gold text-luxury-black'
+                            ? 'bg-[#B8963E] text-white'
                             : isCurrent
-                            ? 'bg-gold/20 text-gold border-2 border-gold'
-                            : 'bg-white/5 text-text-main/30 border border-border-main'
+                            ? 'bg-luxury-teal/10 text-luxury-teal border-2 border-luxury-teal'
+                            : 'bg-white text-slate-300 border border-slate-200'
                         }`}
                       >
                         {isComplete ? <Check size={14} /> : stepNum}
                       </div>
                       <span
-                        className={`text-[11px] font-sans uppercase tracking-widest font-semibold hidden sm:inline transition-colors ${
-                          isCurrent ? 'text-gold' : isComplete ? 'text-text-main/60' : 'text-text-main/30'
+                        className={`text-[10px] font-sans uppercase tracking-[0.3em] font-semibold hidden sm:inline transition-colors ${
+                          isCurrent ? 'text-luxury-teal' : isComplete ? 'text-slate-700' : 'text-slate-300'
                         }`}
                       >
                         {tx(label)}
                       </span>
                     </div>
                     {!isLast && (
-                      <div className="flex-1 h-px bg-border-main relative overflow-hidden">
+                      <div className="flex-1 h-px bg-slate-200 relative overflow-hidden">
                         <motion.div
-                          className="absolute inset-y-0 left-0 bg-gold"
+                          className="absolute inset-y-0 left-0 bg-[#B8963E]"
                           initial={false}
                           animate={{ width: step > stepNum ? '100%' : '0%' }}
                           transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -1320,7 +1326,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
         </div>
       )}
 
-      <div className="pt-40 px-6 max-w-7xl mx-auto">
+      <div className="pt-12 pb-40 px-6 max-w-7xl mx-auto">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={step}
@@ -1345,3 +1351,80 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
     </div>
   );
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

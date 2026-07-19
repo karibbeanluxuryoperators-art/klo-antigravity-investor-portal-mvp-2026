@@ -1,32 +1,36 @@
-// ── KLO Supplier Login ───────────────────────────────────────────────────────
-// Magic-link sign-in page. The supplier types their email, we call Supabase
-// Auth's signInWithOtp, and Supabase sends them an email with a one-time
-// link. The link redirects back to /supplier/dashboard with the session
-// tokens in the URL hash; SupplierDashboardGate picks them up and renders
-// the dashboard.
-//
-// Why no password? Magic-link is the lowest-friction way to get suppliers
-// (often non-technical villa owners, captains, chefs) into the dashboard.
-// Email is the canonical identifier we already have on every suppliers row,
-// so the lookup is exact: matching email → render that supplier's data.
+// ── KLO Supplier Login (v1.7 redesign) ───────────────────────────────────────
+// Magic-link sign-in. v1.7: redesigned to match the public-site design
+// language (slate-50 bg, teal section labels, Cormorant display headings,
+// gold CTAs). See components/ui/primitives.tsx for the design system.
 
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Home, Mail, Loader2, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Mail, Loader2, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { sendSupplierMagicLink } from '../services/supabase';
+import {
+  Section,
+  SectionLabel,
+  DisplayHeading,
+  BodyText,
+  PrimaryButton,
+  GhostButton,
+  Card,
+  Input,
+  TopNav,
+} from './ui/primitives';
 
 type Language = 'EN' | 'ES' | 'PT';
 
 interface SupplierLoginProps {
   onBack: () => void;
-  onSignedIn: () => void;     // parent will navigate to /supplier/dashboard
-  onNewSupplier: () => void;  // parent will navigate to /supplier
+  onSignedIn: () => void;
+  onNewSupplier: () => void;
   lang?: Language;
 }
 
-// Trilingual copy. Localized in the same shape as SupplierPortal/SupplierDashboard.
 const T = {
   EN: {
+    eyebrow: 'Partner Sign In',
     title: 'Welcome Back',
     subtitle: 'Sign in to manage your partner profile, assets, and bookings.',
     emailLabel: 'Your partner email',
@@ -44,6 +48,7 @@ const T = {
     invalidEmail: 'Please enter a valid email address.',
   },
   ES: {
+    eyebrow: 'Acceso de Socios',
     title: 'Bienvenido de Vuelta',
     subtitle: 'Inicia sesión para gestionar tu perfil de socio, activos y reservas.',
     emailLabel: 'Tu correo de socio',
@@ -61,6 +66,7 @@ const T = {
     invalidEmail: 'Por favor, ingresa un correo válido.',
   },
   PT: {
+    eyebrow: 'Acesso de Parceiros',
     title: 'Bem-vindo de Volta',
     subtitle: 'Entre para gerenciar seu perfil de parceiro, ativos e reservas.',
     emailLabel: 'Seu e-mail de parceiro',
@@ -96,16 +102,11 @@ export const SupplierLogin: React.FC<SupplierLoginProps> = ({
     setError(null);
     setIsSending(true);
     try {
-      // After the user clicks the magic link in their email, Supabase redirects
-      // them back to this exact URL with the session tokens in the hash.
-      // SupplierDashboardGate on that page calls getSession() and finds the
-      // freshly-set session automatically (detectSessionInUrl: true).
       const redirectTo = `${window.location.origin}/supplier/dashboard`;
       const result = await sendSupplierMagicLink(email, redirectTo);
-      if (result.ok) {
+      if (result.ok === true) {
         setSentTo(email.trim().toLowerCase());
       } else {
-        // result is narrowed to { ok: false; error: string } here
         setError((result as { error: string }).error);
       }
     } catch (err: any) {
@@ -116,144 +117,112 @@ export const SupplierLogin: React.FC<SupplierLoginProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-luxury-black text-text-main flex items-center justify-center px-6 py-20 relative overflow-hidden">
-      {/* Background gradient — keeps the page from feeling flat */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-32 -right-32 w-96 h-96 bg-gold/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-luxury-teal/10 rounded-full blur-3xl" />
-      </div>
+    <div className="min-h-screen bg-slate-50">
+      <TopNav onBack={onBack} backLabel={t.back} tone="light" />
 
-      {/* Home button — keeps portal navigation consistent with SupplierPortal */}
-      <div className="absolute top-8 left-8 z-10">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 px-6 py-3 bg-luxury-slate/50 border border-border-main rounded-full text-[11px] font-sans uppercase tracking-tight font-semibold hover:bg-luxury-slate transition-all text-text-main shadow-sm"
+      <Section tone="light" size="md" className="!py-24">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="max-w-md mx-auto"
         >
-          <Home size={14} /> {t.back}
-        </button>
-      </div>
+          <div className="text-center mb-12">
+            <SectionLabel tone="teal">{t.eyebrow}</SectionLabel>
+            <DisplayHeading tone="dark" size="lg" as="h1" className="!text-5xl !md:text-6xl">
+              {t.title}
+            </DisplayHeading>
+            <BodyText tone="dark" size="md" className="!text-slate-500 max-w-md mx-auto">
+              {t.subtitle}
+            </BodyText>
+          </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="relative z-10 w-full max-w-md"
-      >
-        {/* Logo */}
-        <div className="flex justify-center mb-10">
-          <button
-            onClick={onBack}
-            className="w-24 h-24 hover:scale-105 transition-transform drop-shadow-[0_8px_24px_rgba(212,175,55,0.35)]"
-            aria-label="KLO home"
-          >
-            <img
-              src="/klo-logo.png"
-              alt="KLO"
-              className="w-full h-full object-contain"
-            />
-          </button>
-        </div>
-
-        <div className="bg-luxury-slate border border-border-main rounded-2xl p-10 shadow-2xl">
           {sentTo ? (
-            // ── SENT STATE ──
-            <motion.div
-              key="sent"
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-center space-y-6"
-            >
-              <div className="w-16 h-16 mx-auto bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400">
-                <CheckCircle2 size={32} />
-              </div>
-              <h1 className="text-3xl font-serif italic text-text-main">{t.sentTitle}</h1>
-              <p className="text-text-main/60 font-light leading-relaxed">
-                {t.sentBody.replace('{email}', sentTo)}
-              </p>
-              <p className="text-[11px] text-text-main/30 italic">{t.sentHelp}</p>
-              <button
-                onClick={() => { setSentTo(null); setEmail(''); }}
-                className="w-full mt-4 px-6 py-4 bg-white/5 border border-border-main text-text-main rounded-xl text-[11px] font-sans uppercase tracking-tight font-semibold hover:bg-white/10 transition-all"
+            <Card tone="light" hover={false} padding="lg">
+              <motion.div
+                key="sent"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center space-y-6"
               >
-                {t.tryAgain}
-              </button>
-            </motion.div>
-          ) : (
-            // ── FORM STATE ──
-            <form onSubmit={handleSubmit} className="space-y-8">
-              <div className="text-center space-y-3">
-                <h1 className="text-4xl font-serif italic text-text-main">{t.title}</h1>
-                <p className="text-text-main/50 font-sans font-light leading-relaxed">
-                  {t.subtitle}
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <label className="block text-[11px] font-sans uppercase tracking-tight text-text-main/40 font-semibold">
-                  {t.emailLabel}
-                </label>
-                <div className="relative">
-                  <Mail
-                    className="absolute left-5 top-1/2 -translate-y-1/2 text-text-main/30 pointer-events-none"
-                    size={18}
-                  />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder={t.emailPlaceholder}
-                    autoComplete="email"
-                    required
-                    disabled={isSending}
-                    className="w-full bg-luxury-black border border-border-main rounded-xl py-4 pl-14 pr-5 focus:outline-none focus:border-gold/50 transition-all font-light text-text-main placeholder:text-text-main/20 disabled:opacity-50"
-                  />
+                <div className="w-16 h-16 mx-auto bg-luxury-teal/10 rounded-full flex items-center justify-center text-luxury-teal">
+                  <CheckCircle2 size={32} />
                 </div>
-                <p className="text-[11px] text-text-main/30 font-light">{t.helpText}</p>
-              </div>
-
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-xl"
-                >
-                  <AlertCircle size={16} className="text-red-400 mt-0.5 shrink-0" />
-                  <p className="text-sm text-red-300 leading-relaxed">{error}</p>
-                </motion.div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isSending || !email.trim()}
-                className="w-full px-6 py-4 bg-gold text-luxury-black rounded-xl font-semibold text-xs uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-white transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-gold/20"
-              >
-                {isSending ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" /> {t.sending}
-                  </>
-                ) : (
-                  <>
-                    {t.sendButton} <ArrowRight size={16} />
-                  </>
-                )}
-              </button>
-
-              <div className="pt-4 border-t border-border-main text-center">
-                <p className="text-text-main/40 text-xs">
-                  {t.newHere}{' '}
-                  <button
-                    type="button"
-                    onClick={onNewSupplier}
-                    className="text-gold hover:text-white font-semibold transition-colors underline underline-offset-2"
-                  >
-                    {t.applyNow}
-                  </button>
+                <h2 className="text-3xl font-serif italic text-slate-900">{t.sentTitle}</h2>
+                <p className="text-slate-500 font-light leading-relaxed">
+                  {t.sentBody.replace('{email}', sentTo)}
                 </p>
-              </div>
-            </form>
+                <p className="text-[11px] text-slate-400 italic">{t.sentHelp}</p>
+                <button
+                  onClick={() => { setSentTo(null); setEmail(''); }}
+                  className="w-full mt-4 px-6 py-4 border border-slate-200 text-slate-700 rounded-full text-[11px] font-sans uppercase tracking-[0.3em] font-semibold hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all"
+                >
+                  {t.tryAgain}
+                </button>
+              </motion.div>
+            </Card>
+          ) : (
+            <Card tone="light" hover={false} padding="lg">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t.emailPlaceholder}
+                  autoComplete="email"
+                  required
+                  disabled={isSending}
+                  label={t.emailLabel}
+                />
+
+                <p className="text-[11px] text-slate-400 font-light -mt-4">{t.helpText}</p>
+
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl"
+                  >
+                    <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
+                    <p className="text-sm text-red-700 leading-relaxed">{error}</p>
+                  </motion.div>
+                )}
+
+                <PrimaryButton
+                  type="submit"
+                  disabled={isSending || !email.trim()}
+                  size="lg"
+                  fullWidth
+                  className="!bg-[#B8963E] !border-[#B8963E] !text-white hover:!bg-white hover:!text-slate-900"
+                >
+                  {isSending ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> {t.sending}
+                    </>
+                  ) : (
+                    <>
+                      {t.sendButton} <ArrowRight size={16} />
+                    </>
+                  )}
+                </PrimaryButton>
+
+                <div className="pt-4 border-t border-slate-100 text-center">
+                  <p className="text-slate-500 text-xs">
+                    {t.newHere}{' '}
+                    <button
+                      type="button"
+                      onClick={onNewSupplier}
+                      className="text-luxury-teal hover:text-slate-900 font-semibold transition-colors underline underline-offset-2"
+                    >
+                      {t.applyNow}
+                    </button>
+                  </p>
+                </div>
+              </form>
+            </Card>
           )}
-        </div>
-      </motion.div>
+        </motion.div>
+      </Section>
     </div>
   );
 };
