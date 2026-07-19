@@ -354,13 +354,18 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
   const renderStep1 = () => (
     <div className="space-y-12">
       <div className="text-center space-y-4">
-        <motion.div 
+        <motion.div
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => window.location.href = '/'}
-          className="w-20 h-20 bg-gold rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-gold/20 cursor-pointer"
+          className="w-24 h-24 mx-auto mb-8 cursor-pointer drop-shadow-[0_8px_24px_rgba(212,175,55,0.35)]"
+          aria-label="KLO home"
         >
-          <span className="text-luxury-black font-bold text-3xl">K</span>
+          <img
+            src="/klo-logo.png"
+            alt="KLO"
+            className="w-full h-full object-contain"
+          />
         </motion.div>
         <h1 className="text-5xl font-serif italic tracking-wide text-text-main">Become a KLO Verified Partner</h1>
         <p className="text-text-main/60 font-sans font-light text-xl max-w-2xl mx-auto leading-relaxed">

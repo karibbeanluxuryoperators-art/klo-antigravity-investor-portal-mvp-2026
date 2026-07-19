@@ -143,10 +143,14 @@ export const SupplierLogin: React.FC<SupplierLoginProps> = ({
         <div className="flex justify-center mb-10">
           <button
             onClick={onBack}
-            className="w-20 h-20 bg-gold rounded-full flex items-center justify-center shadow-2xl shadow-gold/20 hover:scale-105 transition-transform"
+            className="w-24 h-24 hover:scale-105 transition-transform drop-shadow-[0_8px_24px_rgba(212,175,55,0.35)]"
             aria-label="KLO home"
           >
-            <span className="text-luxury-black font-bold text-3xl">K</span>
+            <img
+              src="/klo-logo.png"
+              alt="KLO"
+              className="w-full h-full object-contain"
+            />
           </button>
         </div>
 
