@@ -415,7 +415,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
               <span className={`text-[8px] px-3 py-1 rounded-full border uppercase tracking-widest font-bold ${
                 supplierData?.status === 'APPROVED'
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                  : 'bg-slate-100 text-white/60 border-white/20'
+                  : 'bg-slate-100 text-slate-500 border-slate-200'
               }`}>
                 {supplierData?.status}
               </span>
@@ -434,7 +434,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                   className={`flex items-center gap-2 px-5 py-3 rounded-full text-[11px] font-semibold uppercase tracking-widest transition-all ${
                     activeTab === tab.id
                       ? 'bg-[#B8963E] text-white'
-                      : 'text-slate-500 hover:text-text-main/70 hover:bg-slate-100'
+                      : 'text-slate-500 hover:text-slate-900/70 hover:bg-slate-100'
                   }`}>
                   <Icon size={14} />
                   {tab.label[lang]}
@@ -516,7 +516,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                             <Users size={18} />
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-text-main">{b.guest_name}</p>
+                            <p className="text-sm font-medium text-slate-900">{b.guest_name}</p>
                             <p className="text-[10px] text-slate-500">{b.asset_name} · {b.start_date}</p>
                           </div>
                         </div>
@@ -563,7 +563,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                             <Icon size={20} />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-text-main truncate">{asset.name}</p>
+                            <p className="text-sm font-medium text-slate-900 truncate">{asset.name}</p>
                             <p className="text-[10px] text-slate-500">{ASSET_TYPE_LABELS[asset.type]?.[lang] || asset.type}</p>
                           </div>
                         </div>
@@ -583,7 +583,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                   <input value={search} onChange={e => setSearch(e.target.value)}
                     placeholder={lang === 'EN' ? 'Search assets...' : lang === 'ES' ? 'Buscar activos...' : 'Pesquisar ativos...'}
-                    className="bg-white border border-slate-200 shadow-sm rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-gold/50 transition-all text-sm text-text-main w-full sm:w-64" />
+                    className="bg-white border border-slate-200 shadow-sm rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all text-sm text-slate-900 w-full sm:w-64" />
                 </div>
                 <button onClick={() => openEditModal()}
                   className="px-6 py-3 bg-gold text-luxury-black rounded-full font-semibold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-white transition-all shrink-0">
@@ -593,10 +593,10 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
 
               {filteredAssets.length === 0 ? (
                 <div className="py-20 text-center space-y-4">
-                  <Package size={48} className="text-text-main/10 mx-auto mb-4" />
+                  <Package size={48} className="text-slate-900/10 mx-auto mb-4" />
                   {assets.length === 0 ? (
                     <>
-                      <p className="text-text-main/50 text-sm">
+                      <p className="text-slate-900/50 text-sm">
                         {lang === 'EN' ? 'You have not listed any assets yet.' : lang === 'ES' ? 'Aún no has listado ningún activo.' : 'Você ainda não listou nenhum ativo.'}
                       </p>
                       <button onClick={() => openEditModal()}
@@ -653,7 +653,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                         {/* Card actions */}
                         <div className="border-t border-border-main flex divide-x divide-slate-200">
                           <button onClick={() => openEditModal(asset)}
-                            className="flex-1 py-3 text-[10px] uppercase tracking-widest font-semibold text-text-main/50 hover:text-[#B8963E] hover:bg-[#B8963E]/5 transition-all flex items-center justify-center gap-1.5">
+                            className="flex-1 py-3 text-[10px] uppercase tracking-widest font-semibold text-slate-900/50 hover:text-[#B8963E] hover:bg-[#B8963E]/5 transition-all flex items-center justify-center gap-1.5">
                             <Edit2 size={12} /> {lang === 'EN' ? 'Edit' : lang === 'ES' ? 'Editar' : 'Editar'}
                           </button>
                           <button onClick={() => handleSyncCalendar(asset.id)}
@@ -682,14 +682,14 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input value={search} onChange={e => setSearch(e.target.value)}
                   placeholder={lang === 'EN' ? 'Search bookings...' : lang === 'ES' ? 'Buscar reservas...' : 'Pesquisar reservas...'}
-                  className="bg-white border border-slate-200 shadow-sm rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-gold/50 transition-all text-sm text-text-main w-full sm:w-64" />
+                  className="bg-white border border-slate-200 shadow-sm rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all text-sm text-slate-900 w-full sm:w-64" />
               </div>
 
               {loadingBookings ? (
                 <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-gold" size={32} /></div>
               ) : filteredBookings.length === 0 ? (
                 <div className="py-20 text-center">
-                  <Calendar size={48} className="text-text-main/10 mx-auto mb-4" />
+                  <Calendar size={48} className="text-slate-900/10 mx-auto mb-4" />
                   <p className="text-slate-400 text-sm">
                     {bookings.length === 0
                       ? (lang === 'EN' ? 'No bookings yet' : lang === 'ES' ? 'Sin reservas aún' : 'Nenhuma reserva ainda')
@@ -712,11 +712,11 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                       {filteredBookings.map(b => (
                         <tr key={b.id} className="hover:bg-slate-50 transition-colors">
                           <td className="px-6 py-5">
-                            <div className="text-sm font-medium text-text-main">{b.guest_name}</div>
+                            <div className="text-sm font-medium text-slate-900">{b.guest_name}</div>
                             <div className="text-[10px] text-slate-500">{b.guest_email}</div>
                           </td>
                           <td className="px-6 py-5">
-                            <div className="text-sm text-text-main">{b.asset_name || '—'}</div>
+                            <div className="text-sm text-slate-900">{b.asset_name || '—'}</div>
                             <div className="text-[10px] text-slate-500 uppercase">{b.asset_type}</div>
                           </td>
                           <td className="px-6 py-5 text-xs text-slate-500">{b.start_date} → {b.end_date}</td>
@@ -749,7 +749,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6 max-w-2xl">
               <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
                 <div className="px-8 py-6 border-b border-slate-200">
-                  <h3 className="text-xl font-serif italic text-text-main">{lang === 'EN' ? 'Account Settings' : lang === 'ES' ? 'Ajustes de Cuenta' : 'Configurações da Conta'}</h3>
+                  <h3 className="text-xl font-serif italic text-slate-900">{lang === 'EN' ? 'Account Settings' : lang === 'ES' ? 'Ajustes de Cuenta' : 'Configurações da Conta'}</h3>
                   <p className="text-[11px] text-slate-500 mt-1">{lang === 'EN' ? 'Manage your partner profile' : lang === 'ES' ? 'Gestiona tu perfil de socio' : 'Gerencie seu perfil de parceiro'}</p>
                 </div>
                 <div className="p-8 space-y-6">
@@ -757,29 +757,29 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Business Name' : lang === 'ES' ? 'Nombre del Negocio' : 'Nome do Negócio'}</label>
                       <input value={supplierData?.business_name || ''} readOnly
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-text-main" />
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Contact' : lang === 'ES' ? 'Contacto' : 'Contato'}</label>
                         <input value={supplierData?.contact_name || ''} readOnly
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-text-main" />
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900" />
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Location' : lang === 'ES' ? 'Ubicación' : 'Localização'}</label>
                         <input value={supplierData?.location || ''} readOnly
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-text-main" />
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900" />
                       </div>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Email' : lang === 'ES' ? 'Correo' : 'E-mail'}</label>
                       <input value={supplierData?.email || ''} readOnly
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-text-main" />
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">WhatsApp</label>
                       <input value={supplierData?.whatsapp || ''} readOnly
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-text-main" />
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900" />
                     </div>
                   </div>
                   <p className="text-[10px] text-slate-400 italic">{lang === 'EN' ? 'Profile edits coming soon. Contact KLO admin to update your details.' : lang === 'ES' ? 'Las ediciones de perfil estarán disponibles pronto. Contacta al administrador de KLO para actualizar tus datos.' : 'Edições de perfil em breve. Contate o administrador KLO para atualizar seus dados.'}</p>
@@ -819,7 +819,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                     <div className="flex gap-3">
                       <input value={telegramChatId} onChange={e => setTelegramChatId(e.target.value)}
                         placeholder="123456789"
-                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50" />
+                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30" />
                       <button onClick={handleSaveTelegram} disabled={saving}
                         className="px-6 py-3 bg-gold text-luxury-black rounded-full font-semibold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-white transition-all disabled:opacity-50 shrink-0">
                         {saving ? <Loader2 size={12} className="animate-spin" /> : telegramSaved ? <Check size={12} /> : <Send size={12} />}
@@ -843,7 +843,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
               className="relative w-full max-w-xl bg-white border border-slate-200 shadow-sm rounded-2xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
-              <button onClick={closeModal} className="absolute top-6 right-6 text-slate-500 hover:text-text-main">
+              <button onClick={closeModal} className="absolute top-6 right-6 text-slate-500 hover:text-slate-900">
                 <X size={20} />
               </button>
               <h3 className="text-2xl font-serif italic text-slate-900 mb-6">
@@ -857,14 +857,14 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                     {lang === 'EN' ? 'Asset Name' : lang === 'ES' ? 'Nombre del Activo' : 'Nome do Ativo'}
                   </label>
                   <input value={editingAsset.name || ''} onChange={e => setEditingAsset({ ...editingAsset, name: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50" />
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Type' : lang === 'ES' ? 'Tipo' : 'Tipo'}</label>
                     <select value={editingAsset.type || 'LODGING'} onChange={e => setEditingAsset({ ...editingAsset, type: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50 appearance-none">
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 appearance-none">
                       {Object.entries(ASSET_TYPE_LABELS).map(([val, lbl]) => (
                         <option key={val} value={val}>{lbl[lang]}</option>
                       ))}
@@ -873,7 +873,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                   <div className="space-y-2">
                     <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Location' : lang === 'ES' ? 'Ubicación' : 'Localização'}</label>
                     <input value={editingAsset.location || ''} onChange={e => setEditingAsset({ ...editingAsset, location: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50" />
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30" />
                   </div>
                 </div>
 
@@ -882,12 +882,12 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                     <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Price' : lang === 'ES' ? 'Precio' : 'Preço'}</label>
                     <input value={editingAsset.price_per_unit || ''} onChange={e => setEditingAsset({ ...editingAsset, price_per_unit: e.target.value })}
                       placeholder={lang === 'EN' ? '$0.00' : lang === 'ES' ? '0,00 $' : 'R$ 0,00'}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50" />
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Capacity (PAX)' : lang === 'ES' ? 'Capacidad (PAX)' : 'Capacidade (PAX)'}</label>
                     <input type="number" value={editingAsset.capacity || 1} onChange={e => setEditingAsset({ ...editingAsset, capacity: parseInt(e.target.value) || 1 })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50" />
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30" />
                   </div>
                 </div>
 
@@ -895,13 +895,13 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                   <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Description' : lang === 'ES' ? 'Descripción' : 'Descrição'}</label>
                   <textarea value={editingAsset.description || ''} onChange={e => setEditingAsset({ ...editingAsset, description: e.target.value })}
                     rows={3}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50 resize-none" />
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 resize-none" />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Status' : lang === 'ES' ? 'Estado' : 'Estado'}</label>
                   <select value={editingAsset.status || 'ACTIVE'} onChange={e => setEditingAsset({ ...editingAsset, status: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50 appearance-none">
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 appearance-none">
                     <option value="ACTIVE">{lang === 'EN' ? 'Active' : lang === 'ES' ? 'Activo' : 'Ativo'}</option>
                     <option value="MAINTENANCE">{lang === 'EN' ? 'Maintenance' : lang === 'ES' ? 'Mantenimiento' : 'Manutenção'}</option>
                     <option value="OFFLINE">{lang === 'EN' ? 'Offline' : lang === 'ES' ? 'Sin conexión' : 'Offline'}</option>
@@ -911,7 +911,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
 
               <div className="flex gap-4 mt-8">
                 <button onClick={closeModal}
-                  className="flex-1 py-4 bg-slate-100 border border-slate-200 rounded-xl text-[11px] uppercase tracking-widest font-semibold text-text-main hover:bg-slate-100 transition-all">
+                  className="flex-1 py-4 bg-slate-100 border border-slate-200 rounded-xl text-[11px] uppercase tracking-widest font-semibold text-slate-900 hover:bg-slate-100 transition-all">
                   {lang === 'EN' ? 'Cancel' : lang === 'ES' ? 'Cancelar' : 'Cancelar'}
                 </button>
                 <button onClick={handleSaveAsset} disabled={saving}
@@ -928,6 +928,15 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
     </div>
   );
 };
+
+
+
+
+
+
+
+
+
 
 
 

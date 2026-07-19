@@ -742,7 +742,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.ya_crew)}</label>
                 <div className="flex gap-4">
                   {[T.yes, T.no].map(o => (
-                    <button key={o.EN} onClick={() => setFormData((prev: any) => ({ ...prev, crew_included: o.EN }))} className={`flex-1 py-4 rounded-xl border text-[11px] font-sans uppercase tracking-tight transition-all ${formData.crew_included === o.EN ? 'bg-gold border-gold text-luxury-black font-semibold' : 'border-border-main text-text-main/60'}`}>
+                    <button key={o.EN} onClick={() => setFormData((prev: any) => ({ ...prev, crew_included: o.EN }))} className={`flex-1 py-4 rounded-xl border text-[11px] font-sans uppercase tracking-tight transition-all ${formData.crew_included === o.EN ? "bg-[#B8963E] border-[#B8963E] text-white font-semibold" : "border-slate-200 text-slate-500"}`}>
                       {tx(o)}
                     </button>
                   ))}
@@ -856,7 +856,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">{tx(T.gr_driver_inc)}</label>
                 <div className="flex gap-4">
                   {[T.yes, T.no].map(o => (
-                    <button key={o.EN} onClick={() => setFormData((prev: any) => ({ ...prev, driver_included: o.EN }))} className={`flex-1 py-4 rounded-xl border text-[11px] font-sans uppercase tracking-tight transition-all ${formData.driver_included === o.EN ? 'bg-gold border-gold text-luxury-black font-semibold' : 'border-border-main text-text-main/60'}`}>
+                    <button key={o.EN} onClick={() => setFormData((prev: any) => ({ ...prev, driver_included: o.EN }))} className={`flex-1 py-4 rounded-xl border text-[11px] font-sans uppercase tracking-tight transition-all ${formData.driver_included === o.EN ? "bg-[#B8963E] border-[#B8963E] text-white font-semibold" : "border-slate-200 text-slate-500"}`}>
                       {tx(o)}
                     </button>
                   ))}
@@ -1351,6 +1351,8 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
     </div>
   );
 };
+
+
 
 
 

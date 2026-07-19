@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  UserCheck, Search, Filter, ChevronDown, ChevronUp, 
+import {
+  UserCheck, Search, Filter, ChevronDown, ChevronUp,
   Check, X, MessageSquare, ExternalLink, Package,
   MapPin, Calendar, Info, Loader2, AlertCircle,
   ClipboardList, Clock, DollarSign, User, Mail,
   FileText, Save, RefreshCw
 } from 'lucide-react';
-// Local Language alias — see SupplierPortal.tsx for rationale
+// Local Language alias - see SupplierPortal.tsx for rationale
 type Language = 'EN' | 'ES' | 'PT';
 
 interface Supplier {
@@ -43,6 +43,65 @@ interface SuppliersManagementProps {
   lang: Language;
   onViewAssets: (supplierId: string) => void;
 }
+
+// v1.7: trilingual copy for every user-visible string in the admin UI.
+// Admin is internal so we cover fewer strings than the supplier portal,
+// but every label, button, and modal header is in all 3 languages.
+const T_ADMIN: Record<string, { EN: string; ES: string; PT: string }> = {
+  // Section eyebrows
+  booking_details:    { EN: 'Booking Details', ES: 'Detalles de Reserva', PT: 'Detalhes da Reserva' },
+  asset_info:         { EN: 'Asset Information', ES: 'Información del Activo', PT: 'Informações do Ativo' },
+  guest_details:      { EN: 'Guest Details', ES: 'Detalles del Huésped', PT: 'Detalhes do Hóspede' },
+  journey_dates:      { EN: 'Journey Dates', ES: 'Fechas del Viaje', PT: 'Datas da Viagem' },
+  financials:         { EN: 'Financials', ES: 'Finanzas', PT: 'Finanças' },
+  total_price:        { EN: 'Total Price', ES: 'Precio Total', PT: 'Preço Total' },
+  duration:           { EN: 'Duration', ES: 'Duración', PT: 'Duração' },
+  days:               { EN: 'days', ES: 'días', PT: 'dias' },
+  management_notes:   { EN: 'Management Notes', ES: 'Notas Internas', PT: 'Notas Internas' },
+  notes_placeholder:  { EN: 'Add internal notes about this booking...', ES: 'Agrega notas internas sobre esta reserva...', PT: 'Adicione notas internas sobre esta reserva...' },
+  // Top-level section subtitles
+  network_mgmt:       { EN: 'Network Management', ES: 'Gestión de Red', PT: 'Gestão de Rede' },
+  journey_orch:       { EN: 'Journey Orchestration', ES: 'Orquestación de Viajes', PT: 'Orquestração de Viagens' },
+  // Filter + search
+  search_partners:    { EN: 'Search partners...', ES: 'Buscar socios...', PT: 'Buscar parceiros...' },
+  search_bookings:    { EN: 'Search bookings...', ES: 'Buscar reservas...', PT: 'Buscar reservas...' },
+  all:                { EN: 'All', ES: 'Todos', PT: 'Todos' },
+  pending:            { EN: 'Pending', ES: 'Pendientes', PT: 'Pendentes' },
+  approved:           { EN: 'Approved', ES: 'Aprobados', PT: 'Aprovados' },
+  rejected:           { EN: 'Rejected', ES: 'Rechazados', PT: 'Rejeitados' },
+  confirmed:          { EN: 'Confirmed', ES: 'Confirmadas', PT: 'Confirmadas' },
+  cancelled:          { EN: 'Cancelled', ES: 'Canceladas', PT: 'Canceladas' },
+  // Bookings table headers
+  th_guest:           { EN: 'Guest', ES: 'Huésped', PT: 'Hóspede' },
+  th_asset:           { EN: 'Asset', ES: 'Activo', PT: 'Ativo' },
+  th_dates:           { EN: 'Dates', ES: 'Fechas', PT: 'Datas' },
+  th_total:           { EN: 'Total', ES: 'Total', PT: 'Total' },
+  th_status:          { EN: 'Status', ES: 'Estado', PT: 'Estado' },
+  th_details:         { EN: 'Details', ES: 'Detalles', PT: 'Detalhes' },
+  // Buttons
+  approve:            { EN: 'Approve', ES: 'Aprobar', PT: 'Aprovar' },
+  reject:             { EN: 'Reject', ES: 'Rechazar', PT: 'Rejeitar' },
+  confirm:            { EN: 'Confirm', ES: 'Confirmar', PT: 'Confirmar' },
+  cancel:             { EN: 'Cancel', ES: 'Cancelar', PT: 'Cancelar' },
+  view:               { EN: 'View', ES: 'Ver', PT: 'Ver' },
+  close:              { EN: 'Close', ES: 'Cerrar', PT: 'Fechar' },
+  save_notes:         { EN: 'Save Notes', ES: 'Guardar Notas', PT: 'Salvar Notas' },
+  save:               { EN: 'Save', ES: 'Guardar', PT: 'Salvar' },
+  sync_calendars:     { EN: 'Sync All Calendars', ES: 'Sincronizar Calendarios', PT: 'Sincronizar Calendários' },
+  no_suppliers:       { EN: 'No suppliers yet', ES: 'Aún no hay socios', PT: 'Ainda não há parceiros' },
+  no_bookings:        { EN: 'No bookings yet', ES: 'Sin reservas aún', PT: 'Sem reservas ainda' },
+  // Asset type labels (admin-side)
+  asset_staff:        { EN: 'Staff', ES: 'Personal', PT: 'Equipe' },
+  asset_aircraft:     { EN: 'Aircraft', ES: 'Aeronave', PT: 'Aeronave' },
+  asset_vessel:       { EN: 'Vessel', ES: 'Embarcación', PT: 'Embarcação' },
+  asset_vehicle:      { EN: 'Vehicle', ES: 'Vehículo', PT: 'Veículo' },
+  asset_lodging:      { EN: 'Lodging', ES: 'Alojamiento', PT: 'Hospedagem' },
+};
+
+const txAdmin = (key: keyof typeof T_ADMIN, lang: Language): string => {
+  const entry = T_ADMIN[key];
+  return (entry && (entry[lang] || entry.EN)) || '';
+};
 
 export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, onViewAssets }) => {
   const [activeView, setActiveView] = useState<'SUPPLIERS' | 'BOOKINGS'>('SUPPLIERS');
@@ -177,7 +236,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
 
   const filteredSuppliers = suppliers.filter(s => {
     const matchesFilter = filter === 'ALL' || s.status === filter;
-    const matchesSearch = s.business_name.toLowerCase().includes(search.toLowerCase()) || 
+    const matchesSearch = s.business_name.toLowerCase().includes(search.toLowerCase()) ||
                          s.contact_name.toLowerCase().includes(search.toLowerCase()) ||
                          s.location.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
@@ -185,7 +244,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
 
   const filteredBookings = bookings.filter(b => {
     const matchesFilter = filter === 'ALL' || b.status === filter;
-    const matchesSearch = b.guest_name.toLowerCase().includes(search.toLowerCase()) || 
+    const matchesSearch = b.guest_name.toLowerCase().includes(search.toLowerCase()) ||
                          b.asset_name.toLowerCase().includes(search.toLowerCase()) ||
                          b.guest_email.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
@@ -207,18 +266,18 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
 
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={() => setSelectedBooking(null)}
           className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         />
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative w-full max-w-2xl bg-luxury-black border border-slate-200 rounded-3xl overflow-hidden shadow-2xl"
+          className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-2xl"
         >
           <div className="p-8 border-b border-slate-200 bg-white/5 flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -230,7 +289,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                 <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">ID: {selectedBooking.id}</p>
               </div>
             </div>
-            <button onClick={() => setSelectedBooking(null)} className="p-2 hover:bg-white/5 rounded-full transition-colors">
+            <button onClick={() => setSelectedBooking(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors" title={txAdmin('close', lang)}>
               <X size={24} className="text-slate-500" />
             </button>
           </div>
@@ -239,7 +298,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">Asset Information</h4>
+                  <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">{txAdmin('asset_info', lang)}</h4>
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 border border-slate-200 space-y-3">
                     <div className="flex items-center gap-3">
                       <Package size={16} className="text-slate-500" />
@@ -254,7 +313,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">Guest Details</h4>
+                  <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">{txAdmin('guest_details', lang)}</h4>
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 border border-slate-200 space-y-3">
                     <div className="flex items-center gap-3">
                       <User size={16} className="text-slate-500" />
@@ -270,7 +329,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
 
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">Journey Dates</h4>
+                  <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">{txAdmin('journey_dates', lang)}</h4>
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 border border-slate-200 space-y-3">
                     <div className="flex items-center gap-3">
                       <Calendar size={16} className="text-slate-500" />
@@ -286,10 +345,10 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">Financials</h4>
+                  <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">{txAdmin('financials', lang)}</h4>
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 border border-slate-200">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-slate-500 uppercase tracking-widest">Total Price</span>
+                      <span className="text-[10px] text-slate-500 uppercase tracking-widest">{txAdmin('total_price', lang)}</span>
                       <span className="text-xl text-[#B8963E] font-light">{selectedBooking.total_price}</span>
                     </div>
                   </div>
@@ -298,18 +357,19 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">Management Notes</h4>
+              <h4 className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">{txAdmin('management_notes', lang)}</h4>
               <div className="relative">
-                <textarea 
+                <textarea
                   value={bookingNotes}
                   onChange={(e) => setBookingNotes(e.target.value)}
-                  className="w-full bg-white/5 border border-slate-200 rounded-xl p-6 text-sm text-white font-light h-32 resize-none focus:outline-none focus:border-gold/50 transition-all"
-                  placeholder="Add internal notes about this booking..."
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-6 text-sm text-white font-light h-32 resize-none focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all"
+                  placeholder={txAdmin('notes_placeholder', lang)}
                 />
-                <button 
+                <button
                   onClick={handleSaveNotes}
                   disabled={isSavingNotes}
-                  className="absolute bottom-4 right-4 p-3 bg-[#B8963E] text-white rounded-xl hover:bg-white transition-all disabled:opacity-50"
+                  className="absolute bottom-4 right-4 p-3 bg-[#B8963E] text-white rounded-xl hover:bg-slate-900 transition-all disabled:opacity-50"
+                  title={txAdmin('save_notes', lang)}
                 >
                   {isSavingNotes ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                 </button>
@@ -317,21 +377,21 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
             </div>
 
             <div className="pt-4 flex flex-wrap gap-4">
-              <button 
+              <button
                 onClick={() => handleBookingStatusUpdate(selectedBooking.id, 'CONFIRMED')}
                 disabled={actionLoading === selectedBooking.id || selectedBooking.status === 'CONFIRMED'}
                 className={`flex-1 py-4 rounded-xl font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 transition-all ${
-                  selectedBooking.status === 'CONFIRMED' ? 'bg-emerald-500 text-white' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500 hover:text-white'
+                  selectedBooking.status === 'CONFIRMED' ? 'bg-emerald-500 text-white' : 'bg-emerald-50 text-emerald-700 border border-emerald-500/20 hover:bg-emerald-500 hover:text-slate-900'
                 }`}
               >
                 {actionLoading === selectedBooking.id ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                Confirm Booking
+                {txAdmin('confirm', lang)} {lang === 'EN' ? 'Booking' : lang === 'ES' ? 'Reserva' : 'Reserva'}
               </button>
-              <button 
+              <button
                 onClick={() => handleBookingStatusUpdate(selectedBooking.id, 'CANCELLED')}
                 disabled={actionLoading === selectedBooking.id || selectedBooking.status === 'CANCELLED'}
                 className={`flex-1 py-4 rounded-xl font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 transition-all ${
-                  selectedBooking.status === 'CANCELLED' ? 'bg-red-500 text-white' : 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white'
+                  selectedBooking.status === 'CANCELLED' ? 'bg-red-500 text-white' : 'bg-red-50 text-red-600 border border-red-500/20 hover:bg-red-500 hover:text-slate-900'
                 }`}
               >
                 {actionLoading === selectedBooking.id ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
@@ -358,54 +418,57 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
     <div className="space-y-8">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="flex items-center gap-6">
-          <button 
+          <button
             onClick={() => setActiveView('SUPPLIERS')}
             className={`text-left transition-all ${activeView === 'SUPPLIERS' ? 'opacity-100' : 'opacity-30 hover:opacity-50'}`}
           >
             <h2 className="text-4xl font-serif text-slate-900 uppercase tracking-widest mb-2">{lang === "EN" ? "Suppliers" : lang === "ES" ? "Socios" : "Parceiros"}</h2>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Network Management</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{txAdmin('network_mgmt', lang)}</p>
           </button>
           <div className="w-[1px] h-12 bg-slate-100" />
-          <button 
+          <button
             onClick={() => setActiveView('BOOKINGS')}
             className={`text-left transition-all ${activeView === 'BOOKINGS' ? 'opacity-100' : 'opacity-30 hover:opacity-50'}`}
           >
             <h2 className="text-4xl font-serif text-slate-900 uppercase tracking-widest mb-2">{lang === "EN" ? "Bookings" : lang === "ES" ? "Reservas" : "Reservas"}</h2>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Journey Orchestration</p>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{txAdmin('journey_orch', lang)}</p>
           </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
-              placeholder={activeView === 'SUPPLIERS' ? "Search partners..." : "Search bookings..."}
+            <input
+              type="text"
+              placeholder={activeView === 'SUPPLIERS' ? txAdmin('search_partners', lang) : txAdmin('search_bookings', lang)}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="bg-white/5 border border-slate-200 rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-gold/50 transition-all w-full lg:w-64 text-sm text-white"
+              className="bg-slate-50 border border-slate-200 rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all w-full lg:w-64 text-sm text-white"
             />
           </div>
-          <div className="flex bg-white/5 rounded-full p-1 border border-slate-200">
-            {(activeView === 'SUPPLIERS' ? ['ALL', 'PENDING', 'APPROVED', 'REJECTED'] : ['ALL', 'PENDING', 'CONFIRMED', 'CANCELLED']).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f as any)}
-                className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
-                  filter === f ? 'bg-[#B8963E] text-white' : 'text-slate-500 hover:text-white'
-                }`}
-              >
-                {f}
-              </button>
-            ))}
+          <div className="flex bg-slate-50 rounded-full p-1 border border-slate-200">
+            {(activeView === 'SUPPLIERS' ? ['ALL', 'PENDING', 'APPROVED', 'REJECTED'] : ['ALL', 'PENDING', 'CONFIRMED', 'CANCELLED']).map((f) => {
+              const labelKey = f === 'ALL' ? 'all' : f === 'PENDING' ? 'pending' : f === 'APPROVED' ? 'approved' : f === 'REJECTED' ? 'rejected' : f === 'CONFIRMED' ? 'confirmed' : 'cancelled';
+              return (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f as any)}
+                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
+                    filter === f ? 'bg-[#B8963E] text-white' : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  {txAdmin(labelKey as any, lang)}
+                </button>
+              );
+            })}
           </div>
-          <button 
+          <button
             onClick={handleSyncAll}
             disabled={isSyncing}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-500/10 text-blue-500 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-3 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-blue-500 hover:text-slate-900 transition-all disabled:opacity-50"
           >
             {isSyncing ? <Loader2 className="animate-spin" size={14} /> : <RefreshCw size={14} />}
-            Sync All
+            {txAdmin('sync_calendars', lang)}
           </button>
         </div>
       </div>
@@ -471,9 +534,9 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                       </div>
                       <div className="flex items-center gap-3">
                         <MessageSquare size={16} className="text-emerald-400" />
-                        <a 
-                          href={`https://wa.me/${supplier.whatsapp.replace(/\D/g, '')}`} 
-                          target="_blank" 
+                        <a
+                          href={`https://wa.me/${supplier.whatsapp.replace(/\D/g, '')}`}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors underline underline-offset-4"
                         >
@@ -489,7 +552,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                     </div>
 
                     <div className="pt-4">
-                      <p className="text-xs text-white/50 font-light leading-relaxed line-clamp-3 italic">
+                      <p className="text-xs text-slate-500 font-light leading-relaxed line-clamp-3 italic">
                         "{supplier.description}"
                       </p>
                     </div>
@@ -498,25 +561,25 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                   <div className="p-8 pt-0 flex gap-3">
                     {supplier.status === 'PENDING' ? (
                       <>
-                        <button 
+                        <button
                           onClick={() => handleStatusUpdate(supplier.id, 'APPROVED')}
                           disabled={actionLoading === supplier.id}
-                          className="flex-1 py-4 bg-emerald-500/10 text-emerald-400 rounded-xl hover:bg-emerald-500 hover:text-white transition-all border border-emerald-500/20 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
+                          className="flex-1 py-4 bg-emerald-50 text-emerald-700 rounded-xl hover:bg-emerald-500 hover:text-slate-900 transition-all border border-emerald-500/20 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
                         >
                           {actionLoading === supplier.id ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                          Approve
+                          {txAdmin('approve', lang)}
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleStatusUpdate(supplier.id, 'REJECTED')}
                           disabled={actionLoading === supplier.id}
-                          className="flex-1 py-4 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500 hover:text-white transition-all border border-red-500/20 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
+                          className="flex-1 py-4 bg-red-50 text-red-600 rounded-xl hover:bg-red-500 hover:text-slate-900 transition-all border border-red-500/20 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
                         >
                           {actionLoading === supplier.id ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
-                          Reject
+                          {txAdmin('reject', lang)}
                         </button>
                       </>
                     ) : (
-                      <button 
+                      <button
                         onClick={() => onViewAssets(supplier.id)}
                         className="w-full py-4 bg-white/5 text-slate-500 rounded-xl font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 hover:bg-slate-100 transition-all border border-slate-200"
                       >
@@ -535,17 +598,17 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 bg-white/5">
-                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">Guest</th>
-                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">Asset</th>
-                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">Dates</th>
-                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">Total</th>
-                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">Status</th>
-                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold text-right">Details</th>
+                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">{txAdmin('th_guest', lang)}</th>
+                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">{txAdmin('th_asset', lang)}</th>
+                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">{txAdmin('th_dates', lang)}</th>
+                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">{txAdmin('th_total', lang)}</th>
+                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold">{txAdmin('th_status', lang)}</th>
+                  <th className="px-8 py-6 text-[10px] uppercase tracking-widest text-slate-500 font-bold text-right">{txAdmin('th_details', lang)}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {filteredBookings.map((booking) => (
-                  <tr key={booking.id} className="hover:bg-white/5 transition-colors cursor-pointer" onClick={() => {
+                  <tr key={booking.id} className="hover:bg-slate-100 transition-colors cursor-pointer" onClick={() => {
                     setSelectedBooking(booking);
                     setBookingNotes(booking.notes || '');
                   }}>
@@ -581,7 +644,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                       </span>
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <button className="p-2 text-slate-300 hover:text-white transition-colors">
+                      <button className="p-2 text-slate-300 hover:text-slate-900 transition-colors">
                         <FileText size={18} />
                       </button>
                     </td>
@@ -610,6 +673,23 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
     </div>
   );
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
