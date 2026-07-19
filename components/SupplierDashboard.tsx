@@ -654,17 +654,17 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                         <div className="border-t border-border-main flex divide-x divide-border-main">
                           <button onClick={() => openEditModal(asset)}
                             className="flex-1 py-3 text-[10px] uppercase tracking-widest font-semibold text-text-main/50 hover:text-gold hover:bg-gold/5 transition-all flex items-center justify-center gap-1.5">
-                            <Edit2 size={12} /> Edit
+                            <Edit2 size={12} /> {lang === 'EN' ? 'Edit' : lang === 'ES' ? 'Editar' : 'Editar'}
                           </button>
                           <button onClick={() => handleSyncCalendar(asset.id)}
                             disabled={isSyncing}
                             className="flex-1 py-3 text-[10px] uppercase tracking-widest font-semibold text-text-main/50 hover:text-blue-400 hover:bg-blue-500/5 transition-all flex items-center justify-center gap-1.5">
                             {isSyncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                            Sync
+                            {lang === 'EN' ? 'Sync' : lang === 'ES' ? 'Sincronizar' : 'Sincronizar'}
                           </button>
                           <button onClick={() => handleDeleteAsset(asset.id)}
                             className="flex-1 py-3 text-[10px] uppercase tracking-widest font-semibold text-text-main/30 hover:text-red-400 hover:bg-red-500/5 transition-all flex items-center justify-center gap-1.5">
-                            <Trash2 size={12} /> Delete
+                            <Trash2 size={12} /> {lang === 'EN' ? 'Delete' : lang === 'ES' ? 'Eliminar' : 'Excluir'}
                           </button>
                         </div>
                       </motion.div>
@@ -701,11 +701,11 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-border-main bg-white/3">
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Guest</th>
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Asset</th>
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Dates</th>
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Total</th>
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Status</th>
+                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Guest' : lang === 'ES' ? 'Huésped' : 'Hóspede'}</th>
+                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Asset' : lang === 'ES' ? 'Activo' : 'Ativo'}</th>
+                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Dates' : lang === 'ES' ? 'Fechas' : 'Datas'}</th>
+                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Total' : lang === 'ES' ? 'Total' : 'Total'}</th>
+                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Status' : lang === 'ES' ? 'Estado' : 'Estado'}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border-main">
@@ -749,30 +749,30 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6 max-w-2xl">
               <div className="bg-luxury-slate border border-border-main rounded-2xl overflow-hidden">
                 <div className="px-8 py-6 border-b border-border-main">
-                  <h3 className="text-xl font-serif italic text-text-main">Account Settings</h3>
+                  <h3 className="text-xl font-serif italic text-text-main">{lang === 'EN' ? 'Account Settings' : lang === 'ES' ? 'Ajustes de Cuenta' : 'Configurações da Conta'}</h3>
                   <p className="text-[11px] text-text-main/40 mt-1">{lang === 'EN' ? 'Manage your partner profile' : lang === 'ES' ? 'Gestiona tu perfil de socio' : 'Gerencie seu perfil de parceiro'}</p>
                 </div>
                 <div className="p-8 space-y-6">
                   <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Business Name</label>
+                      <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Business Name' : lang === 'ES' ? 'Nombre del Negocio' : 'Nome do Negócio'}</label>
                       <input value={supplierData?.business_name || ''} readOnly
                         className="w-full bg-luxury-black border border-border-main rounded-xl py-3 px-4 text-sm text-text-main" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Contact</label>
+                        <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Contact' : lang === 'ES' ? 'Contacto' : 'Contato'}</label>
                         <input value={supplierData?.contact_name || ''} readOnly
                           className="w-full bg-luxury-black border border-border-main rounded-xl py-3 px-4 text-sm text-text-main" />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Location</label>
+                        <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Location' : lang === 'ES' ? 'Ubicación' : 'Localização'}</label>
                         <input value={supplierData?.location || ''} readOnly
                           className="w-full bg-luxury-black border border-border-main rounded-xl py-3 px-4 text-sm text-text-main" />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Email</label>
+                      <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Email' : lang === 'ES' ? 'Correo' : 'E-mail'}</label>
                       <input value={supplierData?.email || ''} readOnly
                         className="w-full bg-luxury-black border border-border-main rounded-xl py-3 px-4 text-sm text-text-main" />
                     </div>
@@ -782,7 +782,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                         className="w-full bg-luxury-black border border-border-main rounded-xl py-3 px-4 text-sm text-text-main" />
                     </div>
                   </div>
-                  <p className="text-[10px] text-text-main/30 italic">Profile edits coming soon. Contact KLO admin to update your details.</p>
+                  <p className="text-[10px] text-text-main/30 italic">{lang === 'EN' ? 'Profile edits coming soon. Contact KLO admin to update your details.' : lang === 'ES' ? 'Las ediciones de perfil estarán disponibles pronto. Contacta al administrador de KLO para actualizar tus datos.' : 'Edições de perfil em breve. Contate o administrador KLO para atualizar seus dados.'}</p>
                 </div>
               </div>
 
@@ -793,7 +793,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                     <MessageSquare size={20} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-serif italic text-text-main">Telegram Notifications</h3>
+                    <h3 className="text-lg font-serif italic text-text-main">{lang === 'EN' ? 'Telegram Notifications' : lang === 'ES' ? 'Notificaciones de Telegram' : 'Notificações do Telegram'}</h3>
                     <p className="text-[11px] text-text-main/40 mt-1 leading-relaxed">
                       {lang === 'EN'
                         ? 'Receive booking notifications directly on Telegram. Start a chat with your KLO bot and send your Chat ID.'
@@ -815,7 +815,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Telegram Chat ID</label>
+                    <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Telegram Chat ID' : lang === 'ES' ? 'ID de Chat de Telegram' : 'ID do Chat do Telegram'}</label>
                     <div className="flex gap-3">
                       <input value={telegramChatId} onChange={e => setTelegramChatId(e.target.value)}
                         placeholder="123456789"
@@ -862,7 +862,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Type</label>
+                    <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Type' : lang === 'ES' ? 'Tipo' : 'Tipo'}</label>
                     <select value={editingAsset.type || 'LODGING'} onChange={e => setEditingAsset({ ...editingAsset, type: e.target.value })}
                       className="w-full bg-luxury-black border border-border-main rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50 appearance-none">
                       {Object.entries(ASSET_TYPE_LABELS).map(([val, lbl]) => (
@@ -871,7 +871,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Location</label>
+                    <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Location' : lang === 'ES' ? 'Ubicación' : 'Localização'}</label>
                     <input value={editingAsset.location || ''} onChange={e => setEditingAsset({ ...editingAsset, location: e.target.value })}
                       className="w-full bg-luxury-black border border-border-main rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50" />
                   </div>
@@ -879,32 +879,32 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Price</label>
+                    <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Price' : lang === 'ES' ? 'Precio' : 'Preço'}</label>
                     <input value={editingAsset.price_per_unit || ''} onChange={e => setEditingAsset({ ...editingAsset, price_per_unit: e.target.value })}
-                      placeholder="$0.00"
+                      placeholder={lang === 'EN' ? '$0.00' : lang === 'ES' ? '0,00 $' : 'R$ 0,00'}
                       className="w-full bg-luxury-black border border-border-main rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Capacity (PAX)</label>
+                    <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Capacity (PAX)' : lang === 'ES' ? 'Capacidad (PAX)' : 'Capacidade (PAX)'}</label>
                     <input type="number" value={editingAsset.capacity || 1} onChange={e => setEditingAsset({ ...editingAsset, capacity: parseInt(e.target.value) || 1 })}
                       className="w-full bg-luxury-black border border-border-main rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Description</label>
+                  <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Description' : lang === 'ES' ? 'Descripción' : 'Descrição'}</label>
                   <textarea value={editingAsset.description || ''} onChange={e => setEditingAsset({ ...editingAsset, description: e.target.value })}
                     rows={3}
                     className="w-full bg-luxury-black border border-border-main rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50 resize-none" />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">Status</label>
+                  <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">{lang === 'EN' ? 'Status' : lang === 'ES' ? 'Estado' : 'Estado'}</label>
                   <select value={editingAsset.status || 'ACTIVE'} onChange={e => setEditingAsset({ ...editingAsset, status: e.target.value })}
                     className="w-full bg-luxury-black border border-border-main rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50 appearance-none">
-                    <option value="ACTIVE">Active</option>
-                    <option value="MAINTENANCE">Maintenance</option>
-                    <option value="OFFLINE">Offline</option>
+                    <option value="ACTIVE">{lang === 'EN' ? 'Active' : lang === 'ES' ? 'Activo' : 'Ativo'}</option>
+                    <option value="MAINTENANCE">{lang === 'EN' ? 'Maintenance' : lang === 'ES' ? 'Mantenimiento' : 'Manutenção'}</option>
+                    <option value="OFFLINE">{lang === 'EN' ? 'Offline' : lang === 'ES' ? 'Sin conexión' : 'Offline'}</option>
                   </select>
                 </div>
               </div>
