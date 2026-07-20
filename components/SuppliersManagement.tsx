@@ -62,6 +62,10 @@ const T_ADMIN: Record<string, { EN: string; ES: string; PT: string }> = {
   // Top-level section subtitles
   network_mgmt:       { EN: 'Network Management', ES: 'Gestión de Red', PT: 'Gestão de Rede' },
   journey_orch:       { EN: 'Journey Orchestration', ES: 'Orquestación de Viajes', PT: 'Orquestração de Viagens' },
+  client_mgmt:        { EN: 'UHNWI Guest Relations', ES: 'Relaciones con Huéspedes UHNWI', PT: 'Relações com Hóspedes UHNWI' },
+  clients_coming:     { EN: 'Clients view coming next — Step 2 of the v1.8 port. Use the suppliers tab to onboard partners; use the bookings tab to record the first 20 manual transactions.', ES: 'Vista de clientes próximamente — Paso 2 del port v1.8. Usa la pestaña de socios para incorporar partners; usa la pestaña de reservas para registrar las primeras 20 transacciones manuales.', PT: 'Visualização de clientes em breve — Passo 2 do port v1.8. Use a aba de parceiros para cadastrar; use a aba de reservas para registrar as primeiras 20 transações manuais.' },
+  quick_add_supplier: { EN: 'Add supplier (admin)', ES: 'Añadir socio (admin)', PT: 'Adicionar parceiro (admin)' },
+  quick_add_client:   { EN: 'Add client (admin)', ES: 'Añadir cliente (admin)', PT: 'Adicionar cliente (admin)' },
   // Filter + search
   search_partners:    { EN: 'Search partners...', ES: 'Buscar socios...', PT: 'Buscar parceiros...' },
   search_bookings:    { EN: 'Search bookings...', ES: 'Buscar reservas...', PT: 'Buscar reservas...' },
@@ -104,7 +108,7 @@ const txAdmin = (key: keyof typeof T_ADMIN, lang: Language): string => {
 };
 
 export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, onViewAssets }) => {
-  const [activeView, setActiveView] = useState<'SUPPLIERS' | 'BOOKINGS'>('SUPPLIERS');
+  const [activeView, setActiveView] = useState<'SUPPLIERS' | 'BOOKINGS' | 'CLIENTS'>('SUPPLIERS');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [suppliersLoading, setSuppliersLoading] = useState(true);
@@ -433,6 +437,14 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
             <h2 className="text-4xl font-serif text-slate-900 uppercase tracking-widest mb-2">{lang === "EN" ? "Bookings" : lang === "ES" ? "Reservas" : "Reservas"}</h2>
             <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{txAdmin('journey_orch', lang)}</p>
           </button>
+          <div className="w-[1px] h-12 bg-slate-100" />
+          <button
+            onClick={() => setActiveView('CLIENTS')}
+            className={`text-left transition-all ${activeView === 'CLIENTS' ? 'opacity-100' : 'opacity-30 hover:opacity-50'}`}
+          >
+            <h2 className="text-4xl font-serif text-slate-900 uppercase tracking-widest mb-2">{lang === "EN" ? "Clients" : lang === "ES" ? "Clientes" : "Clientes"}</h2>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{txAdmin('client_mgmt', lang)}</p>
+          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
@@ -592,7 +604,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
             </AnimatePresence>
           )}
         </div>
-      ) : (
+      ) : activeView === 'BOOKINGS' ? (
         <div className="admin-card rounded-2xl overflow-hidden border-white/5">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -664,6 +676,21 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      ) : (
+        // ── v1.8.0 Step 2 placeholder: Clients view (UHNWI guest relations) ────
+        <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
+          <div className="max-w-xl mx-auto space-y-4">
+            <div className="w-16 h-16 bg-[#B8963E]/10 text-[#B8963E] rounded-full flex items-center justify-center mx-auto">
+              <User size={32} />
+            </div>
+            <h3 className="text-2xl font-serif text-slate-900 uppercase tracking-widest">
+              {lang === "EN" ? "Clients" : lang === "ES" ? "Clientes" : "Clientes"}
+            </h3>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              {txAdmin('clients_coming', lang)}
+            </p>
           </div>
         </div>
       )}

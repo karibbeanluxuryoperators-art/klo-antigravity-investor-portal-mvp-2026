@@ -34,14 +34,6 @@ import {
 
 type Language = 'EN' | 'ES' | 'PT';
 
-// v1.7: hardcoded admin allowlist. Will move to a `user_role` column in
-// the suppliers table (or a new `admins` table) in a follow-up.
-const ADMIN_EMAILS: string[] = [
-  'admin@klo.com',
-  'karibbeanluxuryoperators@gmail.com',
-  'juan@karibbeanluxuryoperators.lat',
-];
-
 const T = {
   EN: {
     back: 'Back to Home',
@@ -114,8 +106,8 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
         return;
       }
       const initial = await getSupplierSession();
-      if (!cancelled && initial?.user?.email) {
-        evaluate(initial.user.email);
+      if (!cancelled && initial?.user?.email && initial.access_token) {
+        evaluate(initial.user.email, initial.access_token);
       } else if (!cancelled) {
         setState({ kind: 'needs-sign-in' });
       }
@@ -123,8 +115,8 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
 
     const unsubscribe = onSupplierAuthChange(async (session) => {
       if (cancelled) return;
-      if (session?.user?.email) {
-        evaluate(session.user.email);
+      if (session?.user?.email && session.access_token) {
+        evaluate(session.user.email, session.access_token);
       } else {
         setState({ kind: 'needs-sign-in' });
       }
@@ -138,11 +130,26 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadKey]);
 
-  const evaluate = (email: string) => {
-    const lower = email.toLowerCase();
-    if (ADMIN_EMAILS.some(e => e.toLowerCase() === lower)) {
-      setState({ kind: 'ready', email });
-    } else {
+  // v1.8.0: replaced the hardcoded ADMIN_EMAILS array with a call to
+  // /api/admin/check, which looks up the role in the public.user_roles
+  // table (managed by the service-role key on the server). This way you
+  // can grant or revoke admin without redeploying.
+  const evaluate = async (email: string, accessToken: string) => {
+    try {
+      const res = await fetch('/api/admin/check', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) {
+        setState({ kind: 'not-authorized', email });
+        return;
+      }
+      const data = await res.json();
+      if (data.isAdmin) {
+        setState({ kind: 'ready', email });
+      } else {
+        setState({ kind: 'not-authorized', email });
+      }
+    } catch {
       setState({ kind: 'not-authorized', email });
     }
   };

@@ -102,7 +102,13 @@ export const SupplierLogin: React.FC<SupplierLoginProps> = ({
     setError(null);
     setIsSending(true);
     try {
-      const redirectTo = `${window.location.origin}/supplier/dashboard`;
+      // v1.7.7: use VITE_APP_URL (set at build time in Vercel) instead of
+      // window.location.origin. The latter is wrong because if a user clicks
+      // "Send Magic Link" while on localhost:3000, the email points to
+      // http://localhost:3000/... instead of the production URL. With the
+      // env var, the redirect always points to the real site regardless
+      // of where the user is when they send the link.
+      const redirectTo = `${import.meta.env.VITE_APP_URL || 'https://www.karibbeanluxuryoperators.lat'}/supplier/dashboard`;
       const result = await sendSupplierMagicLink(email, redirectTo);
       if (result.ok === true) {
         setSentTo(email.trim().toLowerCase());

@@ -1198,6 +1198,106 @@ async function startServer() {
     });
   });
 
+  // ── v1.8.0: Admin role check + management ─────────────────────────────────
+  // The browser sends the user's access token in the Authorization header.
+  // We validate it with Supabase's getUser(token) and look up the role
+  // in the public.user_roles table. Replaces the v1.7 hardcoded
+  // ADMIN_EMAILS array in AdminGate.tsx.
+
+  // Shared helper: validate a Bearer token, return the email + role.
+  // Returns { email: string, role: 'admin' | 'partner' | 'viewer' | null }
+  // null role means "no entry in user_roles" — treated as not authorized.
+  const resolveAuthFromRequest = async (req: any): Promise<{ email: string | null; role: string | null; userId: string | null }> => {
+    const auth = req.headers?.authorization || '';
+    const m = auth.match(/^Bearer\s+(.+)$/i);
+    if (!m) return { email: null, role: null, userId: null };
+    const token = m[1].trim();
+    if (!token) return { email: null, role: null, userId: null };
+    try {
+      const { data, error } = await supabase.auth.getUser(token);
+      if (error || !data?.user?.email) return { email: null, role: null, userId: null };
+      const email = data.user.email.toLowerCase();
+      const { data: roleRow } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('email', email)
+        .maybeSingle();
+      return { email, role: (roleRow?.role as string) ?? null, userId: data.user.id };
+    } catch {
+      return { email: null, role: null, userId: null };
+    }
+  };
+
+  // GET /api/admin/check — used by AdminGate on mount. Returns the role
+  // for the currently signed-in user, or {role: null} if not signed in.
+  app.get("/api/admin/check", async (req, res) => {
+    try {
+      const { email, role, userId } = await resolveAuthFromRequest(req);
+      res.json({ email, role, userId, isAdmin: role === 'admin' });
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'check failed' });
+    }
+  });
+
+  // GET /api/admin/users — list all users with their role. Admin-only.
+  app.get("/api/admin/users", async (req, res) => {
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('email, role, granted_by, granted_at, notes')
+        .order('granted_at', { ascending: false });
+      if (error) throw error;
+      res.json({ users: data || [] });
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'list failed' });
+    }
+  });
+
+  // POST /api/admin/users — grant a role to an email. Admin-only.
+  // body: { email, role: 'admin' | 'partner' | 'viewer', notes? }
+  app.post("/api/admin/users", async (req, res) => {
+    try {
+      const { role, email: grantorEmail } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const { email, role: newRole, notes } = req.body || {};
+      if (!email || !newRole) return res.status(400).json({ error: 'email and role required' });
+      if (!['admin', 'partner', 'viewer'].includes(newRole)) {
+        return res.status(400).json({ error: 'role must be admin|partner|viewer' });
+      }
+      const { data, error } = await supabase
+        .from('user_roles')
+        .upsert(
+          { email: String(email).toLowerCase(), role: newRole, granted_by: grantorEmail, notes: notes || null },
+          { onConflict: 'email' }
+        )
+        .select()
+        .single();
+      if (error) throw error;
+      res.json({ user: data });
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'grant failed' });
+    }
+  });
+
+  // DELETE /api/admin/users?email=... — revoke a role. Admin-only.
+  // Cannot revoke yourself (prevents lockout).
+  app.delete("/api/admin/users", async (req, res) => {
+    try {
+      const { role, email: callerEmail } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const target = String(req.query?.email || '').toLowerCase();
+      if (!target) return res.status(400).json({ error: 'email required' });
+      if (target === callerEmail) return res.status(400).json({ error: 'cannot revoke your own admin role' });
+      const { error } = await supabase.from('user_roles').delete().eq('email', target);
+      if (error) throw error;
+      res.json({ revoked: target });
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'revoke failed' });
+    }
+  });
+
   // Simulated Stripe Payment Intent
   app.post("/api/payments/create-intent", async (req, res) => {
     const { amount, customerId } = req.body;
