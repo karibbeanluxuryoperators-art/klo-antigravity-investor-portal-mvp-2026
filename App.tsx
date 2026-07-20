@@ -9,6 +9,7 @@ import { SupplierPortal } from './components/SupplierPortal';
 import { SupplierLogin } from './components/SupplierLogin';
 import { SupplierDashboardGate } from './components/SupplierDashboardGate';
 import { AdminGate } from './components/AdminGate';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // ── Supplier portal route guard ────────────────────────────────────────────
 // Detects the supplier route family in the URL and returns the subroute so
@@ -100,52 +101,60 @@ function App() {
 
     if (supplierSubroute === 'login') {
       return (
-        <div className="min-h-screen selection:bg-gold/30">
-          <SupplierLogin
-            lang={portalLang}
-            onBack={goHome}
-            onSignedIn={goToDashboard}
-            onNewSupplier={goToPortal}
-          />
-        </div>
+        <ErrorBoundary context="Sign in" showDiagnostic>
+          <div className="min-h-screen selection:bg-gold/30">
+            <SupplierLogin
+              lang={portalLang}
+              onBack={goHome}
+              onSignedIn={goToDashboard}
+              onNewSupplier={goToPortal}
+            />
+          </div>
+        </ErrorBoundary>
       );
     }
 
     if (supplierSubroute === 'dashboard') {
       return (
-        <div className="min-h-screen selection:bg-gold/30">
-          <SupplierDashboardGate
-            lang={portalLang}
-            onBack={goHome}
-            onSignIn={goToLogin}
-            onNotPartner={goToPortal}
-          />
-        </div>
+        <ErrorBoundary context="Supplier dashboard" showDiagnostic>
+          <div className="min-h-screen selection:bg-gold/30">
+            <SupplierDashboardGate
+              lang={portalLang}
+              onBack={goHome}
+              onSignIn={goToLogin}
+              onNotPartner={goToPortal}
+            />
+          </div>
+        </ErrorBoundary>
       );
     }
 
     if (supplierSubroute === 'admin') {
       return (
-        <div className="min-h-screen">
-          <AdminGate
-            lang={portalLang}
-            onBack={goHome}
-            onSignIn={goToLogin}
-          />
-        </div>
+        <ErrorBoundary context="Admin portal" showDiagnostic>
+          <div className="min-h-screen">
+            <AdminGate
+              lang={portalLang}
+              onBack={goHome}
+              onSignIn={goToLogin}
+            />
+          </div>
+        </ErrorBoundary>
       );
     }
 
     // Default: the onboarding portal.
     return (
-      <div className="min-h-screen selection:bg-gold/30">
-        <SupplierPortal
-          lang={portalLang}
-          onBack={goHome}
-          onGoToLogin={goToLogin}
-          onGoToDashboard={goToDashboard}
-        />
-      </div>
+      <ErrorBoundary context="Partner application" showDiagnostic>
+        <div className="min-h-screen selection:bg-gold/30">
+          <SupplierPortal
+            lang={portalLang}
+            onBack={goHome}
+            onGoToLogin={goToLogin}
+            onGoToDashboard={goToDashboard}
+          />
+        </div>
+      </ErrorBoundary>
     );
   }
 
