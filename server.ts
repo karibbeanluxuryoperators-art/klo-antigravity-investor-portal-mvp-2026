@@ -1298,6 +1298,162 @@ async function startServer() {
     }
   });
 
+  // ── Clients API (v1.8.0 Step 2) ────────────────────────────────────────────
+  // UHNWI / VVIP / VIP client profiles. Backed by public.clients table
+  // (created via db/migrations/2026-07-20_clients.sql).
+  // All endpoints require admin role. Backward-compatible: if the table
+  // doesn't exist yet, GET returns [] and writes return a clear 500.
+
+  // GET /api/clients — list all clients (most recent first)
+  app.get("/api/clients", async (req, res) => {
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const { tier, status, search } = req.query;
+      let query = supabase
+        .from('clients')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (tier) query = query.eq('tier', String(tier));
+      if (status) query = query.eq('status', String(status));
+      if (search) {
+        const s = String(search).toLowerCase();
+        query = query.or(`name.ilike.%${s}%,email.ilike.%${s}%`);
+      }
+      const { data, error } = await query;
+      if (error) {
+        // Table missing — return empty array so the UI doesn't blow up.
+        if (/relation.*does not exist/i.test(error.message || '')) {
+          return res.json([]);
+        }
+        throw error;
+      }
+      res.json(data || []);
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'fetch clients failed' });
+    }
+  });
+
+  // GET /api/clients/:id — single client with their booking count + spend
+  app.get("/api/clients/:id", async (req, res) => {
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const { id } = req.params;
+      const { data: client, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!client) return res.status(404).json({ error: 'client not found' });
+      // Pull booking stats for this client
+      const { data: bookings } = await supabase
+        .from('bookings')
+        .select('id, status, total_price, start_date, end_date, asset_name, asset_type')
+        .eq('client_id', id)
+        .order('start_date', { ascending: false });
+      res.json({ ...client, bookings: bookings || [] });
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'fetch client failed' });
+    }
+  });
+
+  // POST /api/clients — create a new client
+  // body: { name, email, phone?, whatsapp?, tier, status, preferences, notes, source }
+  app.post("/api/clients", async (req, res) => {
+    try {
+      const { role, email: creatorEmail } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const body = req.body || {};
+      if (!body.name) return res.status(400).json({ error: 'name required' });
+      if (!body.email) return res.status(400).json({ error: 'email required' });
+      if (!['UHNWI', 'VVIP', 'VIP'].includes(body.tier)) {
+        return res.status(400).json({ error: 'tier must be UHNWI|VVIP|VIP' });
+      }
+      const id = 'C' + Date.now() + '_' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const row = {
+        id,
+        name: body.name,
+        email: String(body.email).toLowerCase(),
+        phone: body.phone || null,
+        whatsapp: body.whatsapp || null,
+        tier: body.tier,
+        status: body.status || 'ACTIVE',
+        preferences: body.preferences || {
+          dietary: [], beverages: [], temperature: '22°C', interests: [],
+        },
+        past_experiences: body.past_experiences || 0,
+        total_spend: body.total_spend || 0,
+        loyalty_points: body.loyalty_points || 0,
+        notes: body.notes || null,
+        source: body.source || 'manual',
+        created_by: creatorEmail,
+      };
+      const { data, error } = await supabase.from('clients').insert(row).select().maybeSingle();
+      if (error) {
+        if (/duplicate key/i.test(error.message || '')) {
+          return res.status(409).json({ error: 'client with this email already exists' });
+        }
+        throw error;
+      }
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'create client failed' });
+    }
+  });
+
+  // PATCH /api/clients/:id — partial update (tier, status, preferences, notes, etc.)
+  app.patch("/api/clients/:id", async (req, res) => {
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const { id } = req.params;
+      const allowed = ['name', 'email', 'phone', 'whatsapp', 'tier', 'status',
+                       'preferences', 'past_experiences', 'total_spend',
+                       'loyalty_points', 'notes', 'source'];
+      const updates: any = {};
+      for (const k of allowed) {
+        if (k in (req.body || {})) updates[k] = req.body[k];
+      }
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'no updatable fields provided' });
+      }
+      if (updates.tier && !['UHNWI', 'VVIP', 'VIP'].includes(updates.tier)) {
+        return res.status(400).json({ error: 'tier must be UHNWI|VVIP|VIP' });
+      }
+      if (updates.status && !['ACTIVE', 'INACTIVE', 'PROSPECT'].includes(updates.status)) {
+        return res.status(400).json({ error: 'status must be ACTIVE|INACTIVE|PROSPECT' });
+      }
+      if (updates.email) updates.email = String(updates.email).toLowerCase();
+      const { data, error } = await supabase
+        .from('clients')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return res.status(404).json({ error: 'client not found' });
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'update client failed' });
+    }
+  });
+
+  // DELETE /api/clients/:id — remove a client. Cascades to bookings.client_id (set null).
+  app.delete("/api/clients/:id", async (req, res) => {
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const { id } = req.params;
+      const { error } = await supabase.from('clients').delete().eq('id', id);
+      if (error) throw error;
+      res.json({ deleted: id });
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'delete client failed' });
+    }
+  });
+
   // Simulated Stripe Payment Intent
   app.post("/api/payments/create-intent", async (req, res) => {
     const { amount, customerId } = req.body;

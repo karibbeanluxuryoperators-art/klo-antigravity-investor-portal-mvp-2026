@@ -7,6 +7,7 @@ import {
   ClipboardList, Clock, DollarSign, User, Mail,
   FileText, Save, RefreshCw
 } from 'lucide-react';
+import { ClientManagement } from './ClientManagement';
 // Local Language alias - see SupplierPortal.tsx for rationale
 type Language = 'EN' | 'ES' | 'PT';
 
@@ -679,20 +680,8 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
           </div>
         </div>
       ) : (
-        // ── v1.8.0 Step 2 placeholder: Clients view (UHNWI guest relations) ────
-        <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
-          <div className="max-w-xl mx-auto space-y-4">
-            <div className="w-16 h-16 bg-[#B8963E]/10 text-[#B8963E] rounded-full flex items-center justify-center mx-auto">
-              <User size={32} />
-            </div>
-            <h3 className="text-2xl font-serif text-slate-900 uppercase tracking-widest">
-              {lang === "EN" ? "Clients" : lang === "ES" ? "Clientes" : "Clientes"}
-            </h3>
-            <p className="text-sm text-slate-500 leading-relaxed">
-              {txAdmin('clients_coming', lang)}
-            </p>
-          </div>
-        </div>
+        // ── v1.8.0 Step 2: Clients view (UHNWI guest relations) ──────────────
+        <ClientManagement lang={lang} />
       )}
       <AnimatePresence>
         {selectedBooking && renderBookingModal()}
