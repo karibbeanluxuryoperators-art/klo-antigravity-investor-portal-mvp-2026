@@ -20,7 +20,16 @@ import path from 'node:path';
 
 const SHIM_OUT_PATH = 'assets/otel-shim.js';
 const LITERAL_TO_REPLACE = '"@opentelemetry/api"';
-const REPLACEMENT = '"./otel-shim.js"';
+// Use an absolute URL (./assets/...) so the browser resolves the import
+// correctly regardless of the current page URL. With a bare relative path
+// like "./otel-shim.js", the browser resolves it relative to the
+// *document* URL — so on /supplier/login, it becomes /supplier/otel-shim.js,
+// which doesn't exist, which hits the SPA catch-all and returns index.html
+// with text/html — which is exactly the MIME type error we were chasing.
+// The leading "./" before "assets" is what Vite produces when `base: "./"`
+// is set in vite.config.ts, so the URL stays relative-to-origin instead of
+// protocol-relative, and works the same on https://, file://, etc.
+const REPLACEMENT = '"./assets/otel-shim.js"';
 
 export function otelShimPlugin(): Plugin {
   return {
