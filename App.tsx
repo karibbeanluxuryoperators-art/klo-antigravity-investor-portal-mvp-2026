@@ -73,6 +73,43 @@ function App() {
     document.documentElement.lang = lang;
   }, [lang]);
 
+  // v1.8.0 Step 3.1: post-magic-link redirect handler.
+  // When Supabase sends a magic link, the email contains a URL like
+  //   https://karibbeanluxuryoperators.lat/#access_token=...
+  // which lands the user on `/` (root). If the email is an admin, we want
+  // them to land on `/admin` instead of staying on the public site (where
+  // the public Navbar will greet them). We do this by detecting the
+  // access_token in the URL hash and asking /api/admin/check whether the
+  // session belongs to an admin. If yes → navigate to /admin.
+  // If no → leave them on `/` (they probably want the supplier portal).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash || '';
+    if (!/access_token=/.test(hash)) return; // Not a magic-link landing
+    // Give Supabase Auth a moment to persist the session (it processes
+    // the hash on its own and stores tokens in localStorage).
+    const t = setTimeout(async () => {
+      try {
+        const { data } = await (await import('./services/supabase')).supabase.auth.getSession();
+        const token = data?.session?.access_token;
+        if (!token) return;
+        const res = await fetch('/api/admin/check', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const info = await res.json();
+        if (info?.isAdmin && (window.location.pathname === '/' || window.location.pathname === '')) {
+          // Clear the hash so the auth code doesn't re-trigger on re-render
+          history.replaceState(null, '', '/admin');
+          window.location.reload();
+        }
+      } catch (e) {
+        // Silent — user stays on `/` and can navigate manually
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, []);
+
   // Translation function
   const t = useCallback((key: string): any => {
     return getTranslation(key, lang);

@@ -50,6 +50,7 @@ const T = {
     applyCta: 'Apply to become a partner',
     refresh: 'Refresh',
     signOut: 'Sign out',
+    adminLink: 'Are you an admin? Go to /admin →',
     configTitle: 'Configuration required',
     configBody: 'Supabase is not configured. The /api/config endpoint returned no URL or anon key. Check the server environment.',
     eyebrow: 'Partner Portal',
@@ -66,6 +67,7 @@ const T = {
     applyCta: 'Solicitar ser socio',
     refresh: 'Actualizar',
     signOut: 'Cerrar sesión',
+    adminLink: '¿Eres admin? Ir a /admin →',
     configTitle: 'Configuración requerida',
     configBody: 'Supabase no está configurado. El endpoint /api/config no devolvió URL ni clave anónima. Verifica el entorno del servidor.',
     eyebrow: 'Portal de Socios',
@@ -82,6 +84,7 @@ const T = {
     applyCta: 'Candidate-se a ser parceiro',
     refresh: 'Atualizar',
     signOut: 'Sair',
+    adminLink: 'Você é admin? Ir para /admin →',
     configTitle: 'Configuração necessária',
     configBody: 'Supabase não está configurado. O endpoint /api/config não retornou URL nem chave anônima. Verifique o ambiente do servidor.',
     eyebrow: 'Portal de Parceiros',
@@ -288,6 +291,14 @@ export const SupplierDashboardGate: React.FC<SupplierDashboardGateProps> = ({
                   >
                     <LogOut size={10} /> {t.signOut}
                   </button>
+                </div>
+                <div className="pt-3">
+                  <a
+                    href="/admin"
+                    className="inline-block text-[10px] text-[#B8963E] hover:text-slate-900 uppercase tracking-[0.3em] font-semibold transition-colors"
+                  >
+                    {t.adminLink}
+                  </a>
                 </div>
               </motion.div>
             </Card>
