@@ -5,7 +5,7 @@ import {
   Check, X, MessageSquare, ExternalLink, Package,
   MapPin, Calendar, Info, Loader2, AlertCircle,
   ClipboardList, Clock, DollarSign, User, Mail,
-  FileText, Save, RefreshCw
+  FileText, Save, RefreshCw, LogOut
 } from 'lucide-react';
 import { ClientManagement } from './ClientManagement';
 // Local Language alias - see SupplierPortal.tsx for rationale
@@ -43,6 +43,8 @@ interface Booking {
 interface SuppliersManagementProps {
   lang: Language;
   onViewAssets: (supplierId: string) => void;
+  onSignOut?: () => void;
+  signedInEmail?: string | null;
 }
 
 // v1.7: trilingual copy for every user-visible string in the admin UI.
@@ -93,6 +95,8 @@ const T_ADMIN: Record<string, { EN: string; ES: string; PT: string }> = {
   save_notes:         { EN: 'Save Notes', ES: 'Guardar Notas', PT: 'Salvar Notas' },
   save:               { EN: 'Save', ES: 'Guardar', PT: 'Salvar' },
   sync_calendars:     { EN: 'Sync All Calendars', ES: 'Sincronizar Calendarios', PT: 'Sincronizar Calendários' },
+  sign_out:           { EN: 'Sign out', ES: 'Cerrar sesión', PT: 'Sair' },
+  signed_in_as:       { EN: 'Signed in as', ES: 'Conectado como', PT: 'Conectado como' },
   no_suppliers:       { EN: 'No suppliers yet', ES: 'Aún no hay socios', PT: 'Ainda não há parceiros' },
   no_bookings:        { EN: 'No bookings yet', ES: 'Sin reservas aún', PT: 'Sem reservas ainda' },
   // Asset type labels (admin-side)
@@ -108,7 +112,7 @@ const txAdmin = (key: keyof typeof T_ADMIN, lang: Language): string => {
   return (entry && (entry[lang] || entry.EN)) || '';
 };
 
-export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, onViewAssets }) => {
+export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, onViewAssets, onSignOut, signedInEmail }) => {
   const [activeView, setActiveView] = useState<'SUPPLIERS' | 'BOOKINGS' | 'CLIENTS'>('SUPPLIERS');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -479,10 +483,27 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
             onClick={handleSyncAll}
             disabled={isSyncing}
             className="flex items-center gap-2 px-6 py-3 bg-blue-50 text-blue-600 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-blue-500 hover:text-slate-900 transition-all disabled:opacity-50"
+            title={txAdmin('sync_calendars', lang)}
           >
             {isSyncing ? <Loader2 className="animate-spin" size={14} /> : <RefreshCw size={14} />}
             {txAdmin('sync_calendars', lang)}
           </button>
+          {onSignOut && (
+            <div className="flex flex-col items-end gap-1 ml-2 pl-2 border-l border-slate-200">
+              {signedInEmail && (
+                <span className="text-[9px] text-slate-400 uppercase tracking-widest font-semibold">
+                  {txAdmin('signed_in_as', lang)} {signedInEmail}
+                </span>
+              )}
+              <button
+                onClick={onSignOut}
+                className="flex items-center gap-2 px-4 py-2 text-slate-500 hover:text-slate-900 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
+                title={txAdmin('sign_out', lang)}
+              >
+                <LogOut size={12} /> {txAdmin('sign_out', lang)}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
