@@ -2,11 +2,12 @@ import React from 'react';
 
 interface HeroProps {
   t: (key: string) => any;
+  onInquiryOpen?: () => void;
 }
 
 const HERO_STATIC_IMAGE = "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?auto=format&fit=crop&q=80&w=1920";
 
-const Hero: React.FC<HeroProps> = ({ t }) => {
+const Hero: React.FC<HeroProps> = ({ t, onInquiryOpen }) => {
   return (
     <section 
       className="relative overflow-hidden bg-slate-900"
@@ -101,9 +102,7 @@ const Hero: React.FC<HeroProps> = ({ t }) => {
               {t('hero.cta')}
             </button>
             <a
-              href="https://docs.google.com/forms/d/e/1FAIpQLSf2fDPMkhJfCB12AWppQjxXldV0vC1CNmSy-Vl4WhKVkhRonQ/viewform?usp=header"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/supplier"
               style={{
                 padding: '0.5rem 1.5rem',
                 color: 'rgba(244, 239, 230, 0.55)',
@@ -115,6 +114,7 @@ const Hero: React.FC<HeroProps> = ({ t }) => {
                 textDecoration: 'none',
                 borderBottom: '1px solid rgba(244, 239, 230, 0.2)',
                 transition: 'all 0.3s ease',
+                cursor: 'pointer',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = 'rgba(244, 239, 230, 0.85)';

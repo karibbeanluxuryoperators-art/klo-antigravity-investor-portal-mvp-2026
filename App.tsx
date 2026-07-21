@@ -9,6 +9,7 @@ import { SupplierPortal } from './components/SupplierPortal';
 import { SupplierLogin } from './components/SupplierLogin';
 import { SupplierDashboardGate } from './components/SupplierDashboardGate';
 import { AdminGate } from './components/AdminGate';
+import { PlanTripModal } from './components/PlanTripModal';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // ── Supplier portal route guard ────────────────────────────────────────────
@@ -46,6 +47,7 @@ function useSupplierRoute(): 'portal' | 'login' | 'dashboard' | 'admin' | null {
 function App() {
   const [lang, setLang] = useState<Language>('es');
   const [isReady, setIsReady] = useState(false);
+  const [isPlanTripOpen, setIsPlanTripOpen] = useState(false); // v1.8.0 Step 3: "Plan Your Trip" modal
 
   // ALL HOOKS MUST BE CALLED UNCONDITIONALLY — before any early return.
   // React error #310 ("Rendered more hooks than during the previous render")
@@ -161,14 +163,14 @@ function App() {
   return (
     <div className="min-h-screen selection:bg-luxury-teal selection:text-white" key={lang}>
       <Navbar 
-        lang={lang} 
-        setLang={handleLanguageChange} 
-        t={t} 
-        onInquiryOpen={() => {}} 
+        lang={lang}
+        setLang={handleLanguageChange}
+        t={t}
+        onInquiryOpen={() => setIsPlanTripOpen(true)}
       />
 
       <main>
-<Hero t={t} />
+<Hero t={t} onInquiryOpen={() => setIsPlanTripOpen(true)} />
         
 {/* Destinations */}
         <Destinations t={t as any} />
@@ -315,6 +317,13 @@ function App() {
 
       {/* ── MARIA AI CONCIERGE ───────────────────────────────────────── */}
       <AIAssistant t={t} lang={lang} />
+
+      {/* ── Plan Your Trip modal (v1.8.0 Step 3) ────────────────────── */}
+      <PlanTripModal
+        open={isPlanTripOpen}
+        onClose={() => setIsPlanTripOpen(false)}
+        lang={lang}
+      />
 
       <style>{`
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
