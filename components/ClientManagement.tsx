@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, UserPlus, Search,
@@ -7,6 +7,23 @@ import {
   Star, Activity, Shield,
   Trash2, Edit3,
 } from 'lucide-react';
+import { getSupplierSession } from '../services/supabase';
+
+// v1.8.0 Step 3.2: auth-aware fetch helper.
+// Admin endpoints require `Authorization: Bearer <access_token>`. This helper
+// grabs the current Supabase session and attaches the token. If no session,
+// the request goes through unauthenticated (which will get a 403 from admin
+// endpoints — that's the expected behavior).
+async function authedFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  const session = await getSupplierSession();
+  const token = session?.access_token;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(init.headers as Record<string, string> | undefined ?? {}),
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return fetch(input, { ...init, headers });
+}
 
 // Local Language alias - see SupplierPortal.tsx for rationale
 type Language = 'EN' | 'ES' | 'PT';
@@ -155,7 +172,7 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/clients');
+      const res = await authedFetch('/api/clients');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setClients(Array.isArray(data) ? data : []);
@@ -260,9 +277,8 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
       };
       const url = editingClient ? `/api/clients/${editingClient.id}` : '/api/clients';
       const method = editingClient ? 'PATCH' : 'POST';
-      const res = await fetch(url, {
+      const res = await authedFetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -282,7 +298,7 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
   const handleDelete = async (c: Client) => {
     if (!confirm(t('confirm_delete', lang))) return;
     try {
-      const res = await fetch(`/api/clients/${c.id}`, { method: 'DELETE' });
+      const res = await authedFetch(`/api/clients/${c.id}`, { method: 'DELETE' });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || `HTTP ${res.status}`);
