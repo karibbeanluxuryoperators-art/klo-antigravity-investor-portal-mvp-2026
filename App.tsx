@@ -10,6 +10,7 @@ import { SupplierLogin } from './components/SupplierLogin';
 import { SupplierDashboardGate } from './components/SupplierDashboardGate';
 import { AdminGate } from './components/AdminGate';
 import { PlanTripModal } from './components/PlanTripModal';
+import { HowKLOWorks } from './components/HowKLOWorks';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // ── Supplier portal route guard ────────────────────────────────────────────
@@ -209,7 +210,10 @@ function App() {
 
       <main>
 <Hero t={t} onInquiryOpen={() => setIsPlanTripOpen(true)} />
-        
+
+{/* How KLO Works (v1.8.0 Step 4) */}
+<HowKLOWorks lang={lang} />
+
 {/* Destinations */}
         <Destinations t={t as any} />
 
