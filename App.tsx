@@ -203,12 +203,14 @@ function App() {
 
   return (
     <div className="min-h-screen selection:bg-luxury-teal selection:text-white" key={lang}>
-      <Navbar 
+      <Navbar
         lang={lang}
         setLang={handleLanguageChange}
         t={t}
         onInquiryOpen={() => setIsPlanTripOpen(true)}
       />
+
+      <ErrorBoundary context="Public site" showDiagnostic>
 
       <main>
 <Hero t={t} onInquiryOpen={() => setIsPlanTripOpen(true)} />
@@ -364,6 +366,7 @@ function App() {
           </div>
         </footer>
       </main>
+      </ErrorBoundary>
 
       {/* ── MARIA AI CONCIERGE ───────────────────────────────────────── */}
       <AIAssistant t={t} lang={lang} />
