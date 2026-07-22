@@ -1,0 +1,38 @@
+# Auto-label PRs by what files they touch.
+# Docs: https://github.com/actions/labeler
+
+component:
+  - components/**/*
+
+api:
+  - api/**/*
+  - server.ts
+
+db:
+  - db/**/*
+  - supabase/**/*
+
+infra:
+  - .github/**/*
+  - vite.config.ts
+  - tailwind.config.js
+  - package.json
+  - tsconfig.json
+
+docs:
+  - '**/*.md'
+  - 'docs/**/*'
+
+vault:
+  - 'G:\\My Drive\\KLO-Vault\\**/*'  # Windows path; labeler handles cross-platform ok
+
+test:
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+  - '**/*.spec.ts'
+  - tests/**
+
+i18n:
+  - '**/T_*'
+  - '**/translations/**'
+  - components/PlanTripModal.tsx

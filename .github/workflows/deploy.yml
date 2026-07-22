@@ -1,0 +1,40 @@
+name: KLO Deploy
+
+# This workflow is informational. Vercel handles the actual production
+# deployment via its GitHub integration (push to v1/supplier-portal).
+# This file exists so:
+#   1. CI status checks appear on the Vercel deployment in the PR timeline.
+#   2. We can trigger downstream jobs (slack notifications, smoke post-deploy, etc).
+#   3. Vercel still owns the deploy; we just observe.
+#
+# When Vercel promotes a deploy to production, the Vercel GitHub app creates
+# a "deployment_status" event. This workflow listens for those events
+# and runs a post-deploy smoke against the production URL.
+
+on:
+  deployment_status:
+    types: [success, failure]
+
+jobs:
+  post-deploy-smoke:
+    name: Post-deploy smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    # Only smoke on production deployments (Vercel sends "production" as the environment).
+    if: github.event.deployment_status.environment == 'Production' && github.event.deployment_status.state == 'success'
+    steps:
+      - name: Wait 30s for DNS/CDN propagation
+        run: sleep 30
+
+      - name: Smoke production
+        env:
+          SMOKE_BASE: ${{ github.event.deployment_status.target_url }}
+        run: |
+          URL="$SMOKE_BASE"
+          if [[ -z "$URL" || "$URL" != http* ]]; then
+            URL="https://www.karibbeanluxuryoperators.lat"
+          fi
+          echo "Smoke target: $URL"
+          bash scripts/smoke.sh "$URL"
+        timeout-minutes: 2
+        continue-on-error: true

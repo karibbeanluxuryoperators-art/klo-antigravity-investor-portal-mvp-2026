@@ -90,8 +90,9 @@ function App() {
     // the hash on its own and stores tokens in localStorage).
     const t = setTimeout(async () => {
       try {
-        const { data } = await (await import('./services/supabase')).supabase.auth.getSession();
-        const token = data?.session?.access_token;
+        const mod = await import('./services/supabase');
+        const session = await mod.getSupplierSession();
+        const token = session?.access_token;
         if (!token) return;
         const res = await fetch('/api/admin/check', {
           headers: { Authorization: `Bearer ${token}` },
