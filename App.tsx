@@ -249,26 +249,64 @@ function App() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {PREMIER_SERVICES.map((svc) => (
-                <div key={svc.id} className="group relative bg-white/5 backdrop-blur-sm border border-white/10 hover:border-[#B8963E]/50 transition-all duration-500 overflow-hidden">
-                  <div className="relative h-56 overflow-hidden bg-slate-800">
+              {PREMIER_SERVICES.map((svc) => {
+                // v1.8.0 design polish: each card now gets a gold "API
+                // differentiator" pill at top-right of the image. Mirrors the
+                // (Smart API) / (Direct API) annotations in the titles and
+                // turns them into first-class value props. Aligns every card
+                // to the same height, drops the dark gradient on the image
+                // (the title is below in its own section, so the gradient
+                // was eating the photo), and makes the card an actual link
+                // to /supplier so the affordance is clear.
+                const badges: Record<string, string> = {
+                  flights:      'Smart API',
+                  accommodation: 'Smart API',
+                  yachts:       'Direct API',
+                  transport:    'Premium Fleet',
+                  staff:        'Vetted Pros',
+                  experiences:  'Curated',
+                };
+                return (
+                <a
+                  key={svc.id}
+                  href={`/supplier#${svc.id}`}
+                  className="group relative bg-white/5 backdrop-blur-sm border border-white/10 hover:border-[#B8963E]/50 transition-all duration-500 overflow-hidden h-full flex flex-col"
+                >
+                  <div className="relative h-56 overflow-hidden bg-slate-800 shrink-0">
                     <img
                       src={svc.imageUrl}
                       alt={t(svc.titleKey)}
-                      className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
+                      className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0a1518] via-transparent to-transparent"></div>
+                    {badges[svc.id] && (
+                      <div className="absolute top-4 right-4 px-3 py-1.5 bg-[#0a1518]/80 backdrop-blur-md border border-[#B8963E]/40 text-[#B8963E] text-[9px] font-bold uppercase tracking-[0.3em] rounded-full">
+                        {badges[svc.id]}
+                      </div>
+                    )}
+                    {/* hover arrow (bottom-right) */}
+                    <div className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-[#0a1518]/80 backdrop-blur-md border border-white/20 flex items-center justify-center text-white/70 group-hover:text-[#B8963E] group-hover:border-[#B8963E] group-hover:scale-110 transition-all duration-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      </svg>
+                    </div>
                   </div>
-                  <div className="p-8">
+                  <div className="p-8 flex-1 flex flex-col">
                     <h3 className="text-2xl font-bold mb-4 text-white serif">
                       {t(svc.titleKey)}
                     </h3>
-                    <p className="text-white/60 text-sm leading-relaxed font-light">
+                    <p className="text-white/60 text-sm leading-relaxed font-light flex-1">
                       {t(svc.descriptionKey)}
                     </p>
+                    <div className="mt-6 pt-6 border-t border-white/5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.3em] text-[#B8963E]">
+                      <span>{t('services_cta.button') || 'Contactar al equipo'}</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                   </div>
-                </div>
-              ))}
+                </a>
+                );
+              })}
             </div>
 
             {/* CTA después de servicios */}
