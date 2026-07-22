@@ -9,6 +9,10 @@ import { SupplierPortal } from './components/SupplierPortal';
 import { SupplierLogin } from './components/SupplierLogin';
 import { SupplierDashboardGate } from './components/SupplierDashboardGate';
 import { AdminGate } from './components/AdminGate';
+import { PlanTripModal } from './components/PlanTripModal';
+import { HowKLOWorks } from './components/HowKLOWorks';
+import { KLOStats } from './components/KLOStats';
+import { KLOTestimonials } from './components/KLOTestimonials';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // ── Supplier portal route guard ────────────────────────────────────────────
@@ -46,6 +50,7 @@ function useSupplierRoute(): 'portal' | 'login' | 'dashboard' | 'admin' | null {
 function App() {
   const [lang, setLang] = useState<Language>('es');
   const [isReady, setIsReady] = useState(false);
+  const [isPlanTripOpen, setIsPlanTripOpen] = useState(false); // v1.8.0 Step 3: "Plan Your Trip" modal
 
   // ALL HOOKS MUST BE CALLED UNCONDITIONALLY — before any early return.
   // React error #310 ("Rendered more hooks than during the previous render")
@@ -70,6 +75,44 @@ function App() {
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
+
+  // v1.8.0 Step 3.1: post-magic-link redirect handler.
+  // When Supabase sends a magic link, the email contains a URL like
+  //   https://karibbeanluxuryoperators.lat/#access_token=...
+  // which lands the user on `/` (root). If the email is an admin, we want
+  // them to land on `/admin` instead of staying on the public site (where
+  // the public Navbar will greet them). We do this by detecting the
+  // access_token in the URL hash and asking /api/admin/check whether the
+  // session belongs to an admin. If yes → navigate to /admin.
+  // If no → leave them on `/` (they probably want the supplier portal).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const hash = window.location.hash || '';
+    if (!/access_token=/.test(hash)) return; // Not a magic-link landing
+    // Give Supabase Auth a moment to persist the session (it processes
+    // the hash on its own and stores tokens in localStorage).
+    const t = setTimeout(async () => {
+      try {
+        const mod = await import('./services/supabase');
+        const session = await mod.getSupplierSession();
+        const token = session?.access_token;
+        if (!token) return;
+        const res = await fetch('/api/admin/check', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const info = await res.json();
+        if (info?.isAdmin && (window.location.pathname === '/' || window.location.pathname === '')) {
+          // Clear the hash so the auth code doesn't re-trigger on re-render
+          history.replaceState(null, '', '/admin');
+          window.location.reload();
+        }
+      } catch (e) {
+        // Silent — user stays on `/` and can navigate manually
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, []);
 
   // Translation function
   const t = useCallback((key: string): any => {
@@ -160,16 +203,27 @@ function App() {
 
   return (
     <div className="min-h-screen selection:bg-luxury-teal selection:text-white" key={lang}>
-      <Navbar 
-        lang={lang} 
-        setLang={handleLanguageChange} 
-        t={t} 
-        onInquiryOpen={() => {}} 
+      <Navbar
+        lang={lang}
+        setLang={handleLanguageChange}
+        t={t}
+        onInquiryOpen={() => setIsPlanTripOpen(true)}
       />
 
+      <ErrorBoundary context="Public site" showDiagnostic>
+
       <main>
-<Hero t={t} />
-        
+<Hero t={t} onInquiryOpen={() => setIsPlanTripOpen(true)} />
+
+{/* How KLO Works (v1.8.0 Step 4) */}
+<HowKLOWorks lang={lang} />
+
+{/* Stats (v1.8.0 Step 4) */}
+<KLOStats lang={lang} />
+
+{/* Testimonials + FAQ (v1.8.0 Step 4) */}
+<KLOTestimonials lang={lang} />
+
 {/* Destinations */}
         <Destinations t={t as any} />
 
@@ -312,9 +366,17 @@ function App() {
           </div>
         </footer>
       </main>
+      </ErrorBoundary>
 
       {/* ── MARIA AI CONCIERGE ───────────────────────────────────────── */}
       <AIAssistant t={t} lang={lang} />
+
+      {/* ── Plan Your Trip modal (v1.8.0 Step 3) ────────────────────── */}
+      <PlanTripModal
+        open={isPlanTripOpen}
+        onClose={() => setIsPlanTripOpen(false)}
+        lang={lang}
+      />
 
       <style>{`
         @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }

@@ -1,73 +1,68 @@
 #!/usr/bin/env bash
-# KLO Production Smoke Test
-# Run: ./scripts/smoke.sh [BASE_URL]
-# Default: https://klo-fullstack.vercel.app
-#
-# Exits 0 if all green, 1 if any red.
+# KLO Production Smoke Test (Linux/macOS)
+# Run: bash scripts/smoke.sh [BASE_URL]
+# Default base: https://klo-fullstack.vercel.app
+# Exit code 0 = all green, 1 = at least one red.
 
 set -u
 
 BASE_URL="${1:-https://klo-fullstack.vercel.app}"
 FAILURES=0
-TOTAL=0
+RESULTS=()
 
-# Each line: path|expected_status_1,expected_status_2,...
-ENDPOINTS=(
-  "/api/health|200"
-  "/api/assets|200"
-  "/api/assets?status=ACTIVE|200"
-  "/api/suppliers/lookup?uid=smoke-test-no-such-user|200,500"
-  "/|200"
-)
+# Colors (no-op if not a tty)
+if [ -t 1 ]; then
+  RED='\033[0;31m'; GREEN='\033[0;32m'; NC='\033[0m'
+else
+  RED=''; GREEN=''; NC=''
+fi
 
-RED=$'\033[0;31m'
-GREEN=$'\033[0;32m'
-NC=$'\033[0m'
+test_endpoint() {
+  local name="$1"
+  local path="$2"
+  local expect="${3:-200}"
+  local url="${BASE_URL}${path}"
 
-echo
+  # Capture status + body
+  local response
+  response=$(curl -s -w "\n%{http_code}" --max-time 15 "$url" 2>/dev/null)
+  local status=$(echo "$response" | tail -n1)
+  local body=$(echo "$response" | sed '$d')
+
+  # Trim long bodies
+  local preview="$body"
+  if [ "${#preview}" -gt 120 ]; then
+    preview="${preview:0:120}..."
+  fi
+
+  # Check if status is in expected
+  if echo ",$expect," | grep -q ",$status,"; then
+    echo -e "[PASS] ${path} ${status} -> ${preview}"
+  else
+    echo -e "[FAIL] ${path} ${status} (expected $expect) -> ${preview}"
+    FAILURES=$((FAILURES+1))
+  fi
+  RESULTS+=("$path=$status")
+}
+
+echo ""
 echo "=== KLO Smoke Test ==="
 echo "Base: $BASE_URL"
-echo
+echo ""
 
-for spec in "${ENDPOINTS[@]}"; do
-  path="${spec%%|*}"
-  expected="${spec##*|}"
+# Same 6 checks as the PowerShell version
+test_endpoint "Health"         "/api/health"                                "200"
+test_endpoint "Assets"         "/api/assets"                                "200"
+test_endpoint "AssetsActive"   "/api/assets?status=ACTIVE"                  "200"
+test_endpoint "SuppliersLookup" "/api/suppliers/lookup?uid=smoke-test-no-such-user" "200,500"
+test_endpoint "Landing"        "/"                                          "200"
+test_endpoint "HealthSlash"    "/api/health/"                               "200"
 
-  TOTAL=$((TOTAL + 1))
-  url="${BASE_URL}${path}"
-  body=""
-  status=""
-
-  if command -v curl >/dev/null 2>&1; then
-    out=$(curl -sS -o /tmp/klo_smoke_body -w "%{http_code}" --max-time 15 "$url" 2>/dev/null || echo "000")
-    status="$out"
-    body=$(cat /tmp/klo_smoke_body 2>/dev/null || echo "")
-    rm -f /tmp/klo_smoke_body
-  else
-    echo "[FAIL] $path  curl not found" >&2
-    FAILURES=$((FAILURES + 1))
-    continue
-  fi
-
-  IFS=',' read -ra expects <<< "$expected"
-  ok=0
-  for e in "${expects[@]}"; do
-    [ "$status" = "$e" ] && ok=1
-  done
-
-  if [ "$ok" -eq 1 ]; then
-    printf "${GREEN}[PASS]${NC} %-30s %-6s  -> %s\n" "$path" "$status" "${body:0:120}"
-  else
-    printf "${RED}[FAIL]${NC} %-30s %-6s  -> %s\n" "$path" "$status" "${body:0:120}"
-    FAILURES=$((FAILURES + 1))
-  fi
-done
-
-echo
+echo ""
 if [ "$FAILURES" -eq 0 ]; then
-  printf "${GREEN}=== ALL GREEN ($TOTAL/$TOTAL) ===${NC}\n"
+  echo -e "${GREEN}=== ALL GREEN (6/6) ===${NC}"
   exit 0
 else
-  printf "${RED}=== RED: $FAILURES of $TOTAL failed ===${NC}\n"
+  echo -e "${RED}=== RED: $FAILURES of 6 failed ===${NC}"
   exit 1
 fi

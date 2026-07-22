@@ -82,6 +82,41 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return;
   }
 
+  // /api/og-image — server-rendered SVG social card. Inline here (same
+  // reason as /api/config) so Vercel's bundler picks it up. 1200x630 SVG that
+  // matches the Open Graph image dimensions. Crisp on retina because SVG.
+  if (url === '/api/og-image' || url.startsWith('/api/og-image?')) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a1518"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#B8963E"/>
+      <stop offset="100%" stop-color="#8a6f2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="980" cy="120" r="180" fill="url(#gold)" opacity="0.15"/>
+  <circle cx="180" cy="540" r="220" fill="url(#gold)" opacity="0.10"/>
+  <line x1="80" y1="80" x2="180" y2="80" stroke="url(#gold)" stroke-width="2"/>
+  <line x1="80" y1="80" x2="80" y2="180" stroke="url(#gold)" stroke-width="2"/>
+  <text x="80" y="130" font-family="'Inter', sans-serif" font-size="14" fill="#B8963E" letter-spacing="6" font-weight="700">KARIBBEAN LUXURY OPERATORS</text>
+  <text x="80" y="320" font-family="'Cormorant Garamond', serif" font-size="92" fill="#f4efe6" font-weight="600" font-style="italic">KLO</text>
+  <text x="80" y="400" font-family="'Cormorant Garamond', serif" font-size="42" fill="#B8963E" font-weight="300">Lujo incomparable</text>
+  <text x="80" y="445" font-family="'Cormorant Garamond', serif" font-size="42" fill="#B8963E" font-weight="300">en el Caribe Colombiano</text>
+  <line x1="80" y1="500" x2="200" y2="500" stroke="url(#gold)" stroke-width="2"/>
+  <text x="80" y="540" font-family="'Inter', sans-serif" font-size="18" fill="#f4efe6" opacity="0.7" letter-spacing="2">Aviation · Transport · Yachts · Lodging · Staff</text>
+  <text x="80" y="570" font-family="'Inter', sans-serif" font-size="14" fill="#B8963E" letter-spacing="3">karibbeanluxuryoperators.lat</text>
+</svg>`;
+    res.statusCode = 200;
+    res.setHeader('content-type', 'image/svg+xml; charset=utf-8');
+    res.setHeader('cache-control', 'public, max-age=3600, s-maxage=86400');
+    res.end(svg);
+    return;
+  }
+
   if (!app) {
     res.statusCode = 500;
     res.setHeader('content-type', 'application/json');

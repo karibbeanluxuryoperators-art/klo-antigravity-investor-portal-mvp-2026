@@ -168,6 +168,8 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
       <SuppliersManagement
         lang={lang}
         onViewAssets={() => { /* TODO: navigate to asset detail */ }}
+        onSignOut={handleSignOut}
+        signedInEmail={state.email}
       />
     );
   }

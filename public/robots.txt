@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /supplier/dashboard
+Disallow: /supplier/portal
+Disallow: /admin
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://www.karibbeanluxuryoperators.lat/sitemap.xml

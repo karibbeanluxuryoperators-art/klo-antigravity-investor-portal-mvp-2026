@@ -1,0 +1,91 @@
+name: KLO CI
+
+# Triggers: every push to any branch, every PR. Manual dispatch for ad-hoc reruns.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['v1/supplier-portal', 'main']
+  workflow_dispatch:
+
+# Cancel in-progress runs for the same branch on new pushes (save CI minutes).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# One job that runs smoke + lint + build. Fast feedback before merging.
+jobs:
+  verify:
+    name: Lint + Build + Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20 (matches Vercel)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+        timeout-minutes: 5
+
+      - name: TypeScript type check (no emit)
+        run: npm run lint
+        timeout-minutes: 3
+
+      - name: Build production bundle
+        run: npm run build
+        timeout-minutes: 3
+        env:
+          # CI dummy values so the build doesn't try to call Supabase at build time.
+          # Real values live in Vercel env vars, not in GitHub secrets.
+          VITE_SUPABASE_URL: 'https://placeholder.supabase.co'
+          VITE_SUPABASE_ANON_KEY: 'placeholder.anon.key'
+          VITE_FIREBASE_API_KEY: 'placeholder'
+          VITE_FIREBASE_AUTH_DOMAIN: 'placeholder.firebaseapp.com'
+          VITE_FIREBASE_PROJECT_ID: 'placeholder'
+          VITE_FIREBASE_STORAGE_BUCKET: 'placeholder.appspot.com'
+          VITE_FIREBASE_MESSAGING_SENDER_ID: '0'
+          VITE_FIREBASE_APP_ID: '0:0:web:0'
+          VITE_FIREBASE_MEASUREMENT_ID: 'G-XXXXXX'
+          VITE_APP_URL: 'https://www.karibbeanluxuryoperators.lat'
+
+      - name: Smoke test against preview deploy
+        env:
+          SMOKE_BASE: ${{ github.event.deployment_url || 'https://www.karibbeanluxuryoperators.lat' }}
+          # The smoke script reads these for auth if needed; safe to leave blank for the public endpoint suite.
+          SUPABASE_URL: 'https://placeholder.supabase.co'
+          SUPABASE_SERVICE_KEY: 'placeholder'
+        run: |
+          # Convert preview URL to https if Vercel returned a relative path
+          if [[ "$SMOKE_BASE" != http* ]]; then
+            echo "::warning::No preview URL; falling back to production URL"
+            SMOKE_BASE="https://www.karibbeanluxuryoperators.lat"
+          fi
+          echo "Running smoke against $SMOKE_BASE"
+          # We can't run the PowerShell script on Linux; use a Linux equivalent.
+          bash scripts/smoke.sh "$SMOKE_BASE"
+        timeout-minutes: 2
+        # Don't fail the build on smoke (it may hit real production and we want CI fast)
+        continue-on-error: true
+
+  # Separate job: code review helpers (label, comment on PRs)
+  pr-helper:
+    name: PR Auto-label
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Auto-label by touched paths
+        uses: actions/labeler@v5
+        with:
+          configuration-path: .github/labeler.yml
+        continue-on-error: true
