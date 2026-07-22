@@ -72,8 +72,8 @@ const ASSET_TYPE_LABELS: Record<string, Record<Language, string>> = {
 };
 
 const BOOKING_STATUS_COLORS: Record<string, string> = {
-  PENDING:   'bg-slate-100 text-slate-500 border-white/20',
-  CONFIRMED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  PENDING:   'bg-white/10 text-white/70 border-white/20',
+  CONFIRMED: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
   CANCELLED: "bg-red-50 text-red-600 border-red-200",
 };
 
@@ -318,23 +318,23 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="min-h-screen bg-white/5 text-white">
         {/* v1.5: skeleton shell that mirrors the real layout, so the page
             doesn't flash blank while /api/suppliers/lookup and
             /api/suppliers/:id/assets are in flight. Three pulse layers:
             header bar, 4 stat cards, two content rows. */}
-        <div className="bg-white border-b border-slate-200 shadow-sm">
+        <div className="bg-white border-b border-white/10 ">
           <div className="max-w-7xl mx-auto px-6 py-6">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-5 h-5 rounded bg-slate-100 animate-pulse" />
+              <div className="w-5 h-5 rounded bg-white/5 animate-pulse" />
               <div className="space-y-2">
-                <div className="h-6 w-48 rounded bg-slate-100 animate-pulse" />
-                <div className="h-3 w-32 rounded bg-slate-100 animate-pulse" />
+                <div className="h-6 w-48 rounded bg-white/5 animate-pulse" />
+                <div className="h-3 w-32 rounded bg-white/5 animate-pulse" />
               </div>
             </div>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className="h-9 w-20 rounded-full bg-slate-50 animate-pulse" />
+                <div key={i} className="h-9 w-20 rounded-full bg-white/5 animate-pulse" />
               ))}
             </div>
           </div>
@@ -343,19 +343,19 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
           {/* 4 stat-card skeletons */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6">
+              <div key={i} className="bg-white border border-white/10  rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="h-3 w-20 rounded bg-slate-100 animate-pulse" />
-                  <div className="w-4 h-4 rounded bg-slate-100 animate-pulse" />
+                  <div className="h-3 w-20 rounded bg-white/5 animate-pulse" />
+                  <div className="w-4 h-4 rounded bg-white/5 animate-pulse" />
                 </div>
-                <div className="h-8 w-16 rounded bg-slate-100 animate-pulse" />
+                <div className="h-8 w-16 rounded bg-white/5 animate-pulse" />
               </div>
             ))}
           </div>
           {/* Two content rows */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white border border-slate-200 shadow-sm rounded-2xl h-64 animate-pulse" />
-            <div className="bg-white border border-slate-200 shadow-sm rounded-2xl h-64 animate-pulse" />
+            <div className="bg-white border border-white/10  rounded-2xl h-64 animate-pulse" />
+            <div className="bg-white border border-white/10  rounded-2xl h-64 animate-pulse" />
           </div>
         </div>
       </div>
@@ -364,13 +364,13 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
 
   if (!supplierId) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex items-center justify-center p-8">
+      <div className="min-h-screen bg-white/5 text-white flex items-center justify-center p-8">
         <div className="max-w-lg text-center space-y-6">
           <div className="w-16 h-16 bg-[#B8963E]/10 rounded-full flex items-center justify-center mx-auto text-[#B8963E]">
             <AlertCircle size={32} />
           </div>
-          <h2 className="text-3xl font-serif italic text-slate-900">No Partner Profile Found</h2>
-          <p className="text-slate-500 font-light leading-relaxed">
+          <h2 className="text-3xl font-serif italic text-white">No Partner Profile Found</h2>
+          <p className="text-white/60 font-light leading-relaxed">
             {lang === 'EN'
               ? "You don't have a partner profile yet. Complete the supplier application first to access your dashboard."
               : lang === 'ES'
@@ -378,7 +378,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
               : "Você ainda não tem um perfil de parceiro. Complete o cadastro de fornecedor primeiro."}
           </p>
           <button onClick={onBack}
-            className="px-8 py-3 bg-[#B8963E] text-white rounded-full font-semibold text-[10px] uppercase tracking-[0.3em] hover:bg-slate-900 transition-all">
+            className="px-8 py-3 bg-[#B8963E] text-white rounded-full font-semibold text-[10px] uppercase tracking-[0.3em] hover:bg-white/10 transition-all">
             {lang === 'EN' ? 'Go Back' : lang === 'ES' ? 'Volver' : 'Voltar'}
           </button>
         </div>
@@ -387,13 +387,13 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-white/5 text-white">
       {/* Header */}
-      <div className="bg-white border-b border-slate-200 shadow-sm">
+      <div className="bg-white border-b border-white/10 ">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <button onClick={onBack} className="text-slate-500 hover:text-slate-900 transition-colors">
+              <button onClick={onBack} className="text-white/60 hover:text-white transition-colors">
                 <ChevronRight size={20} className="rotate-180" />
               </button>
               <div>
@@ -403,10 +403,10 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                 <p className="text-[10px] text-[#B8963E] uppercase tracking-[0.3em] font-semibold mb-1">
                   {lang === 'EN' ? `Welcome back, ${user.name?.split(' ')[0] || 'Partner'}` : lang === 'ES' ? `Bienvenido de nuevo, ${user.name?.split(' ')[0] || 'Socio'}` : `Bem-vindo de volta, ${user.name?.split(' ')[0] || 'Parceiro'}`}
                 </p>
-                <h1 className="text-2xl font-serif italic text-slate-900">
+                <h1 className="text-2xl font-serif italic text-white">
                   {supplierData?.business_name || user.name}
                 </h1>
-                <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em] font-semibold">
+                <p className="text-[10px] text-white/60 uppercase tracking-[0.3em] font-semibold">
                   {supplierData?.asset_type} Partner · {supplierData?.location}
                 </p>
               </div>
@@ -415,7 +415,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
               <span className={`text-[8px] px-3 py-1 rounded-full border uppercase tracking-widest font-bold ${
                 supplierData?.status === 'APPROVED'
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                  : 'bg-slate-100 text-slate-500 border-slate-200'
+                  : 'bg-white/5 text-white/60 border-white/10'
               }`}>
                 {supplierData?.status}
               </span>
@@ -434,7 +434,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                   className={`flex items-center gap-2 px-5 py-3 rounded-full text-[11px] font-semibold uppercase tracking-widest transition-all ${
                     activeTab === tab.id
                       ? 'bg-[#B8963E] text-white'
-                      : 'text-slate-500 hover:text-slate-900/70 hover:bg-slate-100'
+                      : 'text-white/60 hover:text-white/70 hover:bg-white/5'
                   }`}>
                   <Icon size={14} />
                   {tab.label[lang]}
@@ -482,20 +482,20 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                   { label: { EN: 'Total Earnings', ES: 'Ganancias Totales', PT: 'Ganhos Totais' }, value: `$${stats.totalEarnings.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, icon: DollarSign, color: 'text-gold' },
                 ].map((stat, i) => (
                   <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                    className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6">
+                    className="bg-white border border-white/10  rounded-2xl p-6">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{stat.label[lang]}</span>
+                      <span className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{stat.label[lang]}</span>
                       <stat.icon size={16} className={stat.color} />
                     </div>
-                    <span className="text-3xl font-serif italic text-slate-900">{stat.value}</span>
+                    <span className="text-3xl font-serif italic text-white">{stat.value}</span>
                   </motion.div>
                 ))}
               </div>
 
               {/* Recent Bookings */}
-              <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
-                <div className="px-8 py-6 border-b border-slate-200 flex items-center justify-between">
-                  <h3 className="text-lg font-serif italic text-slate-900">
+              <div className="bg-white border border-white/10  rounded-2xl overflow-hidden">
+                <div className="px-8 py-6 border-b border-white/10 flex items-center justify-between">
+                  <h3 className="text-lg font-serif italic text-white">
                     {lang === 'EN' ? 'Recent Bookings' : lang === 'ES' ? 'Reservas Recientes' : 'Reservas Recentes'}
                   </h3>
                   <button onClick={() => setActiveTab('bookings')}
@@ -504,24 +504,24 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                   </button>
                 </div>
                 {bookings.length === 0 ? (
-                  <div className="p-12 text-center text-slate-400 text-sm">
+                  <div className="p-12 text-center text-white/40 text-sm">
                     {lang === 'EN' ? 'No bookings yet' : lang === 'ES' ? 'Sin reservas aún' : 'Nenhuma reserva ainda'}
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-200">
+                  <div className="divide-y divide-white/10">
                     {bookings.slice(0, 5).map(b => (
-                      <div key={b.id} className="px-8 py-5 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                      <div key={b.id} className="px-8 py-5 flex items-center justify-between hover:bg-white/5 transition-colors">
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 bg-[#B8963E]/10 rounded-xl flex items-center justify-center text-[#B8963E]">
                             <Users size={18} />
                           </div>
                           <div>
-                            <p className="text-sm font-medium text-slate-900">{b.guest_name}</p>
-                            <p className="text-[10px] text-slate-500">{b.asset_name} · {b.start_date}</p>
+                            <p className="text-sm font-medium text-white">{b.guest_name}</p>
+                            <p className="text-[10px] text-white/60">{b.asset_name} · {b.start_date}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
-                          <span className={`text-[8px] px-3 py-1 rounded-full border uppercase tracking-widest font-bold ${BOOKING_STATUS_COLORS[b.status] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                          <span className={`text-[8px] px-3 py-1 rounded-full border uppercase tracking-widest font-bold ${BOOKING_STATUS_COLORS[b.status] || 'bg-white/5 text-white/60 border-white/10'}`}>
                             {b.status}
                           </span>
                           <span className="text-sm font-bold text-gold">{b.total_price}</span>
@@ -533,9 +533,9 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
               </div>
 
               {/* Assets Preview */}
-              <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
-                <div className="px-8 py-6 border-b border-slate-200 flex items-center justify-between">
-                  <h3 className="text-lg font-serif italic text-slate-900">
+              <div className="bg-white border border-white/10  rounded-2xl overflow-hidden">
+                <div className="px-8 py-6 border-b border-white/10 flex items-center justify-between">
+                  <h3 className="text-lg font-serif italic text-white">
                     {lang === 'EN' ? 'Your Assets' : lang === 'ES' ? 'Tus Activos' : 'Seus Ativos'}
                   </h3>
                   <button onClick={() => setActiveTab('assets')}
@@ -545,7 +545,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                 </div>
                 {assets.length === 0 ? (
                   <div className="p-12 text-center">
-                    <p className="text-slate-400 text-sm mb-4">
+                    <p className="text-white/40 text-sm mb-4">
                       {lang === 'EN' ? 'No assets yet — add your first one!' : lang === 'ES' ? 'Sin activos aún — ¡agrega el primero!' : 'Nenhum ativo ainda — adicione o primeiro!'}
                     </p>
                     <button onClick={() => openEditModal()}
@@ -558,13 +558,13 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                     {assets.slice(0, 3).map(asset => {
                       const Icon = ASSET_TYPE_ICONS[asset.type] || Package;
                       return (
-                        <div key={asset.id} className="bg-slate-50 border border-slate-200 rounded-xl p-5 flex items-center gap-4">
+                        <div key={asset.id} className="bg-white/5 border border-white/10 rounded-xl p-5 flex items-center gap-4">
                           <div className="w-12 h-12 bg-[#B8963E]/10 rounded-xl flex items-center justify-center text-[#B8963E] shrink-0">
                             <Icon size={20} />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-slate-900 truncate">{asset.name}</p>
-                            <p className="text-[10px] text-slate-500">{ASSET_TYPE_LABELS[asset.type]?.[lang] || asset.type}</p>
+                            <p className="text-sm font-medium text-white truncate">{asset.name}</p>
+                            <p className="text-[10px] text-white/60">{ASSET_TYPE_LABELS[asset.type]?.[lang] || asset.type}</p>
                           </div>
                         </div>
                       );
@@ -580,10 +580,10 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
                   <input value={search} onChange={e => setSearch(e.target.value)}
                     placeholder={lang === 'EN' ? 'Search assets...' : lang === 'ES' ? 'Buscar activos...' : 'Pesquisar ativos...'}
-                    className="bg-white border border-slate-200 shadow-sm rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all text-sm text-slate-900 w-full sm:w-64" />
+                    className="bg-white border border-white/10  rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all text-sm text-white w-full sm:w-64" />
                 </div>
                 <button onClick={() => openEditModal()}
                   className="px-6 py-3 bg-gold text-luxury-black rounded-full font-semibold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-white transition-all shrink-0">
@@ -593,19 +593,19 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
 
               {filteredAssets.length === 0 ? (
                 <div className="py-20 text-center space-y-4">
-                  <Package size={48} className="text-slate-900/10 mx-auto mb-4" />
+                  <Package size={48} className="text-white/10 mx-auto mb-4" />
                   {assets.length === 0 ? (
                     <>
-                      <p className="text-slate-900/50 text-sm">
+                      <p className="text-white/50 text-sm">
                         {lang === 'EN' ? 'You have not listed any assets yet.' : lang === 'ES' ? 'Aún no has listado ningún activo.' : 'Você ainda não listou nenhum ativo.'}
                       </p>
                       <button onClick={() => openEditModal()}
-                        className="inline-flex items-center gap-2 px-8 py-3 bg-[#B8963E] text-white rounded-full font-semibold text-[10px] uppercase tracking-[0.3em] hover:bg-slate-900 transition-all">
+                        className="inline-flex items-center gap-2 px-8 py-3 bg-[#B8963E] text-white rounded-full font-semibold text-[10px] uppercase tracking-[0.3em] hover:bg-white/10 transition-all">
                         <Plus size={14} /> {lang === 'EN' ? 'List your first asset' : lang === 'ES' ? 'Lista tu primer activo' : 'Liste seu primeiro ativo'}
                       </button>
                     </>
                   ) : (
-                    <p className="text-slate-400 text-sm">
+                    <p className="text-white/40 text-sm">
                       {lang === 'EN' ? 'No assets match your search' : lang === 'ES' ? 'Sin resultados' : 'Nenhum resultado'}
                     </p>
                   )}
@@ -619,51 +619,51 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                     return (
                       <motion.div key={asset.id} layout
                         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden group">
+                        className="bg-white border border-white/10  rounded-2xl overflow-hidden group">
                         {/* Card header */}
                         <div className="p-6">
                           <div className="flex justify-between items-start mb-4">
                             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                              asset.status === 'ACTIVE' ? 'bg-gold/10 text-gold' : 'bg-slate-100 text-slate-500'
+                              asset.status === 'ACTIVE' ? 'bg-[#B8963E]/15 text-[#B8963E]' : 'bg-white/5 text-white/60'
                             }`}>
                               <Icon size={22} />
                             </div>
                             <span className={`text-[8px] px-2 py-1 rounded-full border uppercase tracking-widest font-bold ${
                               asset.status === "ACTIVE"
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
                                 : asset.status === 'PENDING'
-                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
                                 : "bg-red-50 text-red-600 border-red-200"
                             }`}>
                               {asset.status}
                             </span>
                           </div>
-                          <h3 className="text-lg font-serif italic text-slate-900 mb-1">{asset.name}</h3>
+                          <h3 className="text-lg font-serif italic text-white mb-1">{asset.name}</h3>
                           <div className="flex items-center gap-2 mb-4">
-                            <span className="text-[10px] text-slate-500 uppercase tracking-widest">{ASSET_TYPE_LABELS[asset.type]?.[lang]}</span>
-                            <span className="text-slate-300">·</span>
-                            <span className="text-[10px] text-slate-500">{asset.location}</span>
+                            <span className="text-[10px] text-white/60 uppercase tracking-widest">{ASSET_TYPE_LABELS[asset.type]?.[lang]}</span>
+                            <span className="text-white/30">·</span>
+                            <span className="text-[10px] text-white/60">{asset.location}</span>
                           </div>
                           <div className="flex justify-between items-center">
                             <span className="text-xl font-serif italic text-gold">{asset.price_per_unit}</span>
-                            <span className="text-[10px] text-slate-500">{asset.capacity} PAX</span>
+                            <span className="text-[10px] text-white/60">{asset.capacity} PAX</span>
                           </div>
                         </div>
 
                         {/* Card actions */}
-                        <div className="border-t border-border-main flex divide-x divide-slate-200">
+                        <div className="border-t border-white/5 flex divide-x divide-white/10">
                           <button onClick={() => openEditModal(asset)}
-                            className="flex-1 py-3 text-[10px] uppercase tracking-widest font-semibold text-slate-900/50 hover:text-[#B8963E] hover:bg-[#B8963E]/5 transition-all flex items-center justify-center gap-1.5">
+                            className="flex-1 py-3 text-[10px] uppercase tracking-widest font-semibold text-white/50 hover:text-[#B8963E] hover:bg-[#B8963E]/5 transition-all flex items-center justify-center gap-1.5">
                             <Edit2 size={12} /> {lang === 'EN' ? 'Edit' : lang === 'ES' ? 'Editar' : 'Editar'}
                           </button>
                           <button onClick={() => handleSyncCalendar(asset.id)}
                             disabled={isSyncing}
-                            className="flex-1 py-3 text-[10px] uppercase tracking-widest font-semibold text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-1.5">
+                            className="flex-1 py-3 text-[10px] uppercase tracking-widest font-semibold text-white/60 hover:text-blue-400 hover:bg-blue-500/10 transition-all flex items-center justify-center gap-1.5">
                             {isSyncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
                             {lang === 'EN' ? 'Sync' : lang === 'ES' ? 'Sincronizar' : 'Sincronizar'}
                           </button>
                           <button onClick={() => handleDeleteAsset(asset.id)}
-                            className="flex-1 py-3 text-[10px] uppercase tracking-widest font-semibold text-slate-400 hover:text-red-500 hover:bg-red-500/5 transition-all flex items-center justify-center gap-1.5">
+                            className="flex-1 py-3 text-[10px] uppercase tracking-widest font-semibold text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all flex items-center justify-center gap-1.5">
                             <Trash2 size={12} /> {lang === 'EN' ? 'Delete' : lang === 'ES' ? 'Eliminar' : 'Excluir'}
                           </button>
                         </div>
@@ -679,52 +679,52 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
           {activeTab === 'bookings' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
                 <input value={search} onChange={e => setSearch(e.target.value)}
                   placeholder={lang === 'EN' ? 'Search bookings...' : lang === 'ES' ? 'Buscar reservas...' : 'Pesquisar reservas...'}
-                  className="bg-white border border-slate-200 shadow-sm rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all text-sm text-slate-900 w-full sm:w-64" />
+                  className="bg-white border border-white/10  rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all text-sm text-white w-full sm:w-64" />
               </div>
 
               {loadingBookings ? (
                 <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-gold" size={32} /></div>
               ) : filteredBookings.length === 0 ? (
                 <div className="py-20 text-center">
-                  <Calendar size={48} className="text-slate-900/10 mx-auto mb-4" />
-                  <p className="text-slate-400 text-sm">
+                  <Calendar size={48} className="text-white/10 mx-auto mb-4" />
+                  <p className="text-white/40 text-sm">
                     {bookings.length === 0
                       ? (lang === 'EN' ? 'No bookings yet' : lang === 'ES' ? 'Sin reservas aún' : 'Nenhuma reserva ainda')
                       : (lang === 'EN' ? 'No results' : lang === 'ES' ? 'Sin resultados' : 'Nenhum resultado')}
                   </p>
                 </div>
               ) : (
-                <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+                <div className="bg-white border border-white/10  rounded-2xl overflow-hidden">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50">
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Guest' : lang === 'ES' ? 'Huésped' : 'Hóspede'}</th>
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Asset' : lang === 'ES' ? 'Activo' : 'Ativo'}</th>
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Dates' : lang === 'ES' ? 'Fechas' : 'Datas'}</th>
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Total' : lang === 'ES' ? 'Total' : 'Total'}</th>
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Status' : lang === 'ES' ? 'Estado' : 'Estado'}</th>
+                      <tr className="border-b border-white/10 bg-white/5">
+                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Guest' : lang === 'ES' ? 'Huésped' : 'Hóspede'}</th>
+                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Asset' : lang === 'ES' ? 'Activo' : 'Ativo'}</th>
+                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Dates' : lang === 'ES' ? 'Fechas' : 'Datas'}</th>
+                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Total' : lang === 'ES' ? 'Total' : 'Total'}</th>
+                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Status' : lang === 'ES' ? 'Estado' : 'Estado'}</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200">
+                    <tbody className="divide-y divide-white/10">
                       {filteredBookings.map(b => (
-                        <tr key={b.id} className="hover:bg-slate-50 transition-colors">
+                        <tr key={b.id} className="hover:bg-white/5 transition-colors">
                           <td className="px-6 py-5">
-                            <div className="text-sm font-medium text-slate-900">{b.guest_name}</div>
-                            <div className="text-[10px] text-slate-500">{b.guest_email}</div>
+                            <div className="text-sm font-medium text-white">{b.guest_name}</div>
+                            <div className="text-[10px] text-white/60">{b.guest_email}</div>
                           </td>
                           <td className="px-6 py-5">
-                            <div className="text-sm text-slate-900">{b.asset_name || '—'}</div>
-                            <div className="text-[10px] text-slate-500 uppercase">{b.asset_type}</div>
+                            <div className="text-sm text-white">{b.asset_name || '—'}</div>
+                            <div className="text-[10px] text-white/60 uppercase">{b.asset_type}</div>
                           </td>
-                          <td className="px-6 py-5 text-xs text-slate-500">{b.start_date} → {b.end_date}</td>
+                          <td className="px-6 py-5 text-xs text-white/60">{b.start_date} → {b.end_date}</td>
                           <td className="px-6 py-5">
                             <span className="text-sm font-bold text-gold">{b.total_price}</span>
                           </td>
                           <td className="px-6 py-5">
-                            <span className={`text-[8px] px-3 py-1 rounded-full border uppercase tracking-widest font-bold ${BOOKING_STATUS_COLORS[b.status] || 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                            <span className={`text-[8px] px-3 py-1 rounded-full border uppercase tracking-widest font-bold ${BOOKING_STATUS_COLORS[b.status] || 'bg-white/5 text-white/60 border-white/10'}`}>
                               {b.status}
                             </span>
                           </td>
@@ -747,54 +747,54 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
           {/* ── SETTINGS TAB ── */}
           {activeTab === 'settings' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6 max-w-2xl">
-              <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
-                <div className="px-8 py-6 border-b border-slate-200">
-                  <h3 className="text-xl font-serif italic text-slate-900">{lang === 'EN' ? 'Account Settings' : lang === 'ES' ? 'Ajustes de Cuenta' : 'Configurações da Conta'}</h3>
-                  <p className="text-[11px] text-slate-500 mt-1">{lang === 'EN' ? 'Manage your partner profile' : lang === 'ES' ? 'Gestiona tu perfil de socio' : 'Gerencie seu perfil de parceiro'}</p>
+              <div className="bg-white border border-white/10  rounded-2xl overflow-hidden">
+                <div className="px-8 py-6 border-b border-white/10">
+                  <h3 className="text-xl font-serif italic text-white">{lang === 'EN' ? 'Account Settings' : lang === 'ES' ? 'Ajustes de Cuenta' : 'Configurações da Conta'}</h3>
+                  <p className="text-[11px] text-white/60 mt-1">{lang === 'EN' ? 'Manage your partner profile' : lang === 'ES' ? 'Gestiona tu perfil de socio' : 'Gerencie seu perfil de parceiro'}</p>
                 </div>
                 <div className="p-8 space-y-6">
                   <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Business Name' : lang === 'ES' ? 'Nombre del Negocio' : 'Nome do Negócio'}</label>
+                      <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Business Name' : lang === 'ES' ? 'Nombre del Negocio' : 'Nome do Negócio'}</label>
                       <input value={supplierData?.business_name || ''} readOnly
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900" />
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Contact' : lang === 'ES' ? 'Contacto' : 'Contato'}</label>
+                        <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Contact' : lang === 'ES' ? 'Contacto' : 'Contato'}</label>
                         <input value={supplierData?.contact_name || ''} readOnly
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900" />
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Location' : lang === 'ES' ? 'Ubicación' : 'Localização'}</label>
+                        <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Location' : lang === 'ES' ? 'Ubicación' : 'Localização'}</label>
                         <input value={supplierData?.location || ''} readOnly
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900" />
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Email' : lang === 'ES' ? 'Correo' : 'E-mail'}</label>
+                      <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Email' : lang === 'ES' ? 'Correo' : 'E-mail'}</label>
                       <input value={supplierData?.email || ''} readOnly
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900" />
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">WhatsApp</label>
+                      <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">WhatsApp</label>
                       <input value={supplierData?.whatsapp || ''} readOnly
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900" />
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
                     </div>
                   </div>
-                  <p className="text-[10px] text-slate-400 italic">{lang === 'EN' ? 'Profile edits coming soon. Contact KLO admin to update your details.' : lang === 'ES' ? 'Las ediciones de perfil estarán disponibles pronto. Contacta al administrador de KLO para actualizar tus datos.' : 'Edições de perfil em breve. Contate o administrador KLO para atualizar seus dados.'}</p>
+                  <p className="text-[10px] text-white/40 italic">{lang === 'EN' ? 'Profile edits coming soon. Contact KLO admin to update your details.' : lang === 'ES' ? 'Las ediciones de perfil estarán disponibles pronto. Contacta al administrador de KLO para actualizar tus datos.' : 'Edições de perfil em breve. Contate o administrador KLO para atualizar seus dados.'}</p>
                 </div>
               </div>
 
               {/* Telegram Settings */}
-              <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
-                <div className="px-8 py-6 border-b border-slate-200 flex items-start gap-4">
-                  <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 shrink-0 mt-0.5">
+              <div className="bg-white border border-white/10  rounded-2xl overflow-hidden">
+                <div className="px-8 py-6 border-b border-white/10 flex items-start gap-4">
+                  <div className="w-10 h-10 bg-blue-500/15 rounded-xl flex items-center justify-center text-blue-400 shrink-0 mt-0.5">
                     <MessageSquare size={20} />
                   </div>
                   <div>
-                    <h3 className="text-lg font-serif italic text-slate-900">{lang === 'EN' ? 'Telegram Notifications' : lang === 'ES' ? 'Notificaciones de Telegram' : 'Notificações do Telegram'}</h3>
-                    <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                    <h3 className="text-lg font-serif italic text-white">{lang === 'EN' ? 'Telegram Notifications' : lang === 'ES' ? 'Notificaciones de Telegram' : 'Notificações do Telegram'}</h3>
+                    <p className="text-[11px] text-white/60 mt-1 leading-relaxed">
                       {lang === 'EN'
                         ? 'Receive booking notifications directly on Telegram. Start a chat with your KLO bot and send your Chat ID.'
                         : lang === 'ES'
@@ -806,7 +806,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                 <div className="p-8 space-y-4">
                   <div className="bg-[#B8963E]/5 border border-[#B8963E]/20 rounded-xl p-4 flex items-start gap-3">
                     <AlertCircle size={16} className="text-[#B8963E] mt-0.5 shrink-0" />
-                    <p className="text-xs text-slate-500 leading-relaxed">
+                    <p className="text-xs text-white/60 leading-relaxed">
                       {lang === 'EN'
                         ? 'To get your Chat ID: open Telegram, search for your KLO bot, send /start, then send /id. Copy the number it returns.'
                         : lang === 'ES'
@@ -815,11 +815,11 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Telegram Chat ID' : lang === 'ES' ? 'ID de Chat de Telegram' : 'ID do Chat do Telegram'}</label>
+                    <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Telegram Chat ID' : lang === 'ES' ? 'ID de Chat de Telegram' : 'ID do Chat do Telegram'}</label>
                     <div className="flex gap-3">
                       <input value={telegramChatId} onChange={e => setTelegramChatId(e.target.value)}
                         placeholder="123456789"
-                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30" />
+                        className="flex-1 bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30" />
                       <button onClick={handleSaveTelegram} disabled={saving}
                         className="px-6 py-3 bg-gold text-luxury-black rounded-full font-semibold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-white transition-all disabled:opacity-50 shrink-0">
                         {saving ? <Loader2 size={12} className="animate-spin" /> : telegramSaved ? <Check size={12} /> : <Send size={12} />}
@@ -842,66 +842,66 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
               onClick={closeModal} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-xl bg-white border border-slate-200 shadow-sm rounded-2xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
-              <button onClick={closeModal} className="absolute top-6 right-6 text-slate-500 hover:text-slate-900">
+              className="relative w-full max-w-xl bg-white border border-white/10  rounded-2xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+              <button onClick={closeModal} className="absolute top-6 right-6 text-white/60 hover:text-white">
                 <X size={20} />
               </button>
-              <h3 className="text-2xl font-serif italic text-slate-900 mb-6">
+              <h3 className="text-2xl font-serif italic text-white mb-6">
                 {editingAsset.id ? (lang === 'EN' ? 'Edit Asset' : lang === 'ES' ? 'Editar Activo' : 'Editar Ativo')
                   : (lang === 'EN' ? 'Add New Asset' : lang === 'ES' ? 'Agregar Activo' : 'Adicionar Ativo')}
               </h3>
 
               <div className="space-y-5">
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">
+                  <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">
                     {lang === 'EN' ? 'Asset Name' : lang === 'ES' ? 'Nombre del Activo' : 'Nome do Ativo'}
                   </label>
                   <input value={editingAsset.name || ''} onChange={e => setEditingAsset({ ...editingAsset, name: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30" />
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30" />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Type' : lang === 'ES' ? 'Tipo' : 'Tipo'}</label>
+                    <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Type' : lang === 'ES' ? 'Tipo' : 'Tipo'}</label>
                     <select value={editingAsset.type || 'LODGING'} onChange={e => setEditingAsset({ ...editingAsset, type: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 appearance-none">
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 appearance-none">
                       {Object.entries(ASSET_TYPE_LABELS).map(([val, lbl]) => (
                         <option key={val} value={val}>{lbl[lang]}</option>
                       ))}
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Location' : lang === 'ES' ? 'Ubicación' : 'Localização'}</label>
+                    <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Location' : lang === 'ES' ? 'Ubicación' : 'Localização'}</label>
                     <input value={editingAsset.location || ''} onChange={e => setEditingAsset({ ...editingAsset, location: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30" />
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Price' : lang === 'ES' ? 'Precio' : 'Preço'}</label>
+                    <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Price' : lang === 'ES' ? 'Precio' : 'Preço'}</label>
                     <input value={editingAsset.price_per_unit || ''} onChange={e => setEditingAsset({ ...editingAsset, price_per_unit: e.target.value })}
                       placeholder={lang === 'EN' ? '$0.00' : lang === 'ES' ? '0,00 $' : 'R$ 0,00'}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30" />
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Capacity (PAX)' : lang === 'ES' ? 'Capacidad (PAX)' : 'Capacidade (PAX)'}</label>
+                    <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Capacity (PAX)' : lang === 'ES' ? 'Capacidad (PAX)' : 'Capacidade (PAX)'}</label>
                     <input type="number" value={editingAsset.capacity || 1} onChange={e => setEditingAsset({ ...editingAsset, capacity: parseInt(e.target.value) || 1 })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30" />
+                      className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30" />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Description' : lang === 'ES' ? 'Descripción' : 'Descrição'}</label>
+                  <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Description' : lang === 'ES' ? 'Descripción' : 'Descrição'}</label>
                   <textarea value={editingAsset.description || ''} onChange={e => setEditingAsset({ ...editingAsset, description: e.target.value })}
                     rows={3}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 resize-none" />
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 resize-none" />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-[0.3em] text-slate-500 font-semibold">{lang === 'EN' ? 'Status' : lang === 'ES' ? 'Estado' : 'Estado'}</label>
+                  <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Status' : lang === 'ES' ? 'Estado' : 'Estado'}</label>
                   <select value={editingAsset.status || 'ACTIVE'} onChange={e => setEditingAsset({ ...editingAsset, status: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-900 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 appearance-none">
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 appearance-none">
                     <option value="ACTIVE">{lang === 'EN' ? 'Active' : lang === 'ES' ? 'Activo' : 'Ativo'}</option>
                     <option value="MAINTENANCE">{lang === 'EN' ? 'Maintenance' : lang === 'ES' ? 'Mantenimiento' : 'Manutenção'}</option>
                     <option value="OFFLINE">{lang === 'EN' ? 'Offline' : lang === 'ES' ? 'Sin conexión' : 'Offline'}</option>
@@ -911,11 +911,11 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
 
               <div className="flex gap-4 mt-8">
                 <button onClick={closeModal}
-                  className="flex-1 py-4 bg-slate-100 border border-slate-200 rounded-xl text-[11px] uppercase tracking-widest font-semibold text-slate-900 hover:bg-slate-100 transition-all">
+                  className="flex-1 py-4 bg-white/5 border border-white/10 rounded-xl text-[11px] uppercase tracking-widest font-semibold text-white hover:bg-white/5 transition-all">
                   {lang === 'EN' ? 'Cancel' : lang === 'ES' ? 'Cancelar' : 'Cancelar'}
                 </button>
                 <button onClick={handleSaveAsset} disabled={saving}
-                  className="flex-1 py-3 bg-[#B8963E] text-white rounded-full hover:bg-slate-900 text-[11px] uppercase tracking-widest font-semibold flex items-center justify-center gap-2 hover:bg-white transition-all disabled:opacity-50">
+                  className="flex-1 py-3 bg-[#B8963E] text-white rounded-full hover:bg-white/10 text-[11px] uppercase tracking-widest font-semibold flex items-center justify-center gap-2 hover:bg-white transition-all disabled:opacity-50">
                   {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                   {saving ? (lang === 'EN' ? 'Saving...' : lang === 'ES' ? 'Guardando...' : 'Salvando...')
                     : (lang === 'EN' ? 'Save Asset' : lang === 'ES' ? 'Guardar' : 'Salvar')}
