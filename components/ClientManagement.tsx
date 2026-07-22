@@ -120,15 +120,15 @@ const t = (key: keyof typeof T_CLIENTS, lang: Language): string => {
 };
 
 const TIER_COLORS: Record<string, string> = {
-  UHNWI: 'bg-[#B8963E]/15 text-[#B8963E] border-[#B8963E]/30',
-  VVIP:  'bg-purple-500/10 text-purple-300 border-purple-500/30',
-  VIP:   'bg-slate-100 text-slate-700 border-slate-200',
+  UHNWI: 'bg-[#B8963E]/20 text-[#B8963E] border-[#B8963E]/40',
+  VVIP:  'bg-purple-500/15 text-purple-300 border-purple-500/30',
+  VIP:   'bg-white/10 text-white/70 border-white/20',
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  ACTIVE:   'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-  INACTIVE: 'bg-slate-100 text-slate-500 border-slate-200',
-  PROSPECT: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+  ACTIVE:   'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  INACTIVE: 'bg-white/5 text-white/40 border-white/10',
+  PROSPECT: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
 };
 
 const emptyPrefs = (): ClientPreferences => ({
@@ -324,32 +324,32 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h2 className="text-4xl font-serif text-slate-900 uppercase tracking-widest mb-2">
+          <h2 className="text-4xl font-serif italic text-white uppercase tracking-widest mb-2">
             {lang === 'EN' ? 'Clients' : lang === 'ES' ? 'Clientes' : 'Clientes'}
           </h2>
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">
+          <p className="text-[10px] text-[#B8963E] uppercase tracking-[0.4em] font-bold">
             {t('intelligence', lang)} · {t('preferences', lang)}
           </p>
         </div>
         <div className="flex flex-wrap gap-4 w-full md:w-auto">
           <div className="relative flex-1 md:w-80">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
             <input
               type="text"
               placeholder={t('search', lang)}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all text-sm text-slate-900"
+              className="w-full bg-white/5 border border-white/10 rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all text-sm text-white placeholder:text-white/30"
             />
           </div>
           {/* Tier filter */}
-          <div className="flex bg-slate-50 rounded-full p-1 border border-slate-200">
+          <div className="flex bg-white/5 rounded-full p-1 border border-white/10">
             {(['ALL', 'UHNWI', 'VVIP', 'VIP'] as const).map((tf) => (
               <button
                 key={tf}
                 onClick={() => setTierFilter(tf)}
                 className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
-                  tierFilter === tf ? 'bg-[#B8963E] text-white' : 'text-slate-500 hover:text-slate-900'
+                  tierFilter === tf ? 'bg-[#B8963E] text-white' : 'text-white/60 hover:text-white'
                 }`}
               >
                 {tf}
@@ -358,7 +358,7 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
           </div>
           <button
             onClick={openCreate}
-            className="px-6 py-3 bg-[#B8963E] text-white rounded-full font-bold uppercase tracking-widest text-[10px] flex items-center gap-3 hover:bg-slate-900 transition-all shrink-0"
+            className="px-6 py-3 bg-[#B8963E] text-white rounded-full font-bold uppercase tracking-[0.3em] text-[10px] flex items-center gap-3 hover:bg-[#B8963E]/90 transition-all shrink-0"
           >
             <UserPlus size={16} /> {t('add_client', lang)}
           </button>
@@ -367,20 +367,20 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
 
       {/* Error banner */}
       {error && (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 flex items-start gap-3">
-          <AlertCircle size={20} className="text-red-500 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-700">{t('err_load', lang)}</p>
+        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 flex items-start gap-3">
+          <AlertCircle size={20} className="text-red-400 shrink-0 mt-0.5" />
+          <p className="text-sm text-red-300">{t('err_load', lang)}</p>
         </div>
       )}
 
       {/* Grid */}
       {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
           <div className="max-w-xl mx-auto space-y-4">
-            <div className="w-16 h-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto">
+            <div className="w-16 h-16 bg-white/5 text-white/30 rounded-full flex items-center justify-center mx-auto">
               <Users size={32} />
             </div>
-            <p className="text-sm text-slate-500 leading-relaxed">
+            <p className="text-sm text-white/50 leading-relaxed">
               {clients.length === 0 ? t('empty', lang) : t('empty_filter', lang)}
             </p>
           </div>
@@ -396,9 +396,9 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 transition={{ delay: Math.min(i * 0.05, 0.4) }}
-                className="rounded-2xl border border-slate-200 bg-white p-8 relative overflow-hidden group hover:border-[#B8963E]/30 transition-all"
+                className="rounded-2xl border border-white/10 bg-white/5 p-8 relative overflow-hidden group hover:border-[#B8963E]/40 hover:bg-white/[0.07] transition-all"
               >
-                <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+                <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity pointer-events-none">
                   <Users size={100} />
                 </div>
 
@@ -408,34 +408,34 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                       {(c.name || '?').charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h4 className="text-2xl font-serif text-slate-900 mb-1">{c.name}</h4>
+                      <h4 className="text-2xl font-serif italic text-white mb-2">{c.name}</h4>
                       <div className="flex flex-wrap gap-2">
-                        <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest rounded-full border ${TIER_COLORS[c.tier] || TIER_COLORS.VIP}`}>
+                        <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] rounded-full border ${TIER_COLORS[c.tier] || TIER_COLORS.VIP}`}>
                           {c.tier}
                         </span>
-                        <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest rounded-full border ${STATUS_COLORS[c.status] || STATUS_COLORS.ACTIVE}`}>
+                        <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] rounded-full border ${STATUS_COLORS[c.status] || STATUS_COLORS.ACTIVE}`}>
                           {c.status}
                         </span>
                       </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">{t('total_spend', lang)}</span>
-                    <span className="text-xl font-serif text-[#B8963E]">{formatSpend(c.total_spend || 0, lang)}</span>
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block mb-1">{t('total_spend', lang)}</span>
+                    <span className="text-xl font-serif italic text-[#B8963E]">{formatSpend(c.total_spend || 0, lang)}</span>
                   </div>
                 </div>
 
                 {/* Contact strip */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-6 text-[11px]">
                   {c.email && (
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <Mail size={12} className="text-slate-400" />
+                    <div className="flex items-center gap-2 text-white/70">
+                      <Mail size={12} className="text-white/40" />
                       <span className="truncate">{c.email}</span>
                     </div>
                   )}
                   {c.whatsapp && (
-                    <div className="flex items-center gap-2 text-slate-600">
-                      <Phone size={12} className="text-emerald-500" />
+                    <div className="flex items-center gap-2 text-white/70">
+                      <Phone size={12} className="text-emerald-400" />
                       <span>{c.whatsapp}</span>
                     </div>
                   )}
@@ -444,15 +444,15 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Preferences */}
                   <div className="space-y-4">
-                    <h5 className="text-[9px] font-bold uppercase tracking-widest text-[#B8963E] flex items-center gap-2">
+                    <h5 className="text-[9px] font-bold uppercase tracking-[0.4em] text-[#B8963E] flex items-center gap-2">
                       <Star size={10} /> {t('preferences', lang)}
                     </h5>
                     {c.preferences?.dietary && c.preferences.dietary.length > 0 && (
                       <div>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">{t('dietary', lang)}</span>
+                        <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block mb-1">{t('dietary', lang)}</span>
                         <div className="flex flex-wrap gap-1.5">
                           {c.preferences.dietary.map((d, j) => (
-                            <span key={j} className="text-[10px] px-2 py-0.5 bg-slate-50 text-slate-700 rounded border border-slate-200">
+                            <span key={j} className="text-[10px] px-2 py-0.5 bg-white/5 text-white/80 rounded border border-white/10">
                               {d}
                             </span>
                           ))}
@@ -461,10 +461,10 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                     )}
                     {c.preferences?.beverages && c.preferences.beverages.length > 0 && (
                       <div>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">{t('beverages', lang)}</span>
+                        <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block mb-1">{t('beverages', lang)}</span>
                         <div className="flex flex-wrap gap-1.5">
                           {c.preferences.beverages.map((b, j) => (
-                            <span key={j} className="text-[10px] px-2 py-0.5 bg-slate-50 text-slate-700 rounded border border-slate-200">
+                            <span key={j} className="text-[10px] px-2 py-0.5 bg-white/5 text-white/80 rounded border border-white/10">
                               {b}
                             </span>
                           ))}
@@ -473,8 +473,8 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                     )}
                     {c.preferences?.temperature && (
                       <div>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">{t('temperature', lang)}</span>
-                        <span className="text-[10px] px-2 py-0.5 bg-slate-50 text-slate-700 rounded border border-slate-200">
+                        <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block mb-1">{t('temperature', lang)}</span>
+                        <span className="text-[10px] px-2 py-0.5 bg-white/5 text-white/80 rounded border border-white/10">
                           {c.preferences.temperature}
                         </span>
                       </div>
@@ -483,25 +483,25 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
 
                   {/* Intelligence */}
                   <div className="space-y-4">
-                    <h5 className="text-[9px] font-bold uppercase tracking-widest text-[#B8963E] flex items-center gap-2">
+                    <h5 className="text-[9px] font-bold uppercase tracking-[0.4em] text-[#B8963E] flex items-center gap-2">
                       <Activity size={10} /> {t('intelligence', lang)}
                     </h5>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">{t('experiences', lang)}</span>
-                        <span className="text-lg font-serif text-slate-900">{c.past_experiences ?? 0}</span>
+                      <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                        <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block">{t('experiences', lang)}</span>
+                        <span className="text-lg font-serif italic text-white">{c.past_experiences ?? 0}</span>
                       </div>
-                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">{t('loyalty', lang)}</span>
-                        <span className="text-lg font-serif text-slate-900">{(c.loyalty_points ?? 0).toLocaleString()}</span>
+                      <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                        <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block">{t('loyalty', lang)}</span>
+                        <span className="text-lg font-serif italic text-white">{(c.loyalty_points ?? 0).toLocaleString()}</span>
                       </div>
                     </div>
                     {c.preferences?.interests && c.preferences.interests.length > 0 && (
                       <div>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">{t('interests', lang)}</span>
+                        <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block mb-1">{t('interests', lang)}</span>
                         <div className="flex flex-wrap gap-1.5">
                           {c.preferences.interests.map((interest, j) => (
-                            <span key={j} className="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 bg-[#B8963E]/5 text-[#B8963E] rounded-full border border-[#B8963E]/10">
+                            <span key={j} className="text-[9px] font-bold uppercase tracking-[0.2em] px-2 py-0.5 bg-[#B8963E]/15 text-[#B8963E] rounded-full border border-[#B8963E]/20">
                               {interest}
                             </span>
                           ))}
@@ -512,23 +512,23 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                 </div>
 
                 {c.notes && (
-                  <div className="mt-6 pt-6 border-t border-slate-100">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">{t('notes', lang)}</span>
-                    <p className="text-xs text-slate-600 italic leading-relaxed">{c.notes}</p>
+                  <div className="mt-6 pt-6 border-t border-white/10">
+                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block mb-1">{t('notes', lang)}</span>
+                    <p className="text-xs text-white/60 italic leading-relaxed">{c.notes}</p>
                   </div>
                 )}
 
                 {/* Action row */}
-                <div className="mt-6 pt-6 border-t border-slate-100 flex gap-3">
+                <div className="mt-6 pt-6 border-t border-white/10 flex gap-3">
                   <button
                     onClick={() => openEdit(c)}
-                    className="flex-1 py-3 bg-slate-50 text-slate-700 rounded-xl font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 hover:bg-[#B8963E] hover:text-white transition-all border border-slate-200"
+                    className="flex-1 py-3 bg-white/5 text-white/80 rounded-xl font-bold uppercase tracking-[0.3em] text-[10px] flex items-center justify-center gap-2 hover:bg-[#B8963E] hover:text-white hover:border-[#B8963E] border border-white/10 transition-all"
                   >
                     <Edit3 size={14} /> {t('edit', lang)}
                   </button>
                   <button
                     onClick={() => handleDelete(c)}
-                    className="flex-1 py-3 bg-red-50 text-red-600 rounded-xl font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 hover:bg-red-500 hover:text-white transition-all border border-red-500/20"
+                    className="flex-1 py-3 bg-white/5 text-white/70 rounded-xl font-bold uppercase tracking-[0.3em] text-[10px] flex items-center justify-center gap-2 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/40 border border-white/10 transition-all"
                   >
                     <Trash2 size={14} /> {t('delete', lang)}
                   </button>
@@ -548,106 +548,106 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={closeModal}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-2xl"
+              className="relative w-full max-w-2xl bg-[#0a1518] border border-[#B8963E]/30 rounded-3xl overflow-hidden shadow-2xl"
             >
-              <div className="p-8 border-b border-slate-200 flex justify-between items-center">
+              <div className="p-8 border-b border-white/10 flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                  <div className="p-3 bg-[#B8963E]/10 text-[#B8963E] rounded-xl">
+                  <div className="p-3 bg-[#B8963E]/15 text-[#B8963E] rounded-xl">
                     <UserPlus size={22} />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-serif text-slate-900">
+                    <h3 className="text-2xl font-serif italic text-white">
                       {editingClient ? t('edit_guest', lang) : t('add_client', lang)}
                     </h3>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em]">
                       {editingClient ? editingClient.id : t('new_guest', lang)}
                     </p>
                   </div>
                 </div>
-                <button onClick={closeModal} disabled={submitting} className="p-2 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50">
-                  <X size={22} className="text-slate-500" />
+                <button onClick={closeModal} disabled={submitting} className="p-2 hover:bg-white/10 rounded-full transition-colors disabled:opacity-50">
+                  <X size={22} className="text-white/60" />
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
+              <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('name', lang)} *</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('name', lang)} *</label>
                     <input
                       type="text"
                       required
                       value={form.name || ''}
                       onChange={e => setForm({ ...form, name: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-4 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white placeholder:text-white/30"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('email', lang)} *</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('email', lang)} *</label>
                     <input
                       type="email"
                       required
                       value={form.email || ''}
                       onChange={e => setForm({ ...form, email: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-4 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white placeholder:text-white/30"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('phone', lang)}</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('phone', lang)}</label>
                     <input
                       type="tel"
                       value={form.phone || ''}
                       onChange={e => setForm({ ...form, phone: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-4 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white placeholder:text-white/30"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('whatsapp', lang)}</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('whatsapp', lang)}</label>
                     <input
                       type="tel"
                       value={form.whatsapp || ''}
                       onChange={e => setForm({ ...form, whatsapp: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-4 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white placeholder:text-white/30"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('tier', lang)}</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('tier', lang)}</label>
                     <select
                       value={form.tier}
                       onChange={e => setForm({ ...form, tier: e.target.value as any })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900 appearance-none"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-4 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white appearance-none"
                     >
-                      <option value="UHNWI">UHNWI</option>
-                      <option value="VVIP">VVIP</option>
-                      <option value="VIP">VIP</option>
+                      <option className="bg-[#0a1518]" value="UHNWI">UHNWI</option>
+                      <option className="bg-[#0a1518]" value="VVIP">VVIP</option>
+                      <option className="bg-[#0a1518]" value="VIP">VIP</option>
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('status', lang)}</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('status', lang)}</label>
                     <select
                       value={form.status}
                       onChange={e => setForm({ ...form, status: e.target.value as any })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-4 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900 appearance-none"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-4 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white appearance-none"
                     >
-                      <option value="ACTIVE">ACTIVE</option>
-                      <option value="PROSPECT">PROSPECT</option>
-                      <option value="INACTIVE">INACTIVE</option>
+                      <option className="bg-[#0a1518]" value="ACTIVE">ACTIVE</option>
+                      <option className="bg-[#0a1518]" value="PROSPECT">PROSPECT</option>
+                      <option className="bg-[#0a1518]" value="INACTIVE">INACTIVE</option>
                     </select>
                   </div>
                 </div>
 
                 {/* Preferences: dietary, beverages, interests — each is Enter-to-add */}
                 <div className="space-y-4 pt-2">
-                  <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#B8963E] ml-4">{t('preferences', lang)}</h4>
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#B8963E] ml-4">{t('preferences', lang)}</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Dietary */}
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('dietary', lang)}</label>
+                      <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('dietary', lang)}</label>
                       <input
                         type="text"
                         placeholder={t('press_enter', lang)}
@@ -660,11 +660,11 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                             setDietaryInput('');
                           }
                         }}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white placeholder:text-white/30"
                       />
                       <div className="flex flex-wrap gap-1.5 mt-1">
                         {form.preferences.dietary.map((d, i) => (
-                          <span key={i} className="text-[10px] px-2 py-0.5 bg-[#B8963E]/10 text-[#B8963E] rounded border border-[#B8963E]/20 flex items-center gap-1">
+                          <span key={i} className="text-[10px] px-2 py-0.5 bg-[#B8963E]/15 text-[#B8963E] rounded border border-[#B8963E]/30 flex items-center gap-1">
                             {d}
                             <X size={10} className="cursor-pointer" onClick={() => removePrefItem('dietary', i)} />
                           </span>
@@ -673,7 +673,7 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                     </div>
                     {/* Beverages */}
                     <div className="space-y-2">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('beverages', lang)}</label>
+                      <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('beverages', lang)}</label>
                       <input
                         type="text"
                         placeholder={t('press_enter', lang)}
@@ -686,11 +686,11 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                             setBeverageInput('');
                           }
                         }}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white placeholder:text-white/30"
                       />
                       <div className="flex flex-wrap gap-1.5 mt-1">
                         {form.preferences.beverages.map((b, i) => (
-                          <span key={i} className="text-[10px] px-2 py-0.5 bg-[#B8963E]/10 text-[#B8963E] rounded border border-[#B8963E]/20 flex items-center gap-1">
+                          <span key={i} className="text-[10px] px-2 py-0.5 bg-[#B8963E]/15 text-[#B8963E] rounded border border-[#B8963E]/30 flex items-center gap-1">
                             {b}
                             <X size={10} className="cursor-pointer" onClick={() => removePrefItem('beverages', i)} />
                           </span>
@@ -700,7 +700,7 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                   </div>
                   {/* Interests */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('interests', lang)}</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('interests', lang)}</label>
                     <input
                       type="text"
                       placeholder={t('press_enter', lang)}
@@ -713,11 +713,11 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                           setInterestInput('');
                         }
                       }}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white placeholder:text-white/30"
                     />
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       {form.preferences.interests.map((it, i) => (
-                        <span key={i} className="text-[10px] px-2 py-0.5 bg-[#B8963E]/10 text-[#B8963E] rounded border border-[#B8963E]/20 flex items-center gap-1">
+                        <span key={i} className="text-[10px] px-2 py-0.5 bg-[#B8963E]/15 text-[#B8963E] rounded border border-[#B8963E]/30 flex items-center gap-1">
                           {it}
                           <X size={10} className="cursor-pointer" onClick={() => removePrefItem('interests', i)} />
                         </span>
@@ -726,12 +726,12 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                   </div>
                   {/* Temperature */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('temperature', lang)}</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('temperature', lang)}</label>
                     <input
                       type="text"
                       value={form.preferences.temperature || ''}
                       onChange={e => setForm({ ...form, preferences: { ...form.preferences, temperature: e.target.value } })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white placeholder:text-white/30"
                     />
                   </div>
                 </div>
@@ -739,34 +739,34 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                 {/* Intelligence row */}
                 <div className="grid grid-cols-3 gap-6 pt-2">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('past_exp', lang)}</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('past_exp', lang)}</label>
                     <input
                       type="number"
                       min={0}
                       value={form.past_experiences || 0}
                       onChange={e => setForm({ ...form, past_experiences: parseInt(e.target.value) || 0 })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('total_spend_lbl', lang)}</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('total_spend_lbl', lang)}</label>
                     <input
                       type="number"
                       min={0}
                       step={0.01}
                       value={form.total_spend || 0}
                       onChange={e => setForm({ ...form, total_spend: parseFloat(e.target.value) || 0 })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('loyalty_lbl', lang)}</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('loyalty_lbl', lang)}</label>
                     <input
                       type="number"
                       min={0}
                       value={form.loyalty_points || 0}
                       onChange={e => setForm({ ...form, loyalty_points: parseInt(e.target.value) || 0 })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white"
                     />
                   </div>
                 </div>
@@ -774,24 +774,24 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                 {/* Source + notes */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('source', lang)}</label>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('source', lang)}</label>
                     <input
                       type="text"
                       placeholder={t('source_ph', lang)}
                       value={form.source || ''}
                       onChange={e => setForm({ ...form, source: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white placeholder:text-white/30"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-4">{t('notes', lang)}</label>
+                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 ml-4">{t('notes', lang)}</label>
                   <textarea
                     rows={3}
                     placeholder={t('notes_ph', lang)}
                     value={form.notes || ''}
                     onChange={e => setForm({ ...form, notes: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-slate-900 resize-none"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-6 py-3 focus:outline-none focus:border-[#B8963E] transition-all text-sm text-white placeholder:text-white/30 resize-none"
                   />
                 </div>
 
@@ -800,14 +800,14 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                     type="button"
                     onClick={closeModal}
                     disabled={submitting}
-                    className="flex-1 py-4 border border-slate-200 rounded-xl text-slate-500 font-bold uppercase tracking-widest text-[10px] hover:bg-slate-50 transition-all disabled:opacity-50"
+                    className="flex-1 py-4 border border-white/10 rounded-xl text-white/60 font-bold uppercase tracking-[0.3em] text-[10px] hover:bg-white/5 hover:text-white transition-all disabled:opacity-50"
                   >
                     {t('cancel', lang)}
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="flex-1 py-4 bg-[#B8963E] text-white rounded-xl font-bold uppercase tracking-widest text-[10px] hover:bg-slate-900 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                    className="flex-1 py-4 bg-[#B8963E] text-white rounded-xl font-bold uppercase tracking-[0.3em] text-[10px] hover:bg-[#B8963E]/90 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                   >
                     {submitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                     {t('save', lang)}

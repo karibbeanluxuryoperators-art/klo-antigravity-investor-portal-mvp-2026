@@ -175,10 +175,10 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <TopNav onBack={onBack} backLabel={t.back} tone="light" />
+    <div className="min-h-screen bg-[#0a1518]">
+      <TopNav onBack={onBack} backLabel={t.back} tone="dark" />
 
-      <Section tone="light" size="md" className="!py-24">
+      <Section tone="dark" size="md" className="!py-24">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -186,38 +186,38 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
           className="max-w-xl mx-auto"
         >
           <div className="text-center mb-12">
-            <SectionLabel tone="teal">{t.eyebrow}</SectionLabel>
+            <SectionLabel tone="gold">{t.eyebrow}</SectionLabel>
           </div>
 
           {state.kind === 'loading' && (
-            <Card tone="light" hover={false} padding="lg">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-10">
               <div className="flex flex-col items-center gap-4 py-12">
-                <Loader2 className="animate-spin text-luxury-teal" size={40} />
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-500 font-semibold">{t.loading}</p>
+                <Loader2 className="animate-spin text-[#B8963E]" size={40} />
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60 font-semibold">{t.loading}</p>
               </div>
-            </Card>
+            </div>
           )}
 
           {state.kind === 'config-missing' && (
-            <Card tone="light" hover={false} padding="lg">
+            <div className="bg-white/5 border border-red-500/30 rounded-2xl p-10">
               <div className="text-center space-y-4 py-6">
-                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto text-red-500">
+                <div className="w-16 h-16 bg-red-500/15 rounded-full flex items-center justify-center mx-auto text-red-400">
                   <AlertCircle size={32} />
                 </div>
-                <DisplayHeading tone="dark" size="md" as="h2">{t.configTitle}</DisplayHeading>
-                <BodyText tone="dark">{t.configBody}</BodyText>
+                <h2 className="text-3xl font-serif italic text-white">{t.configTitle}</h2>
+                <p className="text-white/60 font-light leading-relaxed">{t.configBody}</p>
               </div>
-            </Card>
+            </div>
           )}
 
           {state.kind === 'needs-sign-in' && (
-            <Card tone="light" hover={false} padding="lg">
+            <div className="bg-white/5 border border-[#B8963E]/30 rounded-2xl p-10">
               <div className="text-center space-y-6 py-6">
-                <div className="w-16 h-16 bg-luxury-teal/10 rounded-full flex items-center justify-center mx-auto text-luxury-teal">
+                <div className="w-16 h-16 bg-[#B8963E]/15 rounded-full flex items-center justify-center mx-auto text-[#B8963E]">
                   <LogIn size={32} />
                 </div>
-                <DisplayHeading tone="dark" size="md" as="h2">{t.signInTitle}</DisplayHeading>
-                <BodyText tone="dark">{t.signInBody}</BodyText>
+                <h2 className="text-3xl font-serif italic text-white">{t.signInTitle}</h2>
+                <p className="text-white/60 font-light leading-relaxed">{t.signInBody}</p>
                 <PrimaryButton
                   onClick={onSignIn}
                   size="lg"
@@ -228,30 +228,30 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
                   {t.signInCta}
                 </PrimaryButton>
               </div>
-            </Card>
+            </div>
           )}
 
           {state.kind === 'not-authorized' && (
-            <Card tone="light" hover={false} padding="lg">
+            <div className="bg-white/5 border border-red-500/30 rounded-2xl p-10">
               <motion.div
                 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                 className="text-center space-y-6 py-6"
               >
-                <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto text-red-500">
+                <div className="w-16 h-16 bg-red-500/15 rounded-full flex items-center justify-center mx-auto text-red-400">
                   <Shield size={32} />
                 </div>
-                <DisplayHeading tone="dark" size="md" as="h2">{t.notAuthTitle}</DisplayHeading>
-                <BodyText tone="dark">
+                <h2 className="text-3xl font-serif italic text-white">{t.notAuthTitle}</h2>
+                <p className="text-white/60 font-light leading-relaxed">
                   {t.notAuthBody.replace('{email}', state.email)}
-                </BodyText>
+                </p>
                 <button
                   onClick={handleSignOut}
-                  className="inline-flex items-center gap-2 px-6 py-3 border border-slate-200 text-slate-700 rounded-full text-[10px] font-sans uppercase tracking-[0.3em] font-semibold hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all"
+                  className="inline-flex items-center gap-2 px-6 py-3 border border-white/20 text-white/80 rounded-full text-[10px] font-sans uppercase tracking-[0.3em] font-semibold hover:bg-white/10 hover:text-white transition-all"
                 >
                   <LogOut size={12} /> {t.notAuthCta}
                 </button>
               </motion.div>
-            </Card>
+            </div>
           )}
         </motion.div>
       </Section>
