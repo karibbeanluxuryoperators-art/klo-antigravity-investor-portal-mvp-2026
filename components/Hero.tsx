@@ -62,11 +62,11 @@ const Hero: React.FC<HeroProps> = ({ t, onInquiryOpen }) => {
           padding: '2rem',
         }}
       >
-        <div style={{ maxWidth: '42rem', textAlign: 'center', color: 'white' }}>
-          <h1 style={{ fontSize: '3.75rem', fontWeight: 'bold', marginBottom: '1.5rem', lineHeight: 1.2, textShadow: '0 20px 25px rgba(0,0,0,0.5)' }} className="serif">
+        <div style={{ maxWidth: '42rem', textAlign: 'center', color: 'white', padding: '0 1rem' }}>
+          <h1 style={{ fontSize: 'clamp(2.5rem, 7vw, 4.5rem)', fontWeight: 'bold', marginBottom: '1.5rem', lineHeight: 1.1, textShadow: '0 20px 25px rgba(0,0,0,0.5)' }} className="serif">
             {t('hero.title')}
           </h1>
-          <p style={{ fontSize: '1.125rem', marginBottom: '2.5rem', opacity: 0.9, lineHeight: 1.6, textShadow: '0 10px 15px rgba(0,0,0,0.3)' }}>
+          <p style={{ fontSize: 'clamp(1rem, 2vw, 1.25rem)', marginBottom: '2.5rem', opacity: 0.9, lineHeight: 1.6, textShadow: '0 10px 15px rgba(0,0,0,0.3)', maxWidth: '36rem', margin: '0 auto 2.5rem' }}>
             {t('hero.subtitle')}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
