@@ -52,9 +52,9 @@ const STEPS = [
 
 export const HowKLOWorks: React.FC<HowKLOWorksProps> = ({ lang }) => {
   return (
-    <section id="how-klo-works" className="py-32 bg-white relative overflow-hidden">
+    <section id="how-klo-works" className="py-32 bg-[#0a1518] text-white relative overflow-hidden">
       {/* Decorative gradient */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#B8963E]/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#B8963E]/10 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="text-center mb-20 max-w-4xl mx-auto">
@@ -65,10 +65,10 @@ export const HowKLOWorks: React.FC<HowKLOWorksProps> = ({ lang }) => {
             </p>
             <div className="h-px w-8 bg-[#B8963E]"></div>
           </div>
-          <h2 className="text-4xl md:text-6xl font-bold mb-8 text-slate-900 serif leading-tight">
+          <h2 className="text-4xl md:text-6xl font-bold mb-8 text-white serif leading-tight">
             {t('title', lang)}
           </h2>
-          <p className="text-slate-500 text-lg md:text-xl font-light leading-relaxed max-w-2xl mx-auto">
+          <p className="text-white/60 text-lg md:text-xl font-light leading-relaxed max-w-2xl mx-auto">
             {t('subtitle', lang)}
           </p>
         </div>
@@ -94,7 +94,7 @@ export const HowKLOWorks: React.FC<HowKLOWorksProps> = ({ lang }) => {
                 {/* Number badge with icon */}
                 <div className="relative inline-flex items-center justify-center w-24 h-24 mb-6 rounded-full bg-gradient-to-br from-[#B8963E] to-[#8a6f2e] shadow-lg shadow-[#B8963E]/20">
                   <Icon size={32} className="text-white" strokeWidth={1.5} aria-hidden="true" />
-                  <span className="absolute -top-2 -right-2 w-8 h-8 bg-white text-slate-900 rounded-full text-xs font-bold flex items-center justify-center border-2 border-[#B8963E]">
+                  <span className="absolute -top-2 -right-2 w-8 h-8 bg-[#0a1518] text-white rounded-full text-xs font-bold flex items-center justify-center border-2 border-[#B8963E]">
                     {id}
                   </span>
                 </div>
@@ -102,10 +102,10 @@ export const HowKLOWorks: React.FC<HowKLOWorksProps> = ({ lang }) => {
                 <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#B8963E] mb-2">
                   {t(eyebrow as any, lang)}
                 </p>
-                <h3 className="text-xl md:text-2xl font-serif italic text-slate-900 mb-3 leading-tight">
+                <h3 className="text-xl md:text-2xl font-serif italic text-white mb-3 leading-tight">
                   {t(title as any, lang)}
                 </h3>
-                <p className="text-slate-500 text-sm leading-relaxed">
+                <p className="text-white/60 text-sm leading-relaxed">
                   {t(body as any, lang)}
                 </p>
               </motion.div>
@@ -122,7 +122,7 @@ export const HowKLOWorks: React.FC<HowKLOWorksProps> = ({ lang }) => {
               if (navBtn) navBtn.click();
               else document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
             }}
-            className="inline-flex items-center gap-3 px-10 py-4 bg-[#B8963E] text-white rounded-full text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-slate-900 transition-all duration-500 shadow-lg shadow-[#B8963E]/20"
+            className="inline-flex items-center gap-3 px-10 py-4 bg-[#B8963E] text-white rounded-full text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-white hover:text-slate-900 transition-all duration-500 shadow-lg shadow-[#B8963E]/20"
           >
             {t('cta', lang)}
           </button>

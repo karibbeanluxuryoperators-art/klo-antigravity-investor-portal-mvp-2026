@@ -263,29 +263,39 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, icon, tone = '
 };
 
 // ── Input ─────────────────────────────────────────────────────────────────────
-// Form input. Light bg, slate border, teal focus.
+// Form input. Two tones: 'light' (white bg, slate border) for supplier-portal
+// light surfaces; 'dark' (white/5 bg, white/10 border, white text) for the
+// dark admin + portal surfaces. Focus ring is always gold for brand
+// consistency — teal was the old v1 accent.
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   hint?: string;
+  tone?: 'light' | 'dark';
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, hint, className = '', ...rest }, ref) => {
+  ({ label, hint, className = '', tone = 'light', ...rest }, ref) => {
+    const isDark = tone === 'dark';
+    const labelClass = isDark ? 'text-white/40' : 'text-slate-500';
+    const hintClass  = isDark ? 'text-white/30' : 'text-slate-400';
+    const inputClass = isDark
+      ? 'bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-[#B8963E] focus:ring-[#B8963E]/30'
+      : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-300 focus:border-luxury-teal focus:ring-luxury-teal/30';
     return (
       <div className="space-y-2">
         {label && (
-          <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">
+          <label className={`text-[10px] font-sans uppercase tracking-[0.3em] font-semibold ${labelClass}`}>
             {label}
           </label>
         )}
         <input
           ref={ref}
           {...rest}
-          className={`w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900 placeholder:text-slate-300 ${className}`}
+          className={`w-full border rounded-lg py-4 px-5 focus:outline-none focus:ring-1 transition-all font-light ${inputClass} ${className}`}
         />
         {hint && (
-          <p className="text-[11px] text-slate-400 font-light italic">{hint}</p>
+          <p className={`text-[11px] font-light italic ${hintClass}`}>{hint}</p>
         )}
       </div>
     );
@@ -298,24 +308,31 @@ Input.displayName = 'Input';
 interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   hint?: string;
+  tone?: 'light' | 'dark';
 }
 
 export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  ({ label, hint, className = '', ...rest }, ref) => {
+  ({ label, hint, className = '', tone = 'light', ...rest }, ref) => {
+    const isDark = tone === 'dark';
+    const labelClass = isDark ? 'text-white/40' : 'text-slate-500';
+    const hintClass  = isDark ? 'text-white/30' : 'text-slate-400';
+    const inputClass = isDark
+      ? 'bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-[#B8963E] focus:ring-[#B8963E]/30'
+      : 'bg-white border-slate-200 text-slate-900 placeholder:text-slate-300 focus:border-luxury-teal focus:ring-luxury-teal/30';
     return (
       <div className="space-y-2">
         {label && (
-          <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-slate-500 font-semibold">
+          <label className={`text-[10px] font-sans uppercase tracking-[0.3em] font-semibold ${labelClass}`}>
             {label}
           </label>
         )}
         <textarea
           ref={ref}
           {...rest}
-          className={`w-full bg-white border border-slate-200 rounded-lg py-4 px-5 focus:outline-none focus:border-luxury-teal focus:ring-1 focus:ring-luxury-teal/30 transition-all font-light text-slate-900 placeholder:text-slate-300 resize-none ${className}`}
+          className={`w-full border rounded-lg py-4 px-5 focus:outline-none focus:ring-1 transition-all font-light resize-none ${inputClass} ${className}`}
         />
         {hint && (
-          <p className="text-[11px] text-slate-400 font-light italic">{hint}</p>
+          <p className={`text-[11px] font-light italic ${hintClass}`}>{hint}</p>
         )}
       </div>
     );

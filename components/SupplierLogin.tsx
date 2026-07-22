@@ -123,10 +123,10 @@ export const SupplierLogin: React.FC<SupplierLoginProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <TopNav onBack={onBack} backLabel={t.back} tone="light" />
+    <div className="min-h-screen bg-[#0a1518]">
+      <TopNav onBack={onBack} backLabel={t.back} tone="dark" />
 
-      <Section tone="light" size="md" className="!py-24">
+      <Section tone="dark" size="md" className="!py-24">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -134,41 +134,41 @@ export const SupplierLogin: React.FC<SupplierLoginProps> = ({
           className="max-w-md mx-auto"
         >
           <div className="text-center mb-12">
-            <SectionLabel tone="teal">{t.eyebrow}</SectionLabel>
-            <DisplayHeading tone="dark" size="lg" as="h1" className="!text-5xl !md:text-6xl">
+            <SectionLabel tone="gold">{t.eyebrow}</SectionLabel>
+            <DisplayHeading tone="light" size="lg" as="h1" className="!text-5xl !md:text-6xl">
               {t.title}
             </DisplayHeading>
-            <BodyText tone="dark" size="md" className="!text-slate-500 max-w-md mx-auto">
+            <BodyText tone="light" size="md" className="!text-white/60 max-w-md mx-auto">
               {t.subtitle}
             </BodyText>
           </div>
 
           {sentTo ? (
-            <Card tone="light" hover={false} padding="lg">
+            <div className="bg-white/5 backdrop-blur-sm border border-[#B8963E]/30 rounded-2xl p-10">
               <motion.div
                 key="sent"
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="text-center space-y-6"
               >
-                <div className="w-16 h-16 mx-auto bg-luxury-teal/10 rounded-full flex items-center justify-center text-luxury-teal">
+                <div className="w-16 h-16 mx-auto bg-[#B8963E]/15 rounded-full flex items-center justify-center text-[#B8963E]">
                   <CheckCircle2 size={32} />
                 </div>
-                <h2 className="text-3xl font-serif italic text-slate-900">{t.sentTitle}</h2>
-                <p className="text-slate-500 font-light leading-relaxed">
+                <h2 className="text-3xl font-serif italic text-white">{t.sentTitle}</h2>
+                <p className="text-white/60 font-light leading-relaxed">
                   {t.sentBody.replace('{email}', sentTo)}
                 </p>
-                <p className="text-[11px] text-slate-400 italic">{t.sentHelp}</p>
+                <p className="text-[11px] text-white/40 italic">{t.sentHelp}</p>
                 <button
                   onClick={() => { setSentTo(null); setEmail(''); }}
-                  className="w-full mt-4 px-6 py-4 border border-slate-200 text-slate-700 rounded-full text-[11px] font-sans uppercase tracking-[0.3em] font-semibold hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all"
+                  className="w-full mt-4 px-6 py-4 border border-white/20 text-white/80 rounded-full text-[11px] font-sans uppercase tracking-[0.3em] font-semibold hover:bg-white/10 hover:text-white hover:border-white/40 transition-all"
                 >
                   {t.tryAgain}
                 </button>
               </motion.div>
-            </Card>
+            </div>
           ) : (
-            <Card tone="light" hover={false} padding="lg">
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-10">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <Input
                   type="email"
@@ -179,18 +179,19 @@ export const SupplierLogin: React.FC<SupplierLoginProps> = ({
                   required
                   disabled={isSending}
                   label={t.emailLabel}
+                  tone="dark"
                 />
 
-                <p className="text-[11px] text-slate-400 font-light -mt-4">{t.helpText}</p>
+                <p className="text-[11px] text-white/40 font-light -mt-4">{t.helpText}</p>
 
                 {error && (
                   <motion.div
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl"
+                    className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-xl"
                   >
-                    <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
-                    <p className="text-sm text-red-700 leading-relaxed">{error}</p>
+                    <AlertCircle size={16} className="text-red-400 mt-0.5 shrink-0" />
+                    <p className="text-sm text-red-300 leading-relaxed">{error}</p>
                   </motion.div>
                 )}
 
@@ -212,20 +213,20 @@ export const SupplierLogin: React.FC<SupplierLoginProps> = ({
                   )}
                 </PrimaryButton>
 
-                <div className="pt-4 border-t border-slate-100 text-center">
-                  <p className="text-slate-500 text-xs">
+                <div className="pt-4 border-t border-white/10 text-center">
+                  <p className="text-white/60 text-xs">
                     {t.newHere}{' '}
                     <button
                       type="button"
                       onClick={onNewSupplier}
-                      className="text-luxury-teal hover:text-slate-900 font-semibold transition-colors underline underline-offset-2"
+                      className="text-[#B8963E] hover:text-white font-semibold transition-colors underline underline-offset-2"
                     >
                       {t.applyNow}
                     </button>
                   </p>
                 </div>
               </form>
-            </Card>
+            </div>
           )}
         </motion.div>
       </Section>
