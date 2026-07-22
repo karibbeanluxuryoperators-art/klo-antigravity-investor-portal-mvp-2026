@@ -11,6 +11,8 @@ import { SupplierDashboardGate } from './components/SupplierDashboardGate';
 import { AdminGate } from './components/AdminGate';
 import { PlanTripModal } from './components/PlanTripModal';
 import { HowKLOWorks } from './components/HowKLOWorks';
+import { KLOStats } from './components/KLOStats';
+import { KLOTestimonials } from './components/KLOTestimonials';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // ── Supplier portal route guard ────────────────────────────────────────────
@@ -213,6 +215,12 @@ function App() {
 
 {/* How KLO Works (v1.8.0 Step 4) */}
 <HowKLOWorks lang={lang} />
+
+{/* Stats (v1.8.0 Step 4) */}
+<KLOStats lang={lang} />
+
+{/* Testimonials + FAQ (v1.8.0 Step 4) */}
+<KLOTestimonials lang={lang} />
 
 {/* Destinations */}
         <Destinations t={t as any} />
