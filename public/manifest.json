@@ -1,0 +1,18 @@
+{
+  "name": "KLO — Karibbean Luxury Operators",
+  "short_name": "KLO",
+  "description": "Concierge 360° en el Caribe Colombiano. Jets, transporte, yates, alojamiento y staff.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a1518",
+  "theme_color": "#0a1518",
+  "lang": "es-CO",
+  "icons": [
+    {
+      "src": "/klo-logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

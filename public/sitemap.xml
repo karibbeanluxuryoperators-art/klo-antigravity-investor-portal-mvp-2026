@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://www.karibbeanluxuryoperators.lat/</loc>
+    <lastmod>2026-07-20</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="https://www.karibbeanluxuryoperators.lat/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.karibbeanluxuryoperators.lat/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://www.karibbeanluxuryoperators.lat/?lang=pt"/>
+  </url>
+  <url>
+    <loc>https://www.karibbeanluxuryoperators.lat/supplier</loc>
+    <lastmod>2026-07-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.karibbeanluxuryoperators.lat/supplier/login</loc>
+    <lastmod>2026-07-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+</urlset>

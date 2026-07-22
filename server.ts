@@ -890,11 +890,22 @@ async function startServer() {
       if (location) query = query.ilike('location', `%${location}%`);
 
       const { data, error } = await query;
-      if (error) throw error;
-      
-      res.json(data);
+      if (error) {
+        // If the assets table doesn't exist (pre-migration state) or Supabase
+        // is unreachable, return an empty array so the UI doesn't break.
+        // A real error (not a "relation does not exist") still gets logged
+        // but we degrade gracefully — the public marketplace just shows nothing.
+        if (/relation.*does not exist/i.test(error.message || '')) {
+          return res.json([]);
+        }
+        throw error;
+      }
+
+      res.json(data || []);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      // Network / auth / unknown error — log but return empty so the UI keeps working.
+      console.warn('GET /api/assets failed (returning empty):', error?.message || error);
+      res.json([]);
     }
   });
 
