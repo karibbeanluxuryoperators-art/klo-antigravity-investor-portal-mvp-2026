@@ -110,9 +110,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       <button
         key={s.key}
         onClick={() => { onSelect(s.key); setOpen(false); }}
-        // v1.8.0 Step 8.2: full-width button, but the aside has
-        // bg-[#081013] (darker than main) + border-r border-white/10
-        // for clear visual separation, so the pill stays contained.
+        // v1.8.0 Step 8.3: w-full inside a px-3 nav gives 12px of
+        // inset on each side without overflowing the parent. The
+        // border (active state) is fully visible because nothing
+        // clips the button.
         className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-left group ${
           isActive
             ? 'bg-[#B8963E]/15 border border-[#B8963E]/40 text-white'
@@ -165,15 +166,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </div>
 
       {/* Sections */}
-      <nav className="flex-1 overflow-y-auto py-3 space-y-1">
+      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1">
         {SECTIONS.map(s => renderSectionItem(s, false))}
       </nav>
 
       {/* Footer: signed-in + sign out */}
       {onSignOut && (
-        <div className="py-3 border-t border-white/10 space-y-2">
+        <div className="py-3 px-3 border-t border-white/10 space-y-2">
           {signedInEmail && (
-            <p className="text-[9px] text-white/40 uppercase tracking-[0.3em] truncate px-5">
+            <p className="text-[9px] text-white/40 uppercase tracking-[0.3em] truncate px-3">
               {t('signed_in_as', lang)} {signedInEmail}
             </p>
           )}
