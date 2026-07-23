@@ -166,7 +166,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </div>
 
       {/* Sections */}
-      <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-3 space-y-1">
         {SECTIONS.map(s => renderSectionItem(s, false))}
       </nav>
 
@@ -193,7 +193,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   return (
     <>
       {/* ── Desktop (md+) ─────────────────────────────────────────── */}
-      <aside className="hidden md:flex w-64 shrink-0 bg-[#081013] border-r border-white/15 sticky top-0 h-screen">
+      <aside className="hidden md:flex w-64 shrink-0 bg-[#081013] border-r border-white/20 sticky top-0 h-screen overflow-hidden isolate z-10">
         {sidebarBody}
       </aside>
 
