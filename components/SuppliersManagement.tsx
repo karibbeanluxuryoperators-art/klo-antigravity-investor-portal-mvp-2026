@@ -529,7 +529,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
         pendingSuppliersCount={counts.SUPPLIERS}
       />
 
-      <main className="flex-1 min-w-0 px-6 md:px-10 py-10 space-y-8 max-w-[1600px]">
+      <main className="flex-1 min-w-0 px-6 md:px-10 py-10 space-y-8 max-w-[1600px] bg-[#0a1518]">
         {/* Page header */}
         <PageHeader
           activeView={activeView}

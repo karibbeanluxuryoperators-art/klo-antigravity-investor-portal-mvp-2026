@@ -110,10 +110,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       <button
         key={s.key}
         onClick={() => { onSelect(s.key); setOpen(false); }}
-        // v1.8.0 Step 8.1: mx-1.5 inset so the hover/active pill is
-        // visibly contained inside the sidebar (never bleeds onto the
-        // search bar in the main panel).
-        className={`w-full mx-1.5 flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-left group ${
+        // v1.8.0 Step 8.2: full-width button, but the aside has
+        // bg-[#081013] (darker than main) + border-r border-white/10
+        // for clear visual separation, so the pill stays contained.
+        className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-left group ${
           isActive
             ? 'bg-[#B8963E]/15 border border-[#B8963E]/40 text-white'
             : 'border border-transparent text-white/60 hover:bg-white/[0.04] hover:text-white'
@@ -165,21 +165,21 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       </div>
 
       {/* Sections */}
-      <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+      <nav className="flex-1 overflow-y-auto py-3 space-y-1">
         {SECTIONS.map(s => renderSectionItem(s, false))}
       </nav>
 
       {/* Footer: signed-in + sign out */}
       {onSignOut && (
-        <div className="p-3 border-t border-white/10 space-y-2">
+        <div className="py-3 border-t border-white/10 space-y-2">
           {signedInEmail && (
-            <p className="text-[9px] text-white/40 uppercase tracking-[0.3em] truncate px-2">
+            <p className="text-[9px] text-white/40 uppercase tracking-[0.3em] truncate px-5">
               {t('signed_in_as', lang)} {signedInEmail}
             </p>
           )}
           <button
             onClick={onSignOut}
-            className="w-full mx-1.5 flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-[#B8963E] hover:bg-white/[0.04] transition-all text-sm"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-[#B8963E] hover:bg-white/[0.04] transition-all text-sm"
           >
             <LogOut size={16} />
             {t('sign_out', lang)}
@@ -192,7 +192,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   return (
     <>
       {/* ── Desktop (md+) ─────────────────────────────────────────── */}
-      <aside className="hidden md:flex w-64 shrink-0 bg-[#081013] border-r border-white/10 sticky top-0 h-screen overflow-hidden">
+      <aside className="hidden md:flex w-64 shrink-0 bg-[#081013] border-r border-white/15 sticky top-0 h-screen">
         {sidebarBody}
       </aside>
 
@@ -221,7 +221,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 animate={{ x: 0 }}
                 exit={{ x: -300 }}
                 transition={{ type: 'tween', duration: 0.2 }}
-                className="fixed inset-y-0 left-0 w-72 max-w-[80vw] bg-[#0a1518] border-r border-white/10 z-50 shadow-2xl overflow-hidden"
+                className="fixed inset-y-0 left-0 w-72 max-w-[80vw] bg-[#0a1518] border-r border-white/10 z-50 shadow-2xl"
               >
                 <button
                   onClick={() => setOpen(false)}
