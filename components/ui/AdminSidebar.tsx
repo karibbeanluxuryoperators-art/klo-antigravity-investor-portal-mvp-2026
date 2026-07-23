@@ -141,10 +141,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               </span>
             )}
           </div>
-          {/* v1.8.0 Step 8.7: subtitle hides on narrow widths to prevent
-              ugly truncation. The label + icon are enough to identify
-              each section; the subtitle is redundant info. */}
-          <p className="hidden lg:block text-[9px] text-white/40 uppercase tracking-[0.15em] truncate leading-tight">
+          {/* v1.8.0 Step 8.8: with the wider w-72 sidebar, the subtitle
+              now has enough room to render in full. Tracking reduced
+              to 0.15em for a tighter, less-cluttered look. */}
+          <p className="text-[9px] text-white/40 uppercase tracking-[0.15em] truncate leading-tight">
             {t(s.subtitleKey, lang)}
           </p>
         </div>
@@ -196,7 +196,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   return (
     <>
       {/* ── Desktop (md+) ─────────────────────────────────────────── */}
-      <aside className="hidden md:flex w-64 shrink-0 bg-[#081013] border-r border-white/20 sticky top-0 h-screen overflow-hidden isolate z-10">
+      <aside className="hidden md:flex w-72 shrink-0 bg-[#081013] border-r border-white/20 sticky top-0 h-screen overflow-hidden isolate z-10">
         {sidebarBody}
       </aside>
 
@@ -225,7 +225,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 animate={{ x: 0 }}
                 exit={{ x: -300 }}
                 transition={{ type: 'tween', duration: 0.2 }}
-                className="fixed inset-y-0 left-0 w-72 max-w-[80vw] bg-[#0a1518] border-r border-white/10 z-50 shadow-2xl"
+                className="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-[#0a1518] border-r border-white/10 z-50 shadow-2xl"
               >
                 <button
                   onClick={() => setOpen(false)}
