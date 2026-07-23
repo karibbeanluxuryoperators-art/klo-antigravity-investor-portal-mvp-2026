@@ -4,6 +4,7 @@ import {
   Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
   Loader2, AlertCircle, Inbox, Filter, X, Check,
 } from 'lucide-react';
+import { EmptyIllustration } from './EmptyIllustration';
 
 // v1.8.0 Step 5: Shared <DataTable /> primitive.
 //
@@ -702,9 +703,7 @@ const EmptyState: React.FC<{
   hint?: { EN: string; ES: string; PT: string };
 }> = ({ lang, title, hint }) => (
   <div className="py-20 flex flex-col items-center justify-center text-center gap-4 border border-dashed border-white/10 rounded-2xl">
-    <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-white/30">
-      <Inbox size={40} />
-    </div>
+    <EmptyIllustration variant="inbox" size={96} />
     {title && <p className="text-sm uppercase tracking-widest text-white/60">{tx(title, lang)}</p>}
     {hint && <p className="text-xs text-white/40 max-w-md">{tx(hint, lang)}</p>}
   </div>
