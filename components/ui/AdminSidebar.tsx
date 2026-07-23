@@ -110,10 +110,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       <button
         key={s.key}
         onClick={() => { onSelect(s.key); setOpen(false); }}
-        className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-left group ${
+        // v1.8.0 Step 8.1: mx-1.5 inset so the hover/active pill is
+        // visibly contained inside the sidebar (never bleeds onto the
+        // search bar in the main panel).
+        className={`w-full mx-1.5 flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-left group ${
           isActive
-            ? 'bg-[#B8963E]/10 border border-[#B8963E]/30 text-white'
-            : 'border border-transparent text-white/60 hover:bg-white/5 hover:text-white'
+            ? 'bg-[#B8963E]/15 border border-[#B8963E]/40 text-white'
+            : 'border border-transparent text-white/60 hover:bg-white/[0.04] hover:text-white'
         }`}
       >
         <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
@@ -176,7 +179,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           )}
           <button
             onClick={onSignOut}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-[#B8963E] hover:bg-white/5 transition-all text-sm"
+            className="w-full mx-1.5 flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-[#B8963E] hover:bg-white/[0.04] transition-all text-sm"
           >
             <LogOut size={16} />
             {t('sign_out', lang)}
@@ -189,7 +192,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   return (
     <>
       {/* ── Desktop (md+) ─────────────────────────────────────────── */}
-      <aside className="hidden md:flex w-64 shrink-0 bg-[#0a1518] border-r border-white/10 sticky top-0 h-screen">
+      <aside className="hidden md:flex w-64 shrink-0 bg-[#081013] border-r border-white/10 sticky top-0 h-screen overflow-hidden">
         {sidebarBody}
       </aside>
 
@@ -218,11 +221,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 animate={{ x: 0 }}
                 exit={{ x: -300 }}
                 transition={{ type: 'tween', duration: 0.2 }}
-                className="fixed inset-y-0 left-0 w-72 max-w-[80vw] bg-[#0a1518] border-r border-white/10 z-50 shadow-2xl"
+                className="fixed inset-y-0 left-0 w-72 max-w-[80vw] bg-[#0a1518] border-r border-white/10 z-50 shadow-2xl overflow-hidden"
               >
                 <button
                   onClick={() => setOpen(false)}
-                  className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-white/60 hover:text-white rounded-lg"
+                  className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center text-white/60 hover:text-white rounded-lg z-10"
                   aria-label="Close menu"
                 >
                   <X size={16} />
