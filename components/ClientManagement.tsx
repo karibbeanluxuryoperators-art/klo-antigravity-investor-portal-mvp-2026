@@ -521,6 +521,12 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
                 {/* Action row */}
                 <div className="mt-6 pt-6 border-t border-white/10 flex gap-3">
                   <button
+                    onClick={() => { window.location.href = `/admin/clients/${c.id}`; }}
+                    className="flex-1 py-3 bg-white/5 text-white/80 rounded-xl font-bold uppercase tracking-[0.3em] text-[10px] flex items-center justify-center gap-2 hover:bg-[#B8963E] hover:text-white hover:border-[#B8963E] border border-white/10 transition-all"
+                  >
+                    <User size={14} /> {lang === 'ES' ? 'Ver Perfil' : lang === 'PT' ? 'Ver Perfil' : 'View Profile'}
+                  </button>
+                  <button
                     onClick={() => openEdit(c)}
                     className="flex-1 py-3 bg-white/5 text-white/80 rounded-xl font-bold uppercase tracking-[0.3em] text-[10px] flex items-center justify-center gap-2 hover:bg-[#B8963E] hover:text-white hover:border-[#B8963E] border border-white/10 transition-all"
                   >

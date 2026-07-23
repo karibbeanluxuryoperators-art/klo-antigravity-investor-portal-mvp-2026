@@ -554,7 +554,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
             urlStateKey="suppliers"
             emptyTitle={{ EN: 'No partners yet', ES: 'Aún no hay socios', PT: 'Ainda não há parceiros' }}
             emptyHint={{ EN: 'Partner applications submitted via /supplier/apply will appear here.', ES: 'Las solicitudes enviadas por /supplier/apply aparecerán aquí.', PT: 'Os pedidos enviados por /supplier/apply aparecerão aqui.' }}
-            onRowClick={(s) => onViewAssets(s.id)}
+            onRowClick={(s) => { window.location.href = `/admin/suppliers/${s.id}`; }}
             rowActions={(s) => (
               <div className="flex items-center justify-end gap-1">
                 {s.status === 'PENDING' ? (
@@ -606,7 +606,7 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
             urlStateKey="bookings"
             emptyTitle={{ EN: 'No bookings yet', ES: 'Sin reservas aún', PT: 'Sem reservas ainda' }}
             emptyHint={{ EN: 'Reservations created from /admin Reservas or via the partner dashboard will appear here.', ES: 'Las reservas creadas desde /admin Reservas o desde el panel de socios aparecerán aquí.', PT: 'As reservas criadas em /admin Reservas ou no painel do parceiro aparecerão aqui.' }}
-            onRowClick={(b) => { setSelectedBooking(b); setBookingNotes(b.notes || ''); }}
+            onRowClick={(b) => { window.location.href = `/admin/bookings/${b.id}`; }}
             rowActions={(b) => (
               <div className="flex items-center justify-end gap-1">
                 <button

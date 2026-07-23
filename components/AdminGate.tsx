@@ -22,6 +22,7 @@ import {
   isSupabaseConfigured,
 } from '../services/supabase';
 import { SuppliersManagement } from './SuppliersManagement';
+import { SupplierDetail, ClientDetail, BookingDetail, LeadDetail } from './AdminDetails';
 import {
   Section,
   SectionLabel,
@@ -76,10 +77,16 @@ const T = {
   },
 } as const;
 
+type AdminSubroute =
+  | { kind: 'list' }
+  | { kind: 'detail'; entity: 'suppliers' | 'clients' | 'bookings' | 'leads'; id: string }
+  | null;
+
 interface AdminGateProps {
   onBack: () => void;
   onSignIn: () => void;
   lang?: Language;
+  subroute?: AdminSubroute;
 }
 
 type AdminState =
@@ -89,7 +96,7 @@ type AdminState =
   | { kind: 'not-authorized'; email: string }
   | { kind: 'ready'; email: string };
 
-export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = 'EN' }) => {
+export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = 'EN', subroute = null }) => {
   const t = T[lang];
   const [state, setState] = useState<AdminState>({ kind: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
@@ -164,10 +171,24 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
   };
 
   if (state.kind === 'ready') {
+    // Detail route: /admin/{entity}/{id}
+    if (subroute && subroute.kind === 'detail') {
+      const detailProps = {
+        id: subroute.id,
+        lang,
+        signedInEmail: state.email,
+        onSignOut: handleSignOut,
+      };
+      if (subroute.entity === 'suppliers') return <SupplierDetail {...detailProps} />;
+      if (subroute.entity === 'clients')   return <ClientDetail {...detailProps} />;
+      if (subroute.entity === 'bookings')  return <BookingDetail {...detailProps} />;
+      if (subroute.entity === 'leads')     return <LeadDetail {...detailProps} />;
+    }
+    // List route: /admin
     return (
       <SuppliersManagement
         lang={lang}
-        onViewAssets={() => { /* TODO: navigate to asset detail */ }}
+        onViewAssets={(supplierId) => { window.location.href = `/admin/suppliers/${supplierId}`; }}
         onSignOut={handleSignOut}
         signedInEmail={state.email}
       />

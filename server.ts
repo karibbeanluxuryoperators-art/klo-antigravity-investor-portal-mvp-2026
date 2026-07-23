@@ -355,6 +355,25 @@ async function startServer() {
     }
   });
 
+  // GET /api/leads/:id — single lead (admin-only). Used by /admin/leads/[id].
+  app.get("/api/leads/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return res.status(404).json({ error: 'lead not found' });
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.patch("/api/leads/:id", async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
@@ -469,14 +488,33 @@ async function startServer() {
       const updates: any = {};
       if (status) updates.status = status;
       if (notes !== undefined) updates.notes = notes;
-      
+
       const { error } = await supabase
         .from('bookings')
         .update(updates)
         .eq('id', id);
-        
+
       if (error) throw error;
       res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // GET /api/bookings/:id — single booking (admin-only). Used by /admin/bookings/[id].
+  app.get("/api/bookings/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`*, assets(name, type, supplier_id, suppliers(business_name, contact_name, email, whatsapp))`)
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return res.status(404).json({ error: 'booking not found' });
+      res.json(data);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

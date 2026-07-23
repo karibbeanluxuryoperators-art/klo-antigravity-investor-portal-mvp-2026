@@ -5,7 +5,7 @@ import {
   Calendar, DollarSign, MapPin, ExternalLink,
   Check, X as XIcon, Loader2, AlertCircle,
   ChevronDown, ChevronUp, Trash2, RefreshCw,
-  User, Sparkles,
+  User, Sparkles, ExternalLink,
 } from 'lucide-react';
 import { getSupplierSession } from '../services/supabase';
 
@@ -427,6 +427,16 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
                         </span>
                       </div>
                     </div>
+
+                    {/* View full page link */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); window.location.href = `/admin/leads/${lead.id}`; }}
+                      className="hidden md:inline-flex shrink-0 items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-[#B8963E] transition-colors px-2"
+                      title={lang === 'ES' ? 'Ver página completa' : lang === 'PT' ? 'Ver página completa' : 'View full page'}
+                    >
+                      <ExternalLink size={12} />
+                      {lang === 'ES' ? 'Abrir' : lang === 'PT' ? 'Abrir' : 'Open'}
+                    </button>
 
                     {/* Expand chevron */}
                     <div className="text-white/30 shrink-0 mt-1">

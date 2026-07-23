@@ -28,17 +28,28 @@ import { ErrorBoundary } from './components/ui/ErrorBoundary';
 // transitions are full-page navigations (window.location.href = ...) so
 // Supabase's `detectSessionInUrl` can process the access_token hash on each
 // fresh page load. A SPA route change would not trigger that handler.
-function useSupplierRoute(): 'portal' | 'login' | 'dashboard' | 'admin' | null {
-  const compute = (): 'portal' | 'login' | 'dashboard' | 'admin' | null => {
+// v1.8.0 Step 6: extended route detector to handle admin detail pages
+// (e.g. /admin/suppliers/S123). Returns an object so the App can render
+// the right surface (list vs detail) with the right ID.
+type AdminSubroute =
+  | { kind: 'list' }
+  | { kind: 'detail'; entity: 'suppliers' | 'clients' | 'bookings' | 'leads'; id: string }
+  | null;
+
+function useSupplierRoute(): 'portal' | 'login' | 'dashboard' | AdminSubroute {
+  const compute = (): 'portal' | 'login' | 'dashboard' | AdminSubroute => {
     if (typeof window === 'undefined') return null;
-    const p = window.location.pathname;
-    if (p === '/supplier/login' || p === '/supplier/login/') return 'login';
-    if (p === '/supplier/dashboard' || p === '/supplier/dashboard/') return 'dashboard';
-    if (p === '/admin' || p === '/admin/') return 'admin';
-    if (p === '/supplier' || p === '/supplier/' || p.startsWith('/supplier/')) return 'portal';
+    const p = window.location.pathname.replace(/\/$/, ''); // strip trailing slash
+    if (p === '/supplier/login') return 'login';
+    if (p === '/supplier/dashboard') return 'dashboard';
+    if (p === '/supplier' || p.startsWith('/supplier')) return 'portal';
+    // /admin (list) and /admin/{entity}/{id} (detail)
+    if (p === '/admin') return { kind: 'list' };
+    const m = p.match(/^\/admin\/(suppliers|clients|bookings|leads)\/([^/]+)$/);
+    if (m) return { kind: 'detail', entity: m[1] as any, id: m[2] };
     return null;
   };
-  const [subroute, setSubroute] = useState<'portal' | 'login' | 'dashboard' | 'admin' | null>(compute);
+  const [subroute, setSubroute] = useState<'portal' | 'login' | 'dashboard' | AdminSubroute>(compute);
   useEffect(() => {
     const handler = () => setSubroute(compute());
     window.addEventListener('popstate', handler);
@@ -172,7 +183,8 @@ function App() {
       );
     }
 
-    if (supplierSubroute === 'admin') {
+    if (typeof supplierSubroute === 'object' && supplierSubroute !== null) {
+      // Admin routes (list + detail)
       return (
         <ErrorBoundary context="Admin portal" showDiagnostic>
           <div className="min-h-screen">
@@ -180,6 +192,7 @@ function App() {
               lang={portalLang}
               onBack={goHome}
               onSignIn={goToLogin}
+              subroute={supplierSubroute}
             />
           </div>
         </ErrorBoundary>
