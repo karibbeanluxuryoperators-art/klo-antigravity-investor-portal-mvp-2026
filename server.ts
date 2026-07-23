@@ -312,13 +312,17 @@ async function startServer() {
   });
 
   // Leads API
+  // GET is admin-gated (Step 4 — v1.8.0 admin Leads tab).
+  // POST stays public so the public site PlanTripModal can submit without auth.
   app.get("/api/leads", async (req, res) => {
     try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
       const { data, error } = await supabase
         .from('leads')
         .select('*')
         .order('timestamp', { ascending: false });
-      
+
       if (error) throw error;
       res.json(data);
     } catch (error: any) {
@@ -354,13 +358,32 @@ async function startServer() {
   app.patch("/api/leads/:id", async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
-    
+
     try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
       const { error } = await supabase
         .from('leads')
         .update(updates)
         .eq('id', id);
-      
+
+      if (error) throw error;
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // DELETE /api/leads/:id — admin-only removal (used by Leads tab "trash" action).
+  app.delete("/api/leads/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const { error } = await supabase
+        .from('leads')
+        .delete()
+        .eq('id', id);
       if (error) throw error;
       res.json({ success: true });
     } catch (error: any) {

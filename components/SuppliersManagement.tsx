@@ -8,6 +8,7 @@ import {
   FileText, Save, RefreshCw, LogOut
 } from 'lucide-react';
 import { ClientManagement } from './ClientManagement';
+import { LeadsManagement } from './LeadsManagement';
 // Local Language alias - see SupplierPortal.tsx for rationale
 type Language = 'EN' | 'ES' | 'PT';
 
@@ -113,7 +114,7 @@ const txAdmin = (key: keyof typeof T_ADMIN, lang: Language): string => {
 };
 
 export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, onViewAssets, onSignOut, signedInEmail }) => {
-  const [activeView, setActiveView] = useState<'SUPPLIERS' | 'BOOKINGS' | 'CLIENTS'>('SUPPLIERS');
+  const [activeView, setActiveView] = useState<'SUPPLIERS' | 'BOOKINGS' | 'CLIENTS' | 'LEADS'>('SUPPLIERS');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [suppliersLoading, setSuppliersLoading] = useState(true);
@@ -450,44 +451,58 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
             <h2 className="text-4xl font-serif italic text-white uppercase tracking-widest mb-2">{lang === "EN" ? "Clients" : lang === "ES" ? "Clientes" : "Clientes"}</h2>
             <p className="text-[10px] text-[#B8963E] uppercase tracking-[0.4em] font-bold">{txAdmin('client_mgmt', lang)}</p>
           </button>
+          <div className="w-[1px] h-12 bg-white/10" />
+          <button
+            onClick={() => setActiveView('LEADS')}
+            className={`text-left transition-all ${activeView === 'LEADS' ? 'opacity-100' : 'opacity-30 hover:opacity-50'}`}
+          >
+            <h2 className="text-4xl font-serif italic text-white uppercase tracking-widest mb-2">{lang === "EN" ? "Leads" : lang === "ES" ? "Leads" : "Leads"}</h2>
+            <p className="text-[10px] text-[#B8963E] uppercase tracking-[0.4em] font-bold">{lang === "EN" ? "Inbound Inquiries" : lang === "ES" ? "Consultas Entrantes" : "Consultas Entrantes"}</p>
+          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-            <input
-              type="text"
-              placeholder={activeView === 'SUPPLIERS' ? txAdmin('search_partners', lang) : txAdmin('search_bookings', lang)}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all w-full lg:w-64 text-sm text-white placeholder:text-white/30"
-            />
-          </div>
-          <div className="flex bg-white/5 rounded-full p-1 border border-white/10">
-            {(activeView === 'SUPPLIERS' ? ['ALL', 'PENDING', 'APPROVED', 'REJECTED'] : ['ALL', 'PENDING', 'CONFIRMED', 'CANCELLED']).map((f) => {
-              const labelKey = f === 'ALL' ? 'all' : f === 'PENDING' ? 'pending' : f === 'APPROVED' ? 'approved' : f === 'REJECTED' ? 'rejected' : f === 'CONFIRMED' ? 'confirmed' : 'cancelled';
-              return (
+          {(activeView === 'SUPPLIERS' || activeView === 'BOOKINGS') && (
+            <>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
+                <input
+                  type="text"
+                  placeholder={activeView === 'SUPPLIERS' ? txAdmin('search_partners', lang) : txAdmin('search_bookings', lang)}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all w-full lg:w-64 text-sm text-white placeholder:text-white/30"
+                />
+              </div>
+              <div className="flex bg-white/5 rounded-full p-1 border border-white/10">
+                {(activeView === 'SUPPLIERS' ? ['ALL', 'PENDING', 'APPROVED', 'REJECTED'] : ['ALL', 'PENDING', 'CONFIRMED', 'CANCELLED']).map((f) => {
+                  const labelKey = f === 'ALL' ? 'all' : f === 'PENDING' ? 'pending' : f === 'APPROVED' ? 'approved' : f === 'REJECTED' ? 'rejected' : f === 'CONFIRMED' ? 'confirmed' : 'cancelled';
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => setFilter(f as any)}
+                      className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
+                        filter === f ? 'bg-[#B8963E] text-white' : 'text-white/60 hover:text-white'
+                      }`}
+                    >
+                      {txAdmin(labelKey as any, lang)}
+                    </button>
+                  );
+                })}
+              </div>
+              {activeView === 'BOOKINGS' && (
                 <button
-                  key={f}
-                  onClick={() => setFilter(f as any)}
-                  className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
-                    filter === f ? 'bg-[#B8963E] text-white' : 'text-white/60 hover:text-white'
-                  }`}
+                  onClick={handleSyncAll}
+                  disabled={isSyncing}
+                  className="flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white/80 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
+                  title={txAdmin('sync_calendars', lang)}
                 >
-                  {txAdmin(labelKey as any, lang)}
+                  {isSyncing ? <Loader2 className="animate-spin" size={14} /> : <RefreshCw size={14} />}
+                  {txAdmin('sync_calendars', lang)}
                 </button>
-              );
-            })}
-          </div>
-          <button
-            onClick={handleSyncAll}
-            disabled={isSyncing}
-            className="flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 text-white/80 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
-            title={txAdmin('sync_calendars', lang)}
-          >
-            {isSyncing ? <Loader2 className="animate-spin" size={14} /> : <RefreshCw size={14} />}
-            {txAdmin('sync_calendars', lang)}
-          </button>
+              )}
+            </>
+          )}
           {onSignOut && (
             <div className="flex flex-col items-end gap-1 ml-2 pl-2 border-l border-white/10">
               {signedInEmail && (
@@ -700,6 +715,9 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
             </table>
           </div>
         </div>
+      ) : activeView === 'LEADS' ? (
+        // ── v1.8.0 Step 4: Leads view (inbound Plan Your Trip + contact form) ──
+        <LeadsManagement lang={lang} />
       ) : (
         // ── v1.8.0 Step 2: Clients view (UHNWI guest relations) ──────────────
         <ClientManagement lang={lang} />
