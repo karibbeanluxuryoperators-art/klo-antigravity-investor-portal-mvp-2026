@@ -260,15 +260,13 @@ export const SupplierDashboardGate: React.FC<SupplierDashboardGateProps> = ({
                 <p className="text-white/60 font-light leading-relaxed">
                   {t.notFoundBody.replace('{email}', state.email)}
                 </p>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-                  <PrimaryButton
+                <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2 items-stretch">
+                  <button
                     onClick={() => setReloadKey(k => k + 1)}
-                    size="md"
-                    icon={<RefreshCw size={12} />}
-                    className="!bg-[#B8963E] !border-[#B8963E] !text-white hover:!bg-white hover:!text-slate-900"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#B8963E] border border-[#B8963E] text-white rounded-full text-[10px] font-sans uppercase tracking-[0.3em] font-semibold hover:bg-white hover:text-slate-900 transition-all"
                   >
-                    {t.refresh}
-                  </PrimaryButton>
+                    <RefreshCw size={12} /> {t.refresh}
+                  </button>
                   <a
                     href="mailto:hola@karibbeanluxuryoperators.lat"
                     className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-white/20 text-white/80 rounded-full text-[10px] font-sans uppercase tracking-[0.3em] font-semibold hover:bg-white/10 hover:text-white hover:border-white/40 transition-all"
