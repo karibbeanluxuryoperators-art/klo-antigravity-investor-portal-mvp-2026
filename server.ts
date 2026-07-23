@@ -1252,24 +1252,6 @@ async function startServer() {
   // /api/* would not match. The wrapper at api/index.ts short-circuits
   // /api/config and /api/health directly (see api/_configHandler.ts).
 
-  // Simulated Admin Data
-  app.get("/api/admin/stats", (req, res) => {
-    res.json({
-      totalRevenue: "$2.4M",
-      activeBookings: 42,
-      pendingApprovals: 7,
-      partnerCount: 128,
-      revenueData: [
-        { name: 'Jan', value: 400000 },
-        { name: 'Feb', value: 300000 },
-        { name: 'Mar', value: 600000 },
-        { name: 'Apr', value: 800000 },
-        { name: 'May', value: 500000 },
-        { name: 'Jun', value: 900000 },
-      ]
-    });
-  });
-
   // ── v1.8.0: Admin role check + management ─────────────────────────────────
   // The browser sends the user's access token in the Authorization header.
   // We validate it with Supabase's getUser(token) and look up the role
