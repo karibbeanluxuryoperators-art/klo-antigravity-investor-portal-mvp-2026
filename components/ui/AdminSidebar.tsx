@@ -131,17 +131,20 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
               {t(s.labelKey, lang)}
             </span>
             {showBadge && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#B8963E] text-white font-bold tracking-wider">
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#B8963E] text-white font-bold tracking-wider shrink-0">
                 {badgeText}
               </span>
             )}
             {count != null && !showBadge && count > 0 && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-white/60 font-bold">
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/10 text-white/60 font-bold shrink-0">
                 {count}
               </span>
             )}
           </div>
-          <p className="text-[10px] text-white/40 uppercase tracking-[0.2em] truncate">
+          {/* v1.8.0 Step 8.7: subtitle hides on narrow widths to prevent
+              ugly truncation. The label + icon are enough to identify
+              each section; the subtitle is redundant info. */}
+          <p className="hidden lg:block text-[9px] text-white/40 uppercase tracking-[0.15em] truncate leading-tight">
             {t(s.subtitleKey, lang)}
           </p>
         </div>
