@@ -1370,6 +1370,110 @@ async function startServer() {
     }
   });
 
+  // ── Admin aggregate endpoints (v1.8.0 Step 8) ──────────────────────
+  // Powers the STATS and BUNDLES sidebar sections in /admin.
+
+  // GET /api/admin/stats — aggregate counts + recent activity. Admin-only.
+  // Used by AdminStatsView. Designed to be cheap (4 parallel count queries).
+  app.get("/api/admin/stats", async (req, res) => {
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      // Helper: safe count (returns {count: 0} if the table doesn't exist).
+      const safeCount = async (table: string, filter?: (q: any) => any) => {
+        try {
+          let q: any = supabase.from(table).select('id', { count: 'exact', head: true });
+          if (filter) q = filter(q);
+          const { count, error } = await q;
+          if (error && (error.code === '42P01' || /does not exist/i.test(error.message || ''))) {
+            return { count: 0 };
+          }
+          return { count: count || 0 };
+        } catch {
+          return { count: 0 };
+        }
+      };
+      const [
+        suppliersAll, suppliersApproved, suppliersPending,
+        bookingsAll, bookingsConfirmed, bookingsPending,
+        clientsAll, clientsUhnwi,
+        leadsAll, leadsNew, leadsWon,
+        bundlesAll,
+      ] = await Promise.all([
+        safeCount('suppliers'),
+        safeCount('suppliers', (q) => q.eq('status', 'APPROVED')),
+        safeCount('suppliers', (q) => q.eq('status', 'PENDING')),
+        safeCount('bookings'),
+        safeCount('bookings', (q) => q.eq('status', 'CONFIRMED')),
+        safeCount('bookings', (q) => q.eq('status', 'PENDING')),
+        safeCount('clients'),
+        safeCount('clients', (q) => q.eq('tier', 'UHNWI')),
+        safeCount('leads'),
+        safeCount('leads', (q) => q.eq('status', 'NEW')),
+        safeCount('leads', (q) => q.eq('status', 'WON')),
+        safeCount('bundles'),
+      ]);
+      // Recent activity: 5 most-recent leads
+      const { data: recentLeads } = await supabase
+        .from('leads')
+        .select('id, name, source, status, timestamp')
+        .order('timestamp', { ascending: false })
+        .limit(5);
+      res.json({
+        counts: {
+          suppliers: {
+            total: suppliersAll.count,
+            approved: suppliersApproved.count,
+            pending: suppliersPending.count,
+          },
+          bookings: {
+            total: bookingsAll.count,
+            confirmed: bookingsConfirmed.count,
+            pending: bookingsPending.count,
+          },
+          clients: {
+            total: clientsAll.count,
+            uhnwi: clientsUhnwi.count,
+          },
+          leads: {
+            total: leadsAll.count,
+            new: leadsNew.count,
+            won: leadsWon.count,
+          },
+          bundles: bundlesAll.count,
+        },
+        recentLeads: recentLeads || [],
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'stats failed' });
+    }
+  });
+
+  // GET /api/admin/bundles — list all bundles across all suppliers (admin-only).
+  // Used by AdminBundlesView. Each row links to /admin/bundles/[id] (future).
+  // Graceful: if the bundles table doesn't exist (Postgres error 42P01),
+  // return [] instead of 500 so the admin UI doesn't break.
+  app.get("/api/admin/bundles", async (req, res) => {
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const { data, error } = await supabase
+        .from('bundles')
+        .select(`id, name, description, status, price_total, created_at, supplier_id, suppliers:supplier_id ( business_name, contact_name )`)
+        .order('created_at', { ascending: false });
+      if (error) {
+        // 42P01 = undefined_table. Return empty so the admin view shows its empty state.
+        if (error.code === '42P01' || /does not exist/i.test(error.message || '')) {
+          return res.json([]);
+        }
+        throw error;
+      }
+      res.json(data || []);
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'bundles list failed' });
+    }
+  });
+
   // ── Clients API (v1.8.0 Step 2) ────────────────────────────────────────────
   // UHNWI / VVIP / VIP client profiles. Backed by public.clients table
   // (created via db/migrations/2026-07-20_clients.sql).

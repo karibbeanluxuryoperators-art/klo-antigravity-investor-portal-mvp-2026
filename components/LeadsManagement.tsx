@@ -1,16 +1,22 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Inbox, Search, Mail, Phone, MessageSquare,
+  Inbox, Mail, Phone, MessageSquare,
   Calendar, DollarSign, MapPin, ExternalLink,
   Check, X as XIcon, Loader2, AlertCircle,
-  ChevronDown, ChevronUp, Trash2, RefreshCw,
-  User, Sparkles, ExternalLink,
+  Trash2, RefreshCw, Sparkles, User,
 } from 'lucide-react';
 import { getSupplierSession } from '../services/supabase';
+import { DataTable, type Column, type BulkAction } from './ui/DataTable';
 
-// v1.8.0 Step 3.2: auth-aware fetch helper (mirrors ClientManagement).
-// Admin endpoints require `Authorization: Bearer <access_token>`.
+// v1.8.0 Step 8: Leads tab converted to DataTable for visual consistency
+// with the other admin tabs (SOCIOS, RESERVAS, CLIENTES). The expandable
+// card pattern from Step 4 was great for fast outreach, but at 1k+ leads
+// the user needs sort/search/page/bulk first. WhatsApp + email quick actions
+// are now inline in the row (no expand required). Mark Won / Mark Lost
+// are also inline as quick-action buttons. Full detail page lives at
+// /admin/leads/[id] (Step 6) for the full conversation context.
+
 async function authedFetch(input: string, init: RequestInit = {}): Promise<Response> {
   const session = await getSupplierSession();
   const token = session?.access_token;
@@ -22,7 +28,6 @@ async function authedFetch(input: string, init: RequestInit = {}): Promise<Respo
   return fetch(input, { ...init, headers });
 }
 
-// Local Language alias - see SupplierPortal.tsx for rationale
 type Language = 'EN' | 'ES' | 'PT';
 
 export interface Lead {
@@ -45,65 +50,46 @@ interface LeadsManagementProps {
   lang: Language;
 }
 
-// v1.8.0 Step 4: trilingual copy for the Leads tab.
 const T_LEADS: Record<string, { EN: string; ES: string; PT: string }> = {
-  search:           { EN: 'Search leads by name, email, or source...',
-                      ES: 'Buscar leads por nombre, email u origen...',
-                      PT: 'Pesquisar leads por nome, email ou origem...' },
-  empty:            { EN: 'No leads yet. Submissions from "Plan Your Trip" will land here.',
-                      ES: 'Aún no hay leads. Los envíos de "Planifica tu Viaje" aparecerán aquí.',
-                      PT: 'Ainda não há leads. Os envios de "Planeje Sua Viagem" aparecerão aqui.' },
-  empty_filter:     { EN: 'No leads match your filters.',
-                      ES: 'Ningún lead coincide con tus filtros.',
-                      PT: 'Nenhum lead corresponde aos seus filtros.' },
+  search:           { EN: 'Search by name, email, or source...',
+                      ES: 'Buscar por nombre, email u origen...',
+                      PT: 'Pesquisar por nome, email ou origem...' },
   loading:          { EN: 'Loading leads...', ES: 'Cargando leads...', PT: 'Carregando leads...' },
   err_load:         { EN: 'Failed to load leads.',
                       ES: 'Error cargando leads.',
                       PT: 'Erro ao carregar leads.' },
-  // Eyebrow / section
   inbound:          { EN: 'Inbound', ES: 'Entrantes', PT: 'Entrantes' },
   total_count:      { EN: 'Total Leads', ES: 'Leads Totales', PT: 'Leads Totais' },
   new_count:        { EN: 'New', ES: 'Nuevos', PT: 'Novos' },
   qualified_count:  { EN: 'Qualified', ES: 'Calificados', PT: 'Qualificados' },
-  won_count:        { EN: 'Won', ES: 'Ganados', PT: 'Ganhos' },
-  // Status labels (fallback to status name for unknown)
+  won_count:        { EN: 'Won', ES: 'Ganados', PT: 'Ganados' },
   status_NEW:       { EN: 'New', ES: 'Nuevo', PT: 'Novo' },
   status_CONTACTED: { EN: 'Contacted', ES: 'Contactado', PT: 'Contatado' },
   status_QUALIFIED: { EN: 'Qualified', ES: 'Calificado', PT: 'Qualificado' },
   status_WON:       { EN: 'Won', ES: 'Ganado', PT: 'Ganho' },
   status_LOST:      { EN: 'Lost', ES: 'Perdido', PT: 'Perdido' },
-  // Filters
   all:              { EN: 'All', ES: 'Todos', PT: 'Todos' },
-  // Card sections
-  contact:          { EN: 'Contact', ES: 'Contacto', PT: 'Contato' },
-  trip:             { EN: 'Trip Details', ES: 'Detalles del Viaje', PT: 'Detalhes da Viagem' },
-  message:          { EN: 'Message', ES: 'Mensaje', PT: 'Mensagem' },
   no_message:       { EN: 'No message provided.',
                       ES: 'Sin mensaje.',
                       PT: 'Sem mensagem.' },
-  // Field labels
-  experience_type:  { EN: 'Experience', ES: 'Experiencia', PT: 'Experiência' },
-  budget:           { EN: 'Budget', ES: 'Presupuesto', PT: 'Orçamento' },
-  travel_dates:     { EN: 'Travel Dates', ES: 'Fechas', PT: 'Datas' },
-  special_requests: { EN: 'Special Requests', ES: 'Solicitudes Especiales', PT: 'Pedidos Especiais' },
-  source:           { EN: 'Source', ES: 'Origen', PT: 'Origem' },
-  received:         { EN: 'Received', ES: 'Recibido', PT: 'Recebido' },
-  // Status transitions
-  mark_contacted:   { EN: 'Mark Contacted', ES: 'Marcar Contactado', PT: 'Marcar Contatado' },
-  mark_qualified:   { EN: 'Mark Qualified', ES: 'Marcar Calificado', PT: 'Marcar Qualificado' },
+  no_match:         { EN: 'No matches found', ES: 'Sin coincidencias', PT: 'Sem correspondências' },
+  no_match_hint:    { EN: 'Try a different search or filter.', ES: 'Prueba con otra búsqueda o filtro.', PT: 'Tente outra pesquisa ou filtro.' },
   mark_won:         { EN: 'Mark Won', ES: 'Marcar Ganado', PT: 'Marcar Ganho' },
   mark_lost:        { EN: 'Mark Lost', ES: 'Marcar Perdido', PT: 'Marcar Perdido' },
-  reopen:           { EN: 'Reopen as New', ES: 'Reabrir como Nuevo', PT: 'Reabrir como Novo' },
-  // Actions
-  whatsapp:         { EN: 'WhatsApp', ES: 'WhatsApp', PT: 'WhatsApp' },
-  email:            { EN: 'Email', ES: 'Email', PT: 'Email' },
+  mark_contacted:   { EN: 'Mark Contacted', ES: 'Marcar Contactado', PT: 'Marcar Contatado' },
   delete:           { EN: 'Delete', ES: 'Eliminar', PT: 'Excluir' },
   refresh:          { EN: 'Refresh', ES: 'Actualizar', PT: 'Atualizar' },
   err_status:       { EN: 'Status update failed', ES: 'Error al actualizar estado', PT: 'Erro ao atualizar status' },
   err_delete:       { EN: 'Delete failed', ES: 'Error al eliminar', PT: 'Erro ao excluir' },
-  confirm_delete:   { EN: 'Delete this lead? This cannot be undone.',
-                      ES: '¿Eliminar este lead? No se puede deshacer.',
-                      PT: 'Excluir este lead? Não pode ser desfeito.' },
+  confirm_delete:   { EN: 'Delete {n} lead(s)? This cannot be undone.',
+                      ES: '¿Eliminar {n} lead(s)? No se puede deshacer.',
+                      PT: 'Excluir {n} lead(s)? Não pode ser desfeito.' },
+  bulk_contacted:   { EN: 'Mark Contacted', ES: 'Marcar Contactado', PT: 'Marcar Contatado' },
+  bulk_qualified:   { EN: 'Mark Qualified', ES: 'Marcar Calificado', PT: 'Marcar Qualificado' },
+  bulk_won:         { EN: 'Mark Won', ES: 'Marcar Ganado', PT: 'Marcar Ganho' },
+  bulk_lost:        { EN: 'Mark Lost', ES: 'Marcar Perdido', PT: 'Marcar Perdido' },
+  open:             { EN: 'Open', ES: 'Abrir', PT: 'Abrir' },
+  open_detail:      { EN: 'View full detail', ES: 'Ver detalle completo', PT: 'Ver detalhe completo' },
 };
 
 const t = (key: keyof typeof T_LEADS, lang: Language): string => {
@@ -111,7 +97,6 @@ const t = (key: keyof typeof T_LEADS, lang: Language): string => {
   return (entry && (entry[lang] || entry.EN)) || '';
 };
 
-// Status pill colors — gold for high-value, neutral for in-progress, soft red for lost.
 const STATUS_COLORS: Record<string, string> = {
   NEW:       'bg-[#B8963E]/20 text-[#B8963E] border-[#B8963E]/40',
   CONTACTED: 'bg-white/10 text-white/80 border-white/20',
@@ -126,16 +111,6 @@ const formatBudget = (n: number | null, lang: Language): string => {
   return `$${formatted}`;
 };
 
-const formatDate = (iso: string, lang: Language): string => {
-  try {
-    return new Date(iso).toLocaleDateString(lang === 'ES' ? 'es-CO' : lang === 'PT' ? 'pt-BR' : 'en-US', {
-      year: 'numeric', month: 'short', day: 'numeric',
-    });
-  } catch {
-    return iso;
-  }
-};
-
 const formatRelative = (iso: string, lang: Language): string => {
   try {
     const ms = Date.now() - new Date(iso).getTime();
@@ -146,7 +121,7 @@ const formatRelative = (iso: string, lang: Language): string => {
     if (min < 60) return lang === 'ES' ? `hace ${min}m` : lang === 'PT' ? `há ${min}m` : `${min}m ago`;
     if (hr < 24) return lang === 'ES' ? `hace ${hr}h` : lang === 'PT' ? `há ${hr}h` : `${hr}h ago`;
     if (day < 30) return lang === 'ES' ? `hace ${day}d` : lang === 'PT' ? `há ${day}d` : `${day}d ago`;
-    return formatDate(iso, lang);
+    return new Date(iso).toLocaleDateString(lang === 'ES' ? 'es-CO' : lang === 'PT' ? 'pt-BR' : 'en-US');
   } catch {
     return iso;
   }
@@ -160,8 +135,6 @@ const whatsappLink = (phone: string | null, whatsapp: string | null): string | n
 
 const sourceLabel = (s: string | null): string => {
   if (!s) return '—';
-  // Map known source slugs to friendly labels (still raw — not translated here,
-  // the source value is data, not UI chrome).
   const map: Record<string, string> = {
     plan_your_trip_modal: 'Plan Your Trip',
     contact_form: 'Contact Form',
@@ -174,10 +147,6 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'WON' | 'LOST'>('ALL');
-  const [sourceFilter, setSourceFilter] = useState<'ALL' | string>('ALL');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
 
   const fetchLeads = useCallback(async () => {
@@ -200,16 +169,14 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
     }
   }, [lang]);
 
-  useEffect(() => {
-    fetchLeads();
-  }, [fetchLeads]);
+  useEffect(() => { fetchLeads(); }, [fetchLeads]);
 
-  const handleStatusUpdate = async (lead: Lead, newStatus: Lead['status']) => {
+  const updateStatus = async (lead: Lead, status: Lead['status']) => {
     setStatusUpdating(lead.id);
     try {
       const res = await authedFetch(`/api/leads/${lead.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status }),
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -224,10 +191,8 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
     }
   };
 
-  const handleDelete = async (lead: Lead) => {
-    // Browser confirm() — trilingual message.
-    const msg = t('confirm_delete', lang);
-    if (!confirm(msg)) return;
+  const deleteLead = async (lead: Lead) => {
+    if (!confirm(t('confirm_delete', lang).replace('{n}', '1'))) return;
     try {
       const res = await authedFetch(`/api/leads/${lead.id}`, { method: 'DELETE' });
       if (!res.ok) {
@@ -241,43 +206,160 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
     }
   };
 
-  // ── Derived state ──────────────────────────────────────────────────────
-  const sources = Array.from(new Set(leads.map(l => l.source).filter(Boolean))) as string[];
+  // ── Bulk actions ───────────────────────────────────────────────────
+  const bulkActions: BulkAction<Lead>[] = useMemo(() => [
+    {
+      key: 'contacted',
+      label: t('bulk_contacted', lang),
+      icon: <MessageSquare size={12} />,
+      variant: 'neutral',
+      onAction: async (rows) => {
+        for (const l of rows) {
+          await authedFetch(`/api/leads/${l.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'CONTACTED' }),
+          });
+        }
+        await fetchLeads();
+      },
+    },
+    {
+      key: 'qualified',
+      label: t('bulk_qualified', lang),
+      icon: <Check size={12} />,
+      variant: 'success',
+      onAction: async (rows) => {
+        for (const l of rows) {
+          await authedFetch(`/api/leads/${l.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'QUALIFIED' }),
+          });
+        }
+        await fetchLeads();
+      },
+    },
+    {
+      key: 'won',
+      label: t('bulk_won', lang),
+      icon: <Sparkles size={12} />,
+      variant: 'gold',
+      onAction: async (rows) => {
+        for (const l of rows) {
+          await authedFetch(`/api/leads/${l.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'WON' }),
+          });
+        }
+        await fetchLeads();
+      },
+    },
+    {
+      key: 'lost',
+      label: t('bulk_lost', lang),
+      icon: <XIcon size={12} />,
+      variant: 'danger',
+      onAction: async (rows) => {
+        for (const l of rows) {
+          await authedFetch(`/api/leads/${l.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'LOST' }),
+          });
+        }
+        await fetchLeads();
+      },
+    },
+  ], [fetchLeads, lang]);
 
-  const filtered = leads.filter(l => {
-    const q = searchQuery.toLowerCase().trim();
-    const matchesSearch = !q || (
-      (l.name || '').toLowerCase().includes(q) ||
-      (l.email || '').toLowerCase().includes(q) ||
-      (l.source || '').toLowerCase().includes(q) ||
-      (l.message || '').toLowerCase().includes(q) ||
-      (l.experience_type || '').toLowerCase().includes(q)
-    );
-    const matchesStatus = statusFilter === 'ALL' || l.status === statusFilter;
-    const matchesSource = sourceFilter === 'ALL' || l.source === sourceFilter;
-    return matchesSearch && matchesStatus && matchesSource;
-  });
+  // ── Columns ────────────────────────────────────────────────────────
+  const columns: Column<Lead>[] = useMemo(() => [
+    {
+      key: 'name',
+      label: { EN: 'Lead', ES: 'Lead', PT: 'Lead' },
+      sortValue: (l) => l.name || '',
+      render: (l) => {
+        const isNew = l.status === 'NEW';
+        return (
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-serif text-lg shrink-0 ${
+              isNew ? 'bg-[#B8963E] text-white' : 'bg-[#B8963E]/15 text-[#B8963E]'
+            }`}>
+              {(l.name || '?').charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-white truncate flex items-center gap-2">
+                {l.name || (lang === 'ES' ? 'Sin nombre' : lang === 'PT' ? 'Sem nome' : 'Unnamed')}
+                {isNew && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#B8963E] text-white uppercase tracking-[0.2em] font-bold">
+                    {t('inbound', lang)}
+                  </span>
+                )}
+              </div>
+              <div className="text-[10px] text-white/40 truncate">
+                {l.email || l.phone || '—'}
+              </div>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'source',
+      label: { EN: 'Source', ES: 'Origen', PT: 'Origem' },
+      sortValue: (l) => l.source || '',
+      hideOnMobile: true,
+      width: 'w-40',
+      render: (l) => <span className="text-xs text-white/60">{sourceLabel(l.source)}</span>,
+    },
+    {
+      key: 'experience_type',
+      label: { EN: 'Experience', ES: 'Experiencia', PT: 'Experiência' },
+      sortValue: (l) => l.experience_type || '',
+      hideOnMobile: true,
+      render: (l) => <span className="text-xs text-white/60 truncate max-w-[160px]">{l.experience_type || '—'}</span>,
+    },
+    {
+      key: 'budget',
+      label: { EN: 'Budget', ES: 'Presupuesto', PT: 'Orçamento' },
+      sortValue: (l) => l.budget ?? -1,
+      align: 'right',
+      width: 'w-32',
+      render: (l) => l.budget != null ? (
+        <span className="text-sm font-bold text-[#B8963E] font-serif italic">{formatBudget(l.budget, lang)}</span>
+      ) : <span className="text-white/30">—</span>,
+    },
+    {
+      key: 'status',
+      label: { EN: 'Status', ES: 'Estado', PT: 'Estado' },
+      sortValue: (l) => l.status,
+      width: 'w-32',
+      render: (l) => (
+        <span className={`text-[9px] px-2.5 py-1 rounded-full border uppercase tracking-[0.2em] font-bold ${STATUS_COLORS[l.status] || STATUS_COLORS.NEW}`}>
+          {t(`status_${l.status}` as any, lang)}
+        </span>
+      ),
+    },
+    {
+      key: 'timestamp',
+      label: { EN: 'Received', ES: 'Recibido', PT: 'Recebido' },
+      sortValue: (l) => new Date(l.timestamp),
+      hideOnMobile: true,
+      align: 'right',
+      width: 'w-32',
+      render: (l) => <span className="text-[10px] text-white/40">{formatRelative(l.timestamp, lang)}</span>,
+    },
+  ], [lang]);
 
-  const counts = {
+  // ── Counts for stat strip ──────────────────────────────────────────
+  const counts = useMemo(() => ({
     total: leads.length,
     new: leads.filter(l => l.status === 'NEW').length,
     qualified: leads.filter(l => l.status === 'QUALIFIED' || l.status === 'WON').length,
     won: leads.filter(l => l.status === 'WON').length,
-  };
-
-  // ── Render ────────────────────────────────────────────────────────────
-  if (loading && leads.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-[#B8963E]" size={32} />
-        <span className="ml-3 text-xs uppercase tracking-[0.3em] text-white/40">{t('loading', lang)}</span>
-      </div>
-    );
-  }
+  }), [leads]);
 
   return (
     <div className="space-y-6">
-      {/* ── Stat strip ─────────────────────────────────────────────────── */}
+      {/* ── Stat strip ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label={t('total_count', lang)} value={counts.total} accent="text-white" />
         <StatCard label={t('new_count', lang)} value={counts.new} accent="text-[#B8963E]" />
@@ -285,300 +367,82 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
         <StatCard label={t('won_count', lang)} value={counts.won} accent="text-[#B8963E]" />
       </div>
 
-      {/* ── Filters ────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[220px]">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-          <input
-            type="text"
-            placeholder={t('search', lang)}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all text-sm text-white placeholder:text-white/30"
-          />
-        </div>
-
-        {/* Status filter pills */}
-        <div className="flex bg-white/5 rounded-full p-1 border border-white/10 flex-wrap">
-          {(['ALL', 'NEW', 'CONTACTED', 'QUALIFIED', 'WON', 'LOST'] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
-                statusFilter === s ? 'bg-[#B8963E] text-white' : 'text-white/60 hover:text-white'
-              }`}
-            >
-              {s === 'ALL' ? t('all', lang) : t(`status_${s}` as any, lang)}
-            </button>
-          ))}
-        </div>
-
-        {/* Source filter (only if we have > 1 source) */}
-        {sources.length > 1 && (
-          <select
-            value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
-            className="bg-white/5 border border-white/10 rounded-full py-3 px-5 text-[10px] font-bold uppercase tracking-widest text-white/80 focus:outline-none focus:border-[#B8963E]"
-          >
-            <option value="ALL">{t('all', lang)} {t('source', lang)}</option>
-            {sources.map(s => (
-              <option key={s} value={s}>{sourceLabel(s)}</option>
-            ))}
-          </select>
-        )}
-
-        <button
-          onClick={fetchLeads}
-          disabled={loading}
-          className="flex items-center gap-2 px-5 py-3 bg-white/5 border border-white/10 text-white/80 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
-          title={t('refresh', lang)}
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          {t('refresh', lang)}
-        </button>
-      </div>
-
-      {/* ── Error banner ───────────────────────────────────────────────── */}
-      {error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 flex items-start gap-3">
-          <AlertCircle size={18} className="text-red-400 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-300">{error}</p>
-        </div>
-      )}
-
-      {/* ── List ───────────────────────────────────────────────────────── */}
-      {filtered.length === 0 ? (
-        <div className="py-20 flex flex-col items-center justify-center text-center gap-6 border border-dashed border-white/10 rounded-2xl">
-          <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center text-white/30">
-            <Inbox size={40} />
-          </div>
-          <p className="text-sm uppercase tracking-widest text-white/40">
-            {leads.length === 0 ? t('empty', lang) : t('empty_filter', lang)}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <AnimatePresence mode="popLayout">
-            {filtered.map((lead) => {
-              const isExpanded = expandedId === lead.id;
-              const wa = whatsappLink(lead.phone, lead.whatsapp);
-              const isNew = lead.status === 'NEW';
-              return (
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  key={lead.id}
-                  className={`rounded-2xl border transition-all overflow-hidden ${
-                    isNew
-                      ? 'bg-[#B8963E]/[0.04] border-[#B8963E]/30 hover:border-[#B8963E]/50'
-                      : 'bg-white/5 border-white/10 hover:border-white/20'
-                  }`}
+      {/* ── DataTable ──────────────────────────────────────────────── */}
+      <DataTable<Lead>
+        rows={leads}
+        loading={loading}
+        error={error}
+        columns={columns}
+        rowKey={(l) => l.id}
+        bulkActions={bulkActions}
+        filters={{
+          field: 'status',
+          options: [
+            { value: 'ALL',       label: { EN: 'All',        ES: 'Todos',        PT: 'Todos' } },
+            { value: 'NEW',       label: { EN: 'New',        ES: 'Nuevo',        PT: 'Novo' } },
+            { value: 'CONTACTED', label: { EN: 'Contacted',  ES: 'Contactado',   PT: 'Contatado' } },
+            { value: 'QUALIFIED', label: { EN: 'Qualified',  ES: 'Calificado',   PT: 'Qualificado' } },
+            { value: 'WON',       label: { EN: 'Won',        ES: 'Ganado',       PT: 'Ganho' } },
+            { value: 'LOST',      label: { EN: 'Lost',       ES: 'Perdido',      PT: 'Perdido' } },
+          ],
+        }}
+        searchFields={['name', 'email', 'source', 'message', 'experience_type', 'special_requests']}
+        searchPlaceholder={t('search', lang)}
+        defaultSort={{ key: 'timestamp', order: 'desc' }}
+        pageSize={25}
+        lang={lang}
+        urlStateKey="leads"
+        emptyTitle={{ EN: 'No leads yet', ES: 'Aún no hay leads', PT: 'Ainda não há leads' }}
+        emptyHint={{ EN: 'Submissions from "Plan Your Trip" will land here.', ES: 'Los envíos de "Planifica tu Viaje" aparecerán aquí.', PT: 'Os envios de "Planeje Sua Viagem" aparecerão aqui.' }}
+        onRowClick={(l) => { window.location.href = `/admin/leads/${l.id}`; }}
+        rowActions={(l) => {
+          const wa = whatsappLink(l.phone, l.whatsapp);
+          return (
+            <div className="flex items-center justify-end gap-1">
+              {wa && (
+                <a
+                  href={wa}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                  title={`WhatsApp: ${l.whatsapp || l.phone}`}
                 >
-                  {/* Card header — always visible, click to expand */}
-                  <button
-                    onClick={() => setExpandedId(isExpanded ? null : lead.id)}
-                    className="w-full text-left p-6 flex items-start gap-4"
-                  >
-                    {/* Avatar */}
-                    <div className="w-12 h-12 bg-[#B8963E]/15 rounded-xl flex items-center justify-center text-[#B8963E] font-serif text-xl shrink-0">
-                      {(lead.name || '?').charAt(0).toUpperCase()}
-                    </div>
-
-                    {/* Identity */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-wrap items-center gap-3 mb-1">
-                        <h3 className="text-lg font-serif italic text-white truncate">
-                          {lead.name || (lang === 'ES' ? 'Sin nombre' : lang === 'PT' ? 'Sem nome' : 'Unnamed')}
-                        </h3>
-                        <span className={`text-[9px] px-3 py-1 rounded-full border uppercase tracking-[0.2em] font-bold ${STATUS_COLORS[lead.status] || STATUS_COLORS.NEW}`}>
-                          {t(`status_${lead.status}` as any, lang)}
-                        </span>
-                        {isNew && (
-                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-[#B8963E] text-white uppercase tracking-[0.2em] font-bold flex items-center gap-1">
-                            <Sparkles size={10} /> {t('inbound', lang)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/50">
-                        {lead.email && (
-                          <span className="flex items-center gap-1.5">
-                            <Mail size={12} className="text-white/30" /> {lead.email}
-                          </span>
-                        )}
-                        {(lead.phone || lead.whatsapp) && (
-                          <span className="flex items-center gap-1.5">
-                            <Phone size={12} className="text-white/30" /> {lead.whatsapp || lead.phone}
-                          </span>
-                        )}
-                        {lead.experience_type && (
-                          <span className="flex items-center gap-1.5">
-                            <MapPin size={12} className="text-white/30" /> {lead.experience_type}
-                          </span>
-                        )}
-                        {lead.budget != null && (
-                          <span className="flex items-center gap-1.5 text-[#B8963E] font-semibold">
-                            <DollarSign size={12} /> {formatBudget(lead.budget, lang)}
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1.5 text-white/30">
-                          <Calendar size={12} /> {formatRelative(lead.timestamp, lang)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* View full page link */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); window.location.href = `/admin/leads/${lead.id}`; }}
-                      className="hidden md:inline-flex shrink-0 items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-[#B8963E] transition-colors px-2"
-                      title={lang === 'ES' ? 'Ver página completa' : lang === 'PT' ? 'Ver página completa' : 'View full page'}
-                    >
-                      <ExternalLink size={12} />
-                      {lang === 'ES' ? 'Abrir' : lang === 'PT' ? 'Abrir' : 'Open'}
-                    </button>
-
-                    {/* Expand chevron */}
-                    <div className="text-white/30 shrink-0 mt-1">
-                      {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </div>
-                  </button>
-
-                  {/* Expanded body */}
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="overflow-hidden border-t border-white/10"
-                      >
-                        <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          {/* Left: trip details + message */}
-                          <div className="space-y-4">
-                            <div className="space-y-3">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#B8963E]">{t('trip', lang)}</p>
-                              <div className="grid grid-cols-2 gap-3 text-xs">
-                                {lead.experience_type && (
-                                  <Field label={t('experience_type', lang)} value={lead.experience_type} />
-                                )}
-                                {lead.travel_dates && (
-                                  <Field label={t('travel_dates', lang)} value={lead.travel_dates} />
-                                )}
-                                <Field label={t('budget', lang)} value={formatBudget(lead.budget, lang)} accent />
-                                <Field label={t('source', lang)} value={sourceLabel(lead.source)} />
-                                <Field label={t('received', lang)} value={formatDate(lead.timestamp, lang)} />
-                              </div>
-                            </div>
-
-                            {lead.special_requests && (
-                              <div>
-                                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#B8963E] mb-2">{t('special_requests', lang)}</p>
-                                <p className="text-sm text-white/70 leading-relaxed italic border-l-2 border-[#B8963E]/30 pl-4">
-                                  "{lead.special_requests}"
-                                </p>
-                              </div>
-                            )}
-
-                            <div>
-                              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#B8963E] mb-2">{t('message', lang)}</p>
-                              <p className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">
-                                {lead.message || <span className="text-white/30 italic">{t('no_message', lang)}</span>}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Right: actions */}
-                          <div className="space-y-4">
-                            <div className="space-y-3">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#B8963E]">{t('contact', lang)}</p>
-                              <div className="flex flex-col gap-2">
-                                {lead.email && (
-                                  <a
-                                    href={`mailto:${lead.email}`}
-                                    className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white/80 hover:bg-white/10 hover:text-white transition-all"
-                                  >
-                                    <Mail size={16} className="text-[#B8963E]" />
-                                    <span className="flex-1 truncate">{lead.email}</span>
-                                    <ExternalLink size={12} className="text-white/30" />
-                                  </a>
-                                )}
-                                {wa && (
-                                  <a
-                                    href={wa}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-3 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-sm text-emerald-300 hover:bg-emerald-500/20 transition-all"
-                                  >
-                                    <MessageSquare size={16} />
-                                    <span className="flex-1">{lead.whatsapp || lead.phone}</span>
-                                    <ExternalLink size={12} />
-                                  </a>
-                                )}
-                                {!lead.email && !wa && (
-                                  <p className="text-xs text-white/30 italic px-4 py-3 border border-dashed border-white/10 rounded-xl">
-                                    {lang === 'ES' ? 'Sin datos de contacto' : lang === 'PT' ? 'Sem dados de contato' : 'No contact info'}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Status transitions */}
-                            <div className="space-y-2 pt-4 border-t border-white/10">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40 mb-2">
-                                {t('mark_contacted', lang).split(' ').slice(0, 1).join(' ')}…
-                              </p>
-                              <div className="grid grid-cols-2 gap-2">
-                                {lead.status !== 'CONTACTED' && (
-                                  <StatusButton onClick={() => handleStatusUpdate(lead, 'CONTACTED')} disabled={statusUpdating === lead.id} variant="neutral">
-                                    <MessageSquare size={12} /> {t('mark_contacted', lang)}
-                                  </StatusButton>
-                                )}
-                                {lead.status !== 'QUALIFIED' && (
-                                  <StatusButton onClick={() => handleStatusUpdate(lead, 'QUALIFIED')} disabled={statusUpdating === lead.id} variant="success">
-                                    <Check size={12} /> {t('mark_qualified', lang)}
-                                  </StatusButton>
-                                )}
-                                {lead.status !== 'WON' && (
-                                  <StatusButton onClick={() => handleStatusUpdate(lead, 'WON')} disabled={statusUpdating === lead.id} variant="gold">
-                                    <Sparkles size={12} /> {t('mark_won', lang)}
-                                  </StatusButton>
-                                )}
-                                {lead.status !== 'LOST' && (
-                                  <StatusButton onClick={() => handleStatusUpdate(lead, 'LOST')} disabled={statusUpdating === lead.id} variant="danger">
-                                    <XIcon size={12} /> {t('mark_lost', lang)}
-                                  </StatusButton>
-                                )}
-                                {lead.status !== 'NEW' && (
-                                  <StatusButton onClick={() => handleStatusUpdate(lead, 'NEW')} disabled={statusUpdating === lead.id} variant="neutral" className="col-span-2">
-                                    <RefreshCw size={12} /> {t('reopen', lang)}
-                                  </StatusButton>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Delete (destructive, bottom) */}
-                            <div className="pt-4 border-t border-white/10">
-                              <button
-                                onClick={() => handleDelete(lead)}
-                                disabled={statusUpdating === lead.id}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-300/60 hover:text-red-300 hover:bg-red-500/10 rounded-xl text-[10px] font-bold uppercase tracking-[0.3em] transition-all"
-                              >
-                                <Trash2 size={12} /> {t('delete', lang)}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </div>
-      )}
+                  <MessageSquare size={14} />
+                </a>
+              )}
+              {l.email && (
+                <a
+                  href={`mailto:${l.email}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-2 text-white/40 hover:text-[#B8963E] hover:bg-white/5 rounded-lg transition-colors"
+                  title={l.email}
+                >
+                  <Mail size={14} />
+                </a>
+              )}
+              {l.status !== 'WON' && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); updateStatus(l, 'WON'); }}
+                  disabled={statusUpdating === l.id}
+                  className="p-2 text-white/40 hover:text-[#B8963E] hover:bg-[#B8963E]/10 rounded-lg transition-colors disabled:opacity-50"
+                  title={t('mark_won', lang)}
+                >
+                  <Sparkles size={14} />
+                </button>
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); deleteLead(l); }}
+                disabled={statusUpdating === l.id}
+                className="p-2 text-white/40 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
+                title={t('delete', lang)}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          );
+        }}
+      />
     </div>
   );
 };
@@ -590,30 +454,3 @@ const StatCard: React.FC<{ label: string; value: number; accent: string }> = ({ 
     <p className={`text-3xl font-serif italic ${accent}`}>{value}</p>
   </div>
 );
-
-const Field: React.FC<{ label: string; value: string; accent?: boolean }> = ({ label, value, accent }) => (
-  <div>
-    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/40 mb-1">{label}</p>
-    <p className={`text-xs ${accent ? 'text-[#B8963E] font-semibold' : 'text-white/80'}`}>{value}</p>
-  </div>
-);
-
-interface StatusButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant: 'gold' | 'success' | 'danger' | 'neutral';
-}
-const StatusButton: React.FC<StatusButtonProps> = ({ variant, children, className = '', ...rest }) => {
-  const styles: Record<string, string> = {
-    gold:    'bg-[#B8963E] text-white hover:bg-[#B8963E]/90 border-[#B8963E]/40',
-    success: 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 border-emerald-500/30',
-    danger:  'bg-red-500/10 text-red-300 hover:bg-red-500/20 border-red-500/30',
-    neutral: 'bg-white/5 text-white/80 hover:bg-white/10 border-white/10',
-  };
-  return (
-    <button
-      {...rest}
-      className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border transition-all disabled:opacity-50 ${styles[variant]} ${className}`}
-    >
-      {children}
-    </button>
-  );
-};

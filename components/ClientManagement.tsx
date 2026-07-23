@@ -8,6 +8,7 @@ import {
   Trash2, Edit3,
 } from 'lucide-react';
 import { getSupplierSession } from '../services/supabase';
+import { DataTable, type Column } from './ui/DataTable';
 
 // v1.8.0 Step 3.2: auth-aware fetch helper.
 // Admin endpoints require `Authorization: Bearer <access_token>`. This helper
@@ -320,11 +321,11 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h2 className="text-4xl font-serif italic text-white uppercase tracking-widest mb-2">
+          <h2 className="text-3xl font-serif italic text-white uppercase tracking-widest mb-2">
             {lang === 'EN' ? 'Clients' : lang === 'ES' ? 'Clientes' : 'Clientes'}
           </h2>
           <p className="text-[10px] text-[#B8963E] uppercase tracking-[0.4em] font-bold">
@@ -332,30 +333,6 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
           </p>
         </div>
         <div className="flex flex-wrap gap-4 w-full md:w-auto">
-          <div className="relative flex-1 md:w-80">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-            <input
-              type="text"
-              placeholder={t('search', lang)}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all text-sm text-white placeholder:text-white/30"
-            />
-          </div>
-          {/* Tier filter */}
-          <div className="flex bg-white/5 rounded-full p-1 border border-white/10">
-            {(['ALL', 'UHNWI', 'VVIP', 'VIP'] as const).map((tf) => (
-              <button
-                key={tf}
-                onClick={() => setTierFilter(tf)}
-                className={`px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
-                  tierFilter === tf ? 'bg-[#B8963E] text-white' : 'text-white/60 hover:text-white'
-                }`}
-              >
-                {tf}
-              </button>
-            ))}
-          </div>
           <button
             onClick={openCreate}
             className="px-6 py-3 bg-[#B8963E] text-white rounded-full font-bold uppercase tracking-[0.3em] text-[10px] flex items-center gap-3 hover:bg-[#B8963E]/90 transition-all shrink-0"
@@ -373,177 +350,114 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
         </div>
       )}
 
-      {/* Grid */}
-      {filtered.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center">
-          <div className="max-w-xl mx-auto space-y-4">
-            <div className="w-16 h-16 bg-white/5 text-white/30 rounded-full flex items-center justify-center mx-auto">
-              <Users size={32} />
-            </div>
-            <p className="text-sm text-white/50 leading-relaxed">
-              {clients.length === 0 ? t('empty', lang) : t('empty_filter', lang)}
-            </p>
+      {/* v1.8.0 Step 8: DataTable replaces the card grid. */}
+      <DataTable<Client>
+        rows={clients}
+        loading={loading}
+        columns={[
+          {
+            key: 'name',
+            label: { EN: 'Name', ES: 'Nombre', PT: 'Nome' },
+            sortValue: (c) => c.name,
+            render: (c) => (
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-lg bg-[#B8963E] flex items-center justify-center text-white font-serif text-lg shrink-0">
+                  {(c.name || '?').charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-white truncate">{c.name}</div>
+                  <div className="text-[10px] text-white/40 truncate">{c.email || '—'}</div>
+                </div>
+              </div>
+            ),
+          },
+          {
+            key: 'tier',
+            label: { EN: 'Tier', ES: 'Nivel', PT: 'Nível' },
+            sortValue: (c) => c.tier,
+            width: 'w-28',
+            render: (c) => (
+              <span className={`px-2 py-1 text-[9px] font-bold uppercase tracking-[0.2em] rounded-full border ${TIER_COLORS[c.tier] || TIER_COLORS.VIP}`}>
+                {c.tier}
+              </span>
+            ),
+          },
+          {
+            key: 'status',
+            label: { EN: 'Status', ES: 'Estado', PT: 'Status' },
+            sortValue: (c) => c.status,
+            width: 'w-32',
+            render: (c) => (
+              <span className={`px-2 py-1 text-[9px] font-bold uppercase tracking-[0.2em] rounded-full border ${STATUS_COLORS[c.status] || STATUS_COLORS.ACTIVE}`}>
+                {c.status}
+              </span>
+            ),
+          },
+          {
+            key: 'total_spend',
+            label: { EN: 'Total Spend', ES: 'Gasto Total', PT: 'Gasto Total' },
+            sortValue: (c) => c.total_spend || 0,
+            align: 'right',
+            width: 'w-36',
+            render: (c) => <span className="text-sm font-bold text-[#B8963E] font-serif italic">{formatSpend(c.total_spend || 0, lang)}</span>,
+          },
+          {
+            key: 'loyalty_points',
+            label: { EN: 'Loyalty', ES: 'Lealtad', PT: 'Fidelidade' },
+            sortValue: (c) => c.loyalty_points || 0,
+            align: 'right',
+            hideOnMobile: true,
+            width: 'w-32',
+            render: (c) => <span className="text-xs text-white/70">{(c.loyalty_points || 0).toLocaleString()}</span>,
+          },
+          {
+            key: 'past_experiences',
+            label: { EN: 'Trips', ES: 'Viajes', PT: 'Viagens' },
+            sortValue: (c) => c.past_experiences || 0,
+            align: 'right',
+            hideOnMobile: true,
+            width: 'w-24',
+            render: (c) => <span className="text-xs text-white/70">{c.past_experiences ?? 0}</span>,
+          },
+        ]}
+        rowKey={(c) => c.id}
+        filters={{
+          field: 'tier',
+          options: [
+            { value: 'ALL',   label: { EN: 'All',   ES: 'Todos',  PT: 'Todos' } },
+            { value: 'UHNWI', label: { EN: 'UHNWI', ES: 'UHNWI',  PT: 'UHNWI' } },
+            { value: 'VVIP',  label: { EN: 'VVIP',  ES: 'VVIP',   PT: 'VVIP' } },
+            { value: 'VIP',   label: { EN: 'VIP',   ES: 'VIP',    PT: 'VIP' } },
+          ],
+        }}
+        searchFields={['name', 'email', 'phone', 'whatsapp', 'tier', 'status']}
+        searchPlaceholder={t('search', lang)}
+        defaultSort={{ key: 'total_spend', order: 'desc' }}
+        pageSize={25}
+        lang={lang}
+        urlStateKey="clients"
+        emptyTitle={{ EN: 'No clients yet', ES: 'Sin clientes aún', PT: 'Sem clientes ainda' }}
+        emptyHint={clients.length === 0 ? { EN: 'Click "Add New Client" to register your first UHNWI guest.', ES: 'Haz clic en "Añadir Nuevo Cliente" para registrar tu primer huésped UHNWI.', PT: 'Clique em "Adicionar Novo Cliente" para registrar seu primeiro hóspede UHNWI.' } : { EN: 'No clients match your filters.', ES: 'Ningún cliente coincide con tus filtros.', PT: 'Nenhum cliente corresponde aos seus filtros.' }}
+        onRowClick={(c) => { window.location.href = `/admin/clients/${c.id}`; }}
+        rowActions={(c) => (
+          <div className="flex items-center justify-end gap-1">
+            <button
+              onClick={() => openEdit(c)}
+              className="p-2 text-white/40 hover:text-[#B8963E] hover:bg-white/5 rounded-lg transition-colors"
+              title={t('edit', lang)}
+            >
+              <Edit3 size={14} />
+            </button>
+            <button
+              onClick={() => handleDelete(c)}
+              className="p-2 text-white/40 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+              title={t('delete', lang)}
+            >
+              <Trash2 size={14} />
+            </button>
           </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <AnimatePresence mode="popLayout">
-            {filtered.map((c, i) => (
-              <motion.div
-                key={c.id}
-                layout
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ delay: Math.min(i * 0.05, 0.4) }}
-                className="rounded-2xl border border-white/10 bg-white/5 p-8 relative overflow-hidden group hover:border-[#B8963E]/40 hover:bg-white/[0.07] transition-all"
-              >
-                <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity pointer-events-none">
-                  <Users size={100} />
-                </div>
-
-                <div className="flex justify-between items-start mb-6">
-                  <div className="flex items-center gap-5">
-                    <div className="w-16 h-16 bg-[#B8963E] rounded-2xl flex items-center justify-center text-white text-2xl font-serif">
-                      {(c.name || '?').charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <h4 className="text-2xl font-serif italic text-white mb-2">{c.name}</h4>
-                      <div className="flex flex-wrap gap-2">
-                        <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] rounded-full border ${TIER_COLORS[c.tier] || TIER_COLORS.VIP}`}>
-                          {c.tier}
-                        </span>
-                        <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.2em] rounded-full border ${STATUS_COLORS[c.status] || STATUS_COLORS.ACTIVE}`}>
-                          {c.status}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block mb-1">{t('total_spend', lang)}</span>
-                    <span className="text-xl font-serif italic text-[#B8963E]">{formatSpend(c.total_spend || 0, lang)}</span>
-                  </div>
-                </div>
-
-                {/* Contact strip */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-6 text-[11px]">
-                  {c.email && (
-                    <div className="flex items-center gap-2 text-white/70">
-                      <Mail size={12} className="text-white/40" />
-                      <span className="truncate">{c.email}</span>
-                    </div>
-                  )}
-                  {c.whatsapp && (
-                    <div className="flex items-center gap-2 text-white/70">
-                      <Phone size={12} className="text-emerald-400" />
-                      <span>{c.whatsapp}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Preferences */}
-                  <div className="space-y-4">
-                    <h5 className="text-[9px] font-bold uppercase tracking-[0.4em] text-[#B8963E] flex items-center gap-2">
-                      <Star size={10} /> {t('preferences', lang)}
-                    </h5>
-                    {c.preferences?.dietary && c.preferences.dietary.length > 0 && (
-                      <div>
-                        <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block mb-1">{t('dietary', lang)}</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {c.preferences.dietary.map((d, j) => (
-                            <span key={j} className="text-[10px] px-2 py-0.5 bg-white/5 text-white/80 rounded border border-white/10">
-                              {d}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {c.preferences?.beverages && c.preferences.beverages.length > 0 && (
-                      <div>
-                        <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block mb-1">{t('beverages', lang)}</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {c.preferences.beverages.map((b, j) => (
-                            <span key={j} className="text-[10px] px-2 py-0.5 bg-white/5 text-white/80 rounded border border-white/10">
-                              {b}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {c.preferences?.temperature && (
-                      <div>
-                        <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block mb-1">{t('temperature', lang)}</span>
-                        <span className="text-[10px] px-2 py-0.5 bg-white/5 text-white/80 rounded border border-white/10">
-                          {c.preferences.temperature}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Intelligence */}
-                  <div className="space-y-4">
-                    <h5 className="text-[9px] font-bold uppercase tracking-[0.4em] text-[#B8963E] flex items-center gap-2">
-                      <Activity size={10} /> {t('intelligence', lang)}
-                    </h5>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                        <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block">{t('experiences', lang)}</span>
-                        <span className="text-lg font-serif italic text-white">{c.past_experiences ?? 0}</span>
-                      </div>
-                      <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                        <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block">{t('loyalty', lang)}</span>
-                        <span className="text-lg font-serif italic text-white">{(c.loyalty_points ?? 0).toLocaleString()}</span>
-                      </div>
-                    </div>
-                    {c.preferences?.interests && c.preferences.interests.length > 0 && (
-                      <div>
-                        <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block mb-1">{t('interests', lang)}</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {c.preferences.interests.map((interest, j) => (
-                            <span key={j} className="text-[9px] font-bold uppercase tracking-[0.2em] px-2 py-0.5 bg-[#B8963E]/15 text-[#B8963E] rounded-full border border-[#B8963E]/20">
-                              {interest}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {c.notes && (
-                  <div className="mt-6 pt-6 border-t border-white/10">
-                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-[0.3em] block mb-1">{t('notes', lang)}</span>
-                    <p className="text-xs text-white/60 italic leading-relaxed">{c.notes}</p>
-                  </div>
-                )}
-
-                {/* Action row */}
-                <div className="mt-6 pt-6 border-t border-white/10 flex gap-3">
-                  <button
-                    onClick={() => { window.location.href = `/admin/clients/${c.id}`; }}
-                    className="flex-1 py-3 bg-white/5 text-white/80 rounded-xl font-bold uppercase tracking-[0.3em] text-[10px] flex items-center justify-center gap-2 hover:bg-[#B8963E] hover:text-white hover:border-[#B8963E] border border-white/10 transition-all"
-                  >
-                    <User size={14} /> {lang === 'ES' ? 'Ver Perfil' : lang === 'PT' ? 'Ver Perfil' : 'View Profile'}
-                  </button>
-                  <button
-                    onClick={() => openEdit(c)}
-                    className="flex-1 py-3 bg-white/5 text-white/80 rounded-xl font-bold uppercase tracking-[0.3em] text-[10px] flex items-center justify-center gap-2 hover:bg-[#B8963E] hover:text-white hover:border-[#B8963E] border border-white/10 transition-all"
-                  >
-                    <Edit3 size={14} /> {t('edit', lang)}
-                  </button>
-                  <button
-                    onClick={() => handleDelete(c)}
-                    className="flex-1 py-3 bg-white/5 text-white/70 rounded-xl font-bold uppercase tracking-[0.3em] text-[10px] flex items-center justify-center gap-2 hover:bg-red-500/20 hover:text-red-300 hover:border-red-500/40 border border-white/10 transition-all"
-                  >
-                    <Trash2 size={14} /> {t('delete', lang)}
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-      )}
+        )}
+      />
 
       {/* Modal */}
       <AnimatePresence>
