@@ -15,6 +15,7 @@ import { KLOUser } from '../services/firebase';
 type Language = 'EN' | 'ES' | 'PT';
 import { MiniCalendar } from './MiniCalendar';
 import { PartnerBundles } from './PartnerBundles';
+import { DataTable, StatusPill, type Column, type FilterOption } from './ui/DataTable';
 
 interface Asset {
   id: string;
@@ -308,6 +309,108 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
     b.asset_name.toLowerCase().includes(search.toLowerCase())
   );
 
+  // v1.8.0 Step 7: DataTable column configs for assets + bookings tabs.
+  const ASSET_FILTERS: FilterOption[] = [
+    { value: 'ALL',    label: { EN: 'All',    ES: 'Todos',  PT: 'Todos' } },
+    { value: 'ACTIVE', label: { EN: 'Active', ES: 'Activos', PT: 'Ativos' } },
+    { value: 'PENDING', label: { EN: 'Pending', ES: 'Pendientes', PT: 'Pendentes' } },
+  ];
+  const BOOKING_FILTERS: FilterOption[] = [
+    { value: 'ALL',       label: { EN: 'All',        ES: 'Todos',        PT: 'Todos' } },
+    { value: 'PENDING',   label: { EN: 'Pending',    ES: 'Pendientes',   PT: 'Pendentes' } },
+    { value: 'CONFIRMED', label: { EN: 'Confirmed',  ES: 'Confirmadas',  PT: 'Confirmadas' } },
+    { value: 'CANCELLED', label: { EN: 'Cancelled',  ES: 'Canceladas',   PT: 'Canceladas' } },
+  ];
+
+  const assetColumns: Column<Asset>[] = [
+    {
+      key: 'name',
+      label: { EN: 'Asset', ES: 'Activo', PT: 'Ativo' },
+      sortValue: (a) => a.name,
+      render: (a) => {
+        const Icon = ASSET_TYPE_ICONS[a.type] || Package;
+        return (
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-lg bg-[#B8963E]/15 flex items-center justify-center text-[#B8963E] shrink-0">
+              <Icon size={18} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-white truncate">{a.name}</div>
+              <div className="text-[10px] text-white/40 uppercase tracking-[0.2em] truncate">
+                {ASSET_TYPE_LABELS[a.type]?.[lang] || a.type} · {a.capacity} PAX
+              </div>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'location',
+      label: { EN: 'Location', ES: 'Ubicación', PT: 'Localização' },
+      sortValue: (a) => a.location,
+      hideOnMobile: true,
+      render: (a) => <span className="text-xs text-white/60">{a.location}</span>,
+    },
+    {
+      key: 'price_per_unit',
+      label: { EN: 'Price', ES: 'Precio', PT: 'Preço' },
+      sortValue: (a) => parseFloat((a.price_per_unit || '0').replace(/[^0-9.]/g, '')) || 0,
+      align: 'right',
+      width: 'w-32',
+      render: (a) => <span className="text-sm font-bold text-[#B8963E] font-serif italic">{a.price_per_unit}</span>,
+    },
+    {
+      key: 'status',
+      label: { EN: 'Status', ES: 'Estado', PT: 'Estado' },
+      sortValue: (a) => a.status,
+      width: 'w-32',
+      render: (a) => <StatusPill status={a.status} lang={lang} />,
+    },
+  ];
+
+  const bookingColumns: Column<Booking>[] = [
+    {
+      key: 'guest_name',
+      label: { EN: 'Guest', ES: 'Huésped', PT: 'Hóspede' },
+      sortValue: (b) => b.guest_name,
+      render: (b) => (
+        <div>
+          <div className="text-sm font-medium text-white">{b.guest_name}</div>
+          <div className="text-[10px] text-white/40 truncate">{b.guest_email}</div>
+        </div>
+      ),
+    },
+    {
+      key: 'asset_name',
+      label: { EN: 'Asset', ES: 'Activo', PT: 'Ativo' },
+      sortValue: (b) => b.asset_name,
+      hideOnMobile: true,
+      render: (b) => <span className="text-sm text-white">{b.asset_name || '—'}</span>,
+    },
+    {
+      key: 'start_date',
+      label: { EN: 'Dates', ES: 'Fechas', PT: 'Datas' },
+      sortValue: (b) => new Date(b.start_date),
+      hideOnMobile: true,
+      render: (b) => <span className="text-xs text-white/60">{new Date(b.start_date).toLocaleDateString(lang === 'ES' ? 'es-CO' : lang === 'PT' ? 'pt-BR' : 'en-US')}</span>,
+    },
+    {
+      key: 'total_price',
+      label: { EN: 'Total', ES: 'Total', PT: 'Total' },
+      sortValue: (b) => parseFloat((b.total_price || '0').replace(/[^0-9.]/g, '')) || 0,
+      align: 'right',
+      width: 'w-32',
+      render: (b) => <span className="text-sm font-bold text-[#B8963E] font-serif italic">{b.total_price}</span>,
+    },
+    {
+      key: 'status',
+      label: { EN: 'Status', ES: 'Estado', PT: 'Estado' },
+      sortValue: (b) => b.status,
+      width: 'w-32',
+      render: (b) => <StatusPill status={b.status} lang={lang} />,
+    },
+  ];
+
   const TABS = [
     { id: 'dashboard', label: { EN: 'Overview', ES: 'Resumen', PT: 'Visão' }, icon: BarChart3 },
     { id: 'assets',    label: { EN: 'Assets', ES: 'Activos', PT: 'Ativos' }, icon: Package },
@@ -579,161 +682,76 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
           {activeTab === 'assets' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-                  <input value={search} onChange={e => setSearch(e.target.value)}
-                    placeholder={lang === 'EN' ? 'Search assets...' : lang === 'ES' ? 'Buscar activos...' : 'Pesquisar ativos...'}
-                    className="bg-white border border-white/10  rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all text-sm text-white w-full sm:w-64" />
-                </div>
+                <div></div>
                 <button onClick={() => openEditModal()}
-                  className="px-6 py-3 bg-gold text-luxury-black rounded-full font-semibold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-white transition-all shrink-0">
+                  className="px-6 py-3 bg-[#B8963E] text-white rounded-full font-bold text-[10px] uppercase tracking-[0.3em] flex items-center gap-2 hover:bg-white hover:text-slate-900 transition-all shrink-0">
                   <Plus size={14} /> {lang === 'EN' ? 'Add Asset' : lang === 'ES' ? 'Agregar' : 'Adicionar'}
                 </button>
               </div>
-
-              {filteredAssets.length === 0 ? (
-                <div className="py-20 text-center space-y-4">
-                  <Package size={48} className="text-white/10 mx-auto mb-4" />
-                  {assets.length === 0 ? (
-                    <>
-                      <p className="text-white/50 text-sm">
-                        {lang === 'EN' ? 'You have not listed any assets yet.' : lang === 'ES' ? 'Aún no has listado ningún activo.' : 'Você ainda não listou nenhum ativo.'}
-                      </p>
-                      <button onClick={() => openEditModal()}
-                        className="inline-flex items-center gap-2 px-8 py-3 bg-[#B8963E] text-white rounded-full font-semibold text-[10px] uppercase tracking-[0.3em] hover:bg-white/10 transition-all">
-                        <Plus size={14} /> {lang === 'EN' ? 'List your first asset' : lang === 'ES' ? 'Lista tu primer activo' : 'Liste seu primeiro ativo'}
+              <DataTable<Asset>
+                rows={assets}
+                columns={assetColumns}
+                rowKey={(a) => a.id}
+                filters={{ field: 'status', options: ASSET_FILTERS }}
+                searchFields={['name', 'location', 'type', 'description']}
+                searchPlaceholder={{ EN: 'Search by name, location, type...', ES: 'Buscar por nombre, ubicación, tipo...', PT: 'Buscar por nome, localização, tipo...' }}
+                defaultSort={{ key: 'name', order: 'asc' }}
+                pageSize={25}
+                lang={lang}
+                urlStateKey="assets"
+                emptyTitle={{ EN: 'No assets yet', ES: 'Sin activos aún', PT: 'Sem ativos ainda' }}
+                emptyHint={{ EN: 'List your first asset to start receiving bookings.', ES: 'Lista tu primer activo para empezar a recibir reservas.', PT: 'Liste seu primeiro ativo para começar a receber reservas.' }}
+                rowActions={(a) => {
+                  const isSyncing = syncingCalendar === a.id;
+                  return (
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => openEditModal(a)}
+                        className="p-2 text-white/40 hover:text-[#B8963E] hover:bg-white/5 rounded-lg transition-colors"
+                        title={lang === 'EN' ? 'Edit' : lang === 'ES' ? 'Editar' : 'Editar'}
+                      >
+                        <Edit2 size={14} />
                       </button>
-                    </>
-                  ) : (
-                    <p className="text-white/40 text-sm">
-                      {lang === 'EN' ? 'No assets match your search' : lang === 'ES' ? 'Sin resultados' : 'Nenhum resultado'}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredAssets.map(asset => {
-                    const Icon = ASSET_TYPE_ICONS[asset.type] || Package;
-                    const isSyncing = syncingCalendar === asset.id;
-
-                    return (
-                      <motion.div key={asset.id} layout
-                        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white border border-white/10  rounded-2xl overflow-hidden group">
-                        {/* Card header */}
-                        <div className="p-6">
-                          <div className="flex justify-between items-start mb-4">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                              asset.status === 'ACTIVE' ? 'bg-[#B8963E]/15 text-[#B8963E]' : 'bg-white/5 text-white/60'
-                            }`}>
-                              <Icon size={22} />
-                            </div>
-                            <span className={`text-[8px] px-2 py-1 rounded-full border uppercase tracking-widest font-bold ${
-                              asset.status === "ACTIVE"
-                                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                                : asset.status === 'PENDING'
-                                ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                                : "bg-red-50 text-red-600 border-red-200"
-                            }`}>
-                              {asset.status}
-                            </span>
-                          </div>
-                          <h3 className="text-lg font-serif italic text-white mb-1">{asset.name}</h3>
-                          <div className="flex items-center gap-2 mb-4">
-                            <span className="text-[10px] text-white/60 uppercase tracking-widest">{ASSET_TYPE_LABELS[asset.type]?.[lang]}</span>
-                            <span className="text-white/30">·</span>
-                            <span className="text-[10px] text-white/60">{asset.location}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-xl font-serif italic text-gold">{asset.price_per_unit}</span>
-                            <span className="text-[10px] text-white/60">{asset.capacity} PAX</span>
-                          </div>
-                        </div>
-
-                        {/* Card actions */}
-                        <div className="border-t border-white/5 flex divide-x divide-white/10">
-                          <button onClick={() => openEditModal(asset)}
-                            className="flex-1 py-3 text-[10px] uppercase tracking-widest font-semibold text-white/50 hover:text-[#B8963E] hover:bg-[#B8963E]/5 transition-all flex items-center justify-center gap-1.5">
-                            <Edit2 size={12} /> {lang === 'EN' ? 'Edit' : lang === 'ES' ? 'Editar' : 'Editar'}
-                          </button>
-                          <button onClick={() => handleSyncCalendar(asset.id)}
-                            disabled={isSyncing}
-                            className="flex-1 py-3 text-[10px] uppercase tracking-widest font-semibold text-white/60 hover:text-blue-400 hover:bg-blue-500/10 transition-all flex items-center justify-center gap-1.5">
-                            {isSyncing ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                            {lang === 'EN' ? 'Sync' : lang === 'ES' ? 'Sincronizar' : 'Sincronizar'}
-                          </button>
-                          <button onClick={() => handleDeleteAsset(asset.id)}
-                            className="flex-1 py-3 text-[10px] uppercase tracking-widest font-semibold text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-all flex items-center justify-center gap-1.5">
-                            <Trash2 size={12} /> {lang === 'EN' ? 'Delete' : lang === 'ES' ? 'Eliminar' : 'Excluir'}
-                          </button>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              )}
+                      <button
+                        onClick={() => handleSyncCalendar(a.id)}
+                        disabled={isSyncing}
+                        className="p-2 text-white/40 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors disabled:opacity-50"
+                        title={lang === 'EN' ? 'Sync calendar' : lang === 'ES' ? 'Sincronizar' : 'Sincronizar'}
+                      >
+                        {isSyncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAsset(a.id)}
+                        className="p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                        title={lang === 'EN' ? 'Delete' : lang === 'ES' ? 'Eliminar' : 'Excluir'}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  );
+                }}
+              />
             </motion.div>
           )}
 
           {/* ── BOOKINGS TAB ── */}
           {activeTab === 'bookings' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
-                <input value={search} onChange={e => setSearch(e.target.value)}
-                  placeholder={lang === 'EN' ? 'Search bookings...' : lang === 'ES' ? 'Buscar reservas...' : 'Pesquisar reservas...'}
-                  className="bg-white border border-white/10  rounded-full py-3 pl-12 pr-6 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all text-sm text-white w-full sm:w-64" />
-              </div>
-
-              {loadingBookings ? (
-                <div className="py-20 flex justify-center"><Loader2 className="animate-spin text-gold" size={32} /></div>
-              ) : filteredBookings.length === 0 ? (
-                <div className="py-20 text-center">
-                  <Calendar size={48} className="text-white/10 mx-auto mb-4" />
-                  <p className="text-white/40 text-sm">
-                    {bookings.length === 0
-                      ? (lang === 'EN' ? 'No bookings yet' : lang === 'ES' ? 'Sin reservas aún' : 'Nenhuma reserva ainda')
-                      : (lang === 'EN' ? 'No results' : lang === 'ES' ? 'Sin resultados' : 'Nenhum resultado')}
-                  </p>
-                </div>
-              ) : (
-                <div className="bg-white border border-white/10  rounded-2xl overflow-hidden">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-white/10 bg-white/5">
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Guest' : lang === 'ES' ? 'Huésped' : 'Hóspede'}</th>
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Asset' : lang === 'ES' ? 'Activo' : 'Ativo'}</th>
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Dates' : lang === 'ES' ? 'Fechas' : 'Datas'}</th>
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Total' : lang === 'ES' ? 'Total' : 'Total'}</th>
-                        <th className="px-6 py-5 text-left text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Status' : lang === 'ES' ? 'Estado' : 'Estado'}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/10">
-                      {filteredBookings.map(b => (
-                        <tr key={b.id} className="hover:bg-white/5 transition-colors">
-                          <td className="px-6 py-5">
-                            <div className="text-sm font-medium text-white">{b.guest_name}</div>
-                            <div className="text-[10px] text-white/60">{b.guest_email}</div>
-                          </td>
-                          <td className="px-6 py-5">
-                            <div className="text-sm text-white">{b.asset_name || '—'}</div>
-                            <div className="text-[10px] text-white/60 uppercase">{b.asset_type}</div>
-                          </td>
-                          <td className="px-6 py-5 text-xs text-white/60">{b.start_date} → {b.end_date}</td>
-                          <td className="px-6 py-5">
-                            <span className="text-sm font-bold text-gold">{b.total_price}</span>
-                          </td>
-                          <td className="px-6 py-5">
-                            <span className={`text-[8px] px-3 py-1 rounded-full border uppercase tracking-widest font-bold ${BOOKING_STATUS_COLORS[b.status] || 'bg-white/5 text-white/60 border-white/10'}`}>
-                              {b.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <DataTable<Booking>
+                rows={bookings}
+                loading={loadingBookings}
+                columns={bookingColumns}
+                rowKey={(b) => b.id}
+                filters={{ field: 'status', options: BOOKING_FILTERS }}
+                searchFields={['guest_name', 'guest_email', 'asset_name']}
+                searchPlaceholder={{ EN: 'Search by guest, asset, email...', ES: 'Buscar por huésped, activo, email...', PT: 'Buscar por hóspede, ativo, email...' }}
+                defaultSort={{ key: 'start_date', order: 'desc' }}
+                pageSize={25}
+                lang={lang}
+                urlStateKey="bookings"
+                emptyTitle={{ EN: 'No bookings yet', ES: 'Sin reservas aún', PT: 'Nenhuma reserva ainda' }}
+                emptyHint={{ EN: 'Reservations for your assets will appear here once guests book.', ES: 'Las reservas de tus activos aparecerán aquí cuando los huéspedes reserven.', PT: 'As reservas dos seus ativos aparecerão aqui quando os hóspedes reservarem.' }}
+              />
             </motion.div>
           )}
 
