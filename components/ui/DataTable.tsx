@@ -377,7 +377,7 @@ export function DataTable<T extends Record<string, any>>({
     <div className="space-y-4">
       {/* ── Toolbar (search + filter) ────────────────────────────── */}
       {(searchable || filters) && (
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 min-w-0">
           {searchable && (
             <div className="relative flex-1 min-w-[220px]">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
@@ -401,12 +401,12 @@ export function DataTable<T extends Record<string, any>>({
           )}
 
           {filters && (
-            <div className="flex bg-white/5 rounded-full p-1 border border-white/10 flex-wrap">
+            <div className="flex bg-white/5 rounded-full p-1 border border-white/10 flex-wrap max-w-full">
               {filters.options.map((opt) => (
                 <button
                   key={opt.value}
                   onClick={() => onFilterChange(opt.value)}
-                  className={`px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${
+                  className={`px-3 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap ${
                     filterValue === opt.value ? 'bg-[#B8963E] text-white' : 'text-white/60 hover:text-white'
                   }`}
                 >
