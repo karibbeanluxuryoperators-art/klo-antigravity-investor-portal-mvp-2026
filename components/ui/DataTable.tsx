@@ -163,6 +163,9 @@ export function DataTable<T extends Record<string, any>>({
   const [sortKey, setSortKey] = useState<string | null>(defaultSort?.key ?? null);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(defaultSort?.order ?? null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // v1.8.0 Phase 6: keyboard nav state. -1 means "no row selected".
+  const [focusedRowIdx, setFocusedRowIdx] = useState(-1);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
   const [bulkRunning, setBulkRunning] = useState<string | null>(null);
 
   const currentPage = controlledPage ?? internalPage;
@@ -208,6 +211,49 @@ export function DataTable<T extends Record<string, any>>({
     const t = setTimeout(() => setDebouncedSearch(search), 200);
     return () => clearTimeout(t);
   }, [search]);
+
+  // v1.8.0 Phase 6: keyboard shortcuts.
+  //   /         → focus search input
+  //   j         → move focused row down (like vim/Gmail)
+  //   k         → move focused row up
+  //   Enter     → open the focused row (calls onRowClick)
+  //   Escape    → clear search
+  // Only active when the user is NOT typing in an input/textarea.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+      if (isEditable) return;
+      if (e.key === '/') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+      if (e.key === 'j' || e.key === 'k') {
+        e.preventDefault();
+        setFocusedRowIdx(prev => {
+          const max = pagedRows.length - 1;
+          if (max < 0) return -1;
+          if (e.key === 'j') return Math.min(prev + 1, max);
+          return Math.max(prev - 1, 0);
+        });
+        return;
+      }
+      if (e.key === 'Enter' && focusedRowIdx >= 0 && focusedRowIdx < pagedRows.length) {
+        e.preventDefault();
+        const row = pagedRows[focusedRowIdx];
+        if (row && onRowClick) onRowClick(row);
+        return;
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [pagedRows, focusedRowIdx, onRowClick]);
+
+  // Reset focused row when data / page changes
+  useEffect(() => {
+    setFocusedRowIdx(prev => (prev >= pagedRows.length ? pagedRows.length - 1 : prev));
+  }, [pagedRows.length]);
 
   // Reset selection when data changes
   useEffect(() => {
@@ -382,10 +428,18 @@ export function DataTable<T extends Record<string, any>>({
             <div className="relative flex-1 min-w-[220px]">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={18} />
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder={tx(searchPlaceholder, lang) || (lang === 'ES' ? 'Buscar…' : lang === 'PT' ? 'Pesquisar…' : 'Search…')}
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
+                onKeyDown={(e) => {
+                  // Escape clears the search
+                  if (e.key === 'Escape' && search) {
+                    e.preventDefault();
+                    onSearchChange('');
+                  }
+                }}
                 className="w-full bg-white/5 border border-white/10 rounded-full py-3 pl-12 pr-10 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all text-sm text-white placeholder:text-white/30"
               />
               {search && (
@@ -396,6 +450,11 @@ export function DataTable<T extends Record<string, any>>({
                 >
                   <X size={14} />
                 </button>
+              )}
+              {!search && (
+                <kbd className="absolute right-4 top-1/2 -translate-y-1/2 hidden md:inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-mono text-white/30 bg-white/5 border border-white/10 rounded">
+                  /
+                </kbd>
               )}
             </div>
           )}
@@ -535,7 +594,7 @@ export function DataTable<T extends Record<string, any>>({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -4 }}
                         transition={{ delay: Math.min(idx, 8) * 0.01 }}
-                        className={`group transition-colors ${isSelected ? 'bg-[#B8963E]/[0.06]' : 'hover:bg-white/[0.03]'} ${onRowClick ? 'cursor-pointer' : ''}`}
+                        className={`group transition-colors ${isSelected ? 'bg-[#B8963E]/[0.06]' : 'hover:bg-white/[0.03]'} ${idx === focusedRowIdx ? 'ring-1 ring-inset ring-[#B8963E]/50 bg-[#B8963E]/[0.04]' : ''} ${onRowClick ? 'cursor-pointer' : ''}`}
                         onClick={(e) => {
                           // Don't fire row click when clicking checkbox or action button
                           const target = e.target as HTMLElement;
