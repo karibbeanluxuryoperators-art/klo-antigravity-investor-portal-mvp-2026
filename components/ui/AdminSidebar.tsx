@@ -110,11 +110,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       <button
         key={s.key}
         onClick={() => { onSelect(s.key); setOpen(false); }}
-        // v1.8.0 Step 8.7: w-[calc(100%-0.75rem)] + mx-1.5 gives 6px
-        // inset on each side. The 1px border on the active state is
-        // fully visible on all 4 sides without overflowing the
-        // aside (which has overflow-hidden as a safety net).
-        className={`w-[calc(100%-0.75rem)] mx-1.5 flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-left group ${
+        // v1.8.0 Step 8.10: w-[calc(100%-1rem)] + mx-2 gives 8px inset
+        // on each side. The 8px gap keeps the button's 1px gold
+        // border visually separate from the aside's border-r
+        // (which is also 1px white/20). Without the gap, the two
+        // borders overlap and the right edge looks "chopped".
+        className={`w-[calc(100%-1rem)] mx-2 flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-left group ${
           isActive
             ? 'bg-[#B8963E]/15 border border-[#B8963E]/40 text-white'
             : 'border border-transparent text-white/60 hover:bg-white/[0.04] hover:text-white'
@@ -183,7 +184,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           )}
           <button
             onClick={onSignOut}
-            className="w-[calc(100%-0.75rem)] mx-1.5 flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-[#B8963E] hover:bg-white/[0.04] transition-all text-sm"
+            className="w-[calc(100%-1rem)] mx-2 flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/60 hover:text-[#B8963E] hover:bg-white/[0.04] transition-all text-sm"
           >
             <LogOut size={16} />
             {t('sign_out', lang)}
