@@ -240,102 +240,11 @@ function App() {
 {/* Destinations */}
         <Destinations t={t as any} />
 
-        {/* Premier Services */}
-        <section id="servicios" className="py-32 bg-[#0a1518] text-white overflow-hidden relative">
-          <div className="absolute inset-0 opacity-20 pointer-events-none">
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-luxury-teal rounded-full blur-3xl"></div>
-            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#B8963E] rounded-full blur-3xl"></div>
-          </div>
-          <div className="container mx-auto px-6 relative z-10">
-            <div className="text-center mb-24 max-w-4xl mx-auto">
-              <div className="flex items-center justify-center space-x-3 mb-6">
-                <div className="h-px w-8 bg-[#B8963E]"></div>
-                <p className="text-[#B8963E] font-bold text-[10px] uppercase tracking-[0.5em]">Five Pillars · One Operator</p>
-                <div className="h-px w-8 bg-[#B8963E]"></div>
-              </div>
-              <h2 className="text-4xl md:text-6xl font-bold mb-8 text-white serif leading-tight">
-                {t('services.section_title')}
-              </h2>
-              <p className="text-white/50 text-lg md:text-xl font-light leading-relaxed max-w-2xl mx-auto">
-                {t('services.section_subtitle')}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {PREMIER_SERVICES.map((svc) => {
-                // v1.8.0 design polish: each card now gets a gold "API
-                // differentiator" pill at top-right of the image. Mirrors the
-                // (Smart API) / (Direct API) annotations in the titles and
-                // turns them into first-class value props. Aligns every card
-                // to the same height, drops the dark gradient on the image
-                // (the title is below in its own section, so the gradient
-                // was eating the photo), and makes the card an actual link
-                // to /supplier so the affordance is clear.
-                const badges: Record<string, string> = {
-                  flights:      'Smart API',
-                  accommodation: 'Smart API',
-                  yachts:       'Direct API',
-                  transport:    'Premium Fleet',
-                  staff:        'Vetted Pros',
-                  experiences:  'Curated',
-                };
-                return (
-                <a
-                  key={svc.id}
-                  href={`/supplier#${svc.id}`}
-                  className="group relative bg-white/5 backdrop-blur-sm border border-white/10 hover:border-[#B8963E]/50 transition-all duration-500 overflow-hidden h-full flex flex-col"
-                >
-                  <div className="relative h-56 overflow-hidden bg-slate-800 shrink-0">
-                    <img
-                      src={svc.imageUrl}
-                      alt={t(svc.titleKey)}
-                      className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
-                    />
-                    {badges[svc.id] && (
-                      <div className="absolute top-4 right-4 px-3 py-1.5 bg-[#0a1518]/80 backdrop-blur-md border border-[#B8963E]/40 text-[#B8963E] text-[9px] font-bold uppercase tracking-[0.3em] rounded-full">
-                        {badges[svc.id]}
-                      </div>
-                    )}
-                    {/* hover arrow (bottom-right) */}
-                    <div className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-[#0a1518]/80 backdrop-blur-md border border-white/20 flex items-center justify-center text-white/70 group-hover:text-[#B8963E] group-hover:border-[#B8963E] group-hover:scale-110 transition-all duration-500">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="p-8 flex-1 flex flex-col">
-                    <h3 className="text-2xl font-bold mb-4 text-white serif">
-                      {t(svc.titleKey)}
-                    </h3>
-                    <p className="text-white/60 text-sm leading-relaxed font-light flex-1">
-                      {t(svc.descriptionKey)}
-                    </p>
-                    <div className="mt-6 pt-6 border-t border-white/5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.3em] text-[#B8963E]">
-                      <span>{t('services_cta.button') || 'Contactar al equipo'}</span>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </a>
-                );
-              })}
-            </div>
-
-            {/* CTA después de servicios */}
-            <div className="mt-20 text-center">
-              <p className="text-white/40 text-xs uppercase tracking-[0.4em] mb-6">
-                {t('services_cta.subtitle')}
-              </p>
-              <a
-                href="mailto:hola@karibbeanluxuryoperators.lat"
-                className="inline-block px-12 py-5 bg-[#B8963E]/10 border border-[#B8963E]/40 hover:bg-[#B8963E]/20 hover:border-[#B8963E]/70 transition-all duration-500 text-[#B8963E] text-xs uppercase tracking-[0.4em] font-medium"
-              >
-                {t('services_cta.button')}
-              </a>
-            </div>
-          </div>
-        </section>
+        {/* v1.8.0: Premier Services section removed. The hero already
+            mentions "Five Pillars · One Operator", and the contact CTA
+            at the bottom covers the same intent. Removing the 6-card
+            grid makes the page scannable — fewer redundant images,
+            faster to /footer. */}
 
         {/* Concierge CTA */}
         <section className="py-24 bg-slate-50 text-center">
