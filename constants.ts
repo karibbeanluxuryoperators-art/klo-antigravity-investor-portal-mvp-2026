@@ -181,6 +181,9 @@ export const TRANSLATIONS = {
       subtitle: "Como empresa data-driven y pionera en IA, nos especializamos en experiencias a medida, con acceso exclusivo a islas privadas, villas y yates en el Caribe Colombiano.",
       cta: "Empieza a Planificar"
     },
+    supplier: {
+      cta: "Conviértete en Socio"  // v1.8.0 Step 9.3 — missing key fix
+    },
     nav: {
       destinations: "Destinos",
       services: "Servicios",
@@ -381,6 +384,9 @@ export const TRANSLATIONS = {
       subtitle: "As data-driven AI pioneers, we curate bespoke travel experiences with exclusive access to private islands, luxury villas, and yacht charters in Colombia.",
       cta: "Start Planning"
     },
+    supplier: {
+      cta: "Become a Partner"  // v1.8.0 Step 9.3 — missing key fix
+    },
     nav: {
       destinations: "Destinations",
       services: "Services",
@@ -580,6 +586,9 @@ export const TRANSLATIONS = {
       title: "Elevando o Luxo no Caribe",
       subtitle: "Como pioneiros em dados e IA, somos especialistas em experiências sob medida, com acesso a ilhas privadas e iates exclusivos.",
       cta: "Começar Planejamento"
+    },
+    supplier: {
+      cta: "Torne-se um Parceiro"  // v1.8.0 Step 9.3 — missing key fix
     },
     nav: {
       destinations: "Destinos",

@@ -228,14 +228,17 @@ function App() {
       <main>
 <Hero t={t} onInquiryOpen={() => setIsPlanTripOpen(true)} />
 
-{/* How KLO Works (v1.8.0 Step 4) */}
-<HowKLOWorks lang={lang} />
+{/* How KLO Works — v1.8.0 Step 9.3 fix: pass lang.toUpperCase() so the
+    component's EN/ES/PT lookup table keys match the public site lang state
+    (lowercase 'es'). Without this, dI.eyebrow.es is undefined and the
+    section always falls back to English. */}
+<HowKLOWorks lang={lang.toUpperCase() as 'EN' | 'ES' | 'PT'} />
 
-{/* Stats (v1.8.0 Step 4) */}
-<KLOStats lang={lang} />
+{/* Stats — same v1.8.0 Step 9.3 fix as HowKLOWorks. */}
+<KLOStats lang={lang.toUpperCase() as 'EN' | 'ES' | 'PT'} />
 
-{/* Testimonials + FAQ (v1.8.0 Step 4) */}
-<KLOTestimonials lang={lang} />
+{/* Testimonials + FAQ — same v1.8.0 Step 9.3 fix. */}
+<KLOTestimonials lang={lang.toUpperCase() as 'EN' | 'ES' | 'PT'} />
 
 {/* Destinations */}
         <Destinations t={t as any} />
