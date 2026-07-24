@@ -377,6 +377,64 @@ ${ctx.turnsUsed >= 10 ? "⚠️ LÍMITE DE 10 INTERCAMBIOS ALCANZADO. Cierra la 
 ---`;
 }
 
+// v1.8.0 Step 11: builds a small inline list of the published curated
+// experiences for the bot's system prompt. Cached for 5 minutes so we
+// don't hit Supabase on every chat message.
+let _experiencesCache: { at: number; text: string } | null = null;
+const EXPERIENCES_TTL_MS = 5 * 60 * 1000;
+
+export async function getExperiencesContextBlock(): Promise<string> {
+  if (_experiencesCache && Date.now() - _experiencesCache.at < EXPERIENCES_TTL_MS) {
+    return _experiencesCache.text;
+  }
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!supabaseUrl || !supabaseKey) return '';
+    const url = `${supabaseUrl}/rest/v1/experiences?status=eq.PUBLISHED&select=id,title_en,title_es,title_pt,days,price_from,currency,pillars&order=display_order.asc&limit=20`;
+    const res = await fetch(url, {
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+      },
+    });
+    if (!res.ok) {
+      console.warn('[chat] experiences fetch failed', res.status);
+      return _experiencesCache?.text || '';
+    }
+    const data = (await res.json()) as Array<{
+      id: string;
+      title_en: string;
+      title_es: string;
+      title_pt: string;
+      days: number;
+      price_from: number;
+      currency: string;
+      pillars: string[];
+    }>;
+    if (!data || data.length === 0) {
+      _experiencesCache = { at: Date.now(), text: '' };
+      return '';
+    }
+    const lines = data.map((e) => {
+      const pillars = (e.pillars || []).join(', ');
+      return `- ${e.id}: ${e.title_en} / ${e.title_es} / ${e.title_pt} — ${e.days} days, from $${e.price_from.toLocaleString('en-US')} ${e.currency} (${pillars})`;
+    });
+    const block = `
+---
+EXPERIENCES CURADAS DISPONIBLES (v1.8.0 Step 11 — recurre a estas cuando el cliente pregunta por algo concreto, por ejemplo "qué puedo hacer en Cartagena" o "tienes paquetes"):
+${lines.join('\n')}
+
+Cuando recomiendes una experiencia, di su nombre (en el idioma del cliente) y sugiere que visite https://www.karibbeanluxityoperators.lat/#experiences para ver los detalles. La página tiene un botón "Plan this trip" que abre el formulario con la experiencia pre-seleccionada.
+---`;
+    _experiencesCache = { at: Date.now(), text: block };
+    return block;
+  } catch (e) {
+    console.warn('[chat] experiences fetch error', e);
+    return _experiencesCache?.text || '';
+  }
+}
+
 // ===== lib/provider.ts =====
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -1177,6 +1235,7 @@ export default async function handler(
   const messages = [
     { role: "system" as const, content: MARIA_SYSTEM_PROMPT },
     { role: "system" as const, content: buildContextBlock({ isOpenHours: time.isOpenHours, turnsUsed, colombiaTime: time.iso, history: clientHistory }) },
+    { role: "system" as const, content: await getExperiencesContextBlock() },
     ...clientHistory.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
     { role: "user" as const, content: message },
   ];
