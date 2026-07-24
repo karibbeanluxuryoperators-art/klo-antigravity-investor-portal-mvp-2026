@@ -393,6 +393,224 @@ async function startServer() {
     }
   });
 
+  // ── Experiences (v1.8.0 Step 11) ───────────────────────────────────────────
+  // GET /api/experiences — public for PUBLISHED, admin for ALL.
+  // Query: ?status=PUBLISHED|DRAFT|ARCHIVED|ALL
+  // Public site uses default (PUBLISHED). Admin EntityEditor passes ?status=ALL.
+  app.get("/api/experiences", async (req, res) => {
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      const isAdmin = role === 'admin';
+      const statusParam = (req.query?.status as string) || 'PUBLISHED';
+      // Non-admins can only read PUBLISHED. Treat anything else as PUBLISHED.
+      const effectiveStatus = isAdmin ? statusParam : 'PUBLISHED';
+
+      let query = supabase.from('experiences').select('*');
+      if (effectiveStatus !== 'ALL') {
+        query = query.eq('status', effectiveStatus);
+      }
+      const { data, error } = await query
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      res.json(data || []);
+    } catch (error: any) {
+      console.error('GET /api/experiences failed', error?.message || error);
+      res.status(500).json({ error: error?.message || 'list failed' });
+    }
+  });
+
+  // GET /api/experiences/:id — single experience.
+  // Public can read PUBLISHED only; admin can read any.
+  app.get("/api/experiences/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      const isAdmin = role === 'admin';
+      const { data, error } = await supabase
+        .from('experiences')
+        .select('*')
+        .eq('id', id)
+        .limit(1);
+      if (error) throw error;
+      if (!data || data.length === 0) return res.status(404).json({ error: 'not found' });
+      if (!isAdmin && data[0].status !== 'PUBLISHED') {
+        return res.status(404).json({ error: 'not found' });
+      }
+      res.json(data[0]);
+    } catch (error: any) {
+      console.error('GET /api/experiences/:id failed', error?.message || error);
+      res.status(500).json({ error: error?.message || 'get failed' });
+    }
+  });
+
+  // POST /api/experiences — admin-only create.
+  app.post("/api/experiences", async (req, res) => {
+    try {
+      const { email, role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const body = req.body || {};
+      if (!body.id || !body.title_en || !body.hero_image) {
+        return res.status(400).json({ error: 'id, title_en, hero_image are required' });
+      }
+      const row = {
+        ...body,
+        created_by: email,
+        updated_by: email,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      const { data, error } = await supabase
+        .from('experiences')
+        .insert([row])
+        .select();
+      if (error) throw error;
+      res.json(data?.[0] || row);
+    } catch (error: any) {
+      console.error('POST /api/experiences failed', error?.message || error);
+      res.status(500).json({ error: error?.message || 'create failed' });
+    }
+  });
+
+  // PATCH /api/experiences/:id — admin-only update.
+  app.patch("/api/experiences/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const { email, role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const updates = {
+        ...req.body,
+        updated_by: email,
+        updated_at: new Date().toISOString(),
+      };
+      const { data, error } = await supabase
+        .from('experiences')
+        .update(updates)
+        .eq('id', id)
+        .select();
+      if (error) throw error;
+      res.json(data?.[0] || { id, ...updates });
+    } catch (error: any) {
+      console.error('PATCH /api/experiences/:id failed', error?.message || error);
+      res.status(500).json({ error: error?.message || 'update failed' });
+    }
+  });
+
+  // DELETE /api/experiences/:id — admin-only soft delete (sets status=ARCHIVED).
+  // Hard delete would orphan any vendors/assets that reference this experience.
+  app.delete("/api/experiences/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const { data, error } = await supabase
+        .from('experiences')
+        .update({ status: 'ARCHIVED', updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select();
+      if (error) throw error;
+      res.json({ success: true, archived: data?.[0] });
+    } catch (error: any) {
+      console.error('DELETE /api/experiences/:id failed', error?.message || error);
+      res.status(500).json({ error: error?.message || 'delete failed' });
+    }
+  });
+
+  // POST /api/experiences/:id/publish — admin-only toggle DRAFT ↔ PUBLISHED.
+  // Body: { status: 'DRAFT' | 'PUBLISHED' }
+  app.post("/api/experiences/:id/publish", async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body || {};
+    if (status !== 'DRAFT' && status !== 'PUBLISHED') {
+      return res.status(400).json({ error: 'status must be DRAFT or PUBLISHED' });
+    }
+    try {
+      const { email, role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const { data, error } = await supabase
+        .from('experiences')
+        .update({ status, updated_by: email, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select();
+      if (error) throw error;
+      res.json(data?.[0] || { id, status });
+    } catch (error: any) {
+      console.error('POST /api/experiences/:id/publish failed', error?.message || error);
+      res.status(500).json({ error: error?.message || 'publish failed' });
+    }
+  });
+
+  // POST /api/experiences/:id/photo — admin-only photo upload.
+  // v1: client compresses to 1200px max + base64-encodes; we just persist the
+  //     data URL string into hero_image (or push into gallery[]).
+  // v2 (post-funding): swap to Supabase Storage bucket; this endpoint
+  //     becomes a thin wrapper that calls supabase.storage.from('klo-media').upload().
+  // Body: { field: 'hero_image' | 'gallery', dataUrl: string, replaceIndex?: number }
+  //   - field=hero_image: replaces the hero_image column
+  //   - field=gallery: appends to gallery[] (or replaces at replaceIndex)
+  app.post("/api/experiences/:id/photo", async (req, res) => {
+    const { id } = req.params;
+    const { field, dataUrl, replaceIndex } = req.body || {};
+    if (!field || !dataUrl) {
+      return res.status(400).json({ error: 'field and dataUrl are required' });
+    }
+    if (field !== 'hero_image' && field !== 'gallery') {
+      return res.status(400).json({ error: 'field must be hero_image or gallery' });
+    }
+    if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'dataUrl must be a data:image/* URL' });
+    }
+    // Cap at 800KB after base64 (≈600KB binary) to keep the row under Supabase's
+    // 1MB per-row soft limit even with the trilingual columns populated.
+    if (dataUrl.length > 1_200_000) {
+      return res.status(413).json({ error: 'image too large; compress to 1200px and try again' });
+    }
+    try {
+      const { email, role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+
+      // Read the current row
+      const { data: current, error: readErr } = await supabase
+        .from('experiences')
+        .select('hero_image, gallery')
+        .eq('id', id)
+        .limit(1);
+      if (readErr) throw readErr;
+      if (!current || current.length === 0) return res.status(404).json({ error: 'experience not found' });
+      const row = current[0];
+
+      const updates: Record<string, any> = {
+        updated_by: email,
+        updated_at: new Date().toISOString(),
+      };
+      if (field === 'hero_image') {
+        updates.hero_image = dataUrl;
+      } else {
+        const gallery = Array.isArray(row.gallery) ? [...row.gallery] : [];
+        if (typeof replaceIndex === 'number' && replaceIndex >= 0 && replaceIndex < gallery.length) {
+          gallery[replaceIndex] = dataUrl;
+        } else {
+          gallery.push(dataUrl);
+        }
+        if (gallery.length > 5) {
+          return res.status(400).json({ error: 'gallery max 5 images' });
+        }
+        updates.gallery = gallery;
+      }
+
+      const { data, error } = await supabase
+        .from('experiences')
+        .update(updates)
+        .eq('id', id)
+        .select();
+      if (error) throw error;
+      res.json({ success: true, row: data?.[0] });
+    } catch (error: any) {
+      console.error('POST /api/experiences/:id/photo failed', error?.message || error);
+      res.status(500).json({ error: error?.message || 'photo upload failed' });
+    }
+  });
+
   // DELETE /api/leads/:id — admin-only removal (used by Leads tab "trash" action).
   app.delete("/api/leads/:id", async (req, res) => {
     const { id } = req.params;
@@ -606,30 +824,36 @@ async function startServer() {
   });
 
   // Supplier lookup (by Firebase UID or email)
+  // v1.8.0 Step 10: replaced .maybeSingle() with .limit(1) to avoid the
+  // "Cannot coerce the result to a single JSON object" PostgREST error that
+  // happens when the column has unexpected null/duplicate values. Now we
+  // also explicitly check `error` so the catch block only fires on real
+  // failures (network, auth, etc), not on empty-result lookups.
   app.get("/api/suppliers/lookup", async (req, res) => {
     const { uid, email } = req.query;
     try {
-      // Try firebase_uid first
       if (uid) {
         const { data, error } = await supabase
           .from('suppliers')
           .select('*')
           .eq('firebase_uid', uid)
-          .maybeSingle();
-        if (data) return res.json({ supplier: data });
+          .limit(1);
+        if (error) throw error;
+        if (data && data.length > 0) return res.json({ supplier: data[0] });
       }
-      // Fall back to email
       if (email) {
         const { data, error } = await supabase
           .from('suppliers')
           .select('*')
           .eq('email', email)
-          .maybeSingle();
-        if (data) return res.json({ supplier: data });
+          .limit(1);
+        if (error) throw error;
+        if (data && data.length > 0) return res.json({ supplier: data[0] });
       }
       res.json({ supplier: null });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error('lookup failed', error?.message || error);
+      res.status(500).json({ error: error?.message || 'lookup failed' });
     }
   });
 
