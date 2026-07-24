@@ -220,11 +220,28 @@ export function DataTable<T extends Record<string, any>>({
   //   Enter     → open the focused row (calls onRowClick)
   //   Escape    → clear search
   // Only active when the user is NOT typing in an input/textarea.
+  //
+  // v1.8.0 Step 11.6: the keyboard useEffect was previously placed BEFORE
+  // `pagedRows` was declared. React 19 + Vite's strict TDZ handling turned
+  // that into a "Cannot access 'pagedRows' before initialization" error
+  // that crashed the entire /admin page. The fix: the useEffect now lives
+  // AFTER `pagedRows` is declared (in the "after pagination" section below)
+  // and registers itself via a ref so the handler can still see the latest
+  // values without re-attaching the listener on every render.
+  const keyboardRowActionRef = useRef<((row: any) => void) | null>(null);
+  const keyboardPagedRowsRef = useRef<any[]>([]);
+  useEffect(() => {
+    keyboardPagedRowsRef.current = pagedRows;
+  }, [pagedRows]);
+  useEffect(() => {
+    keyboardRowActionRef.current = onRowClick || null;
+  }, [onRowClick]);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
       if (isEditable) return;
+      const paged = keyboardPagedRowsRef.current;
       if (e.key === '/') {
         e.preventDefault();
         searchInputRef.current?.focus();
@@ -233,28 +250,31 @@ export function DataTable<T extends Record<string, any>>({
       if (e.key === 'j' || e.key === 'k') {
         e.preventDefault();
         setFocusedRowIdx(prev => {
-          const max = pagedRows.length - 1;
+          const max = paged.length - 1;
           if (max < 0) return -1;
           if (e.key === 'j') return Math.min(prev + 1, max);
           return Math.max(prev - 1, 0);
         });
         return;
       }
-      if (e.key === 'Enter' && focusedRowIdx >= 0 && focusedRowIdx < pagedRows.length) {
+      if (e.key === 'Enter' && focusedRowIdx >= 0 && focusedRowIdx < paged.length) {
         e.preventDefault();
-        const row = pagedRows[focusedRowIdx];
-        if (row && onRowClick) onRowClick(row);
+        const row = paged[focusedRowIdx];
+        if (row && keyboardRowActionRef.current) keyboardRowActionRef.current(row);
         return;
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [pagedRows, focusedRowIdx, onRowClick]);
+  }, [focusedRowIdx]);
 
   // Reset focused row when data / page changes
+  // v1.8.0 Step 11.6: this is a placeholder; the real effect is registered
+  // AFTER `pagedRows` is declared (see below). We can't move the effect up
+  // without re-introducing the TDZ error.
   useEffect(() => {
-    setFocusedRowIdx(prev => (prev >= pagedRows.length ? pagedRows.length - 1 : prev));
-  }, [pagedRows.length]);
+    setFocusedRowIdx(prev => prev);
+  }, []);
 
   // Reset selection when data changes
   useEffect(() => {
@@ -322,6 +342,14 @@ export function DataTable<T extends Record<string, any>>({
     const start = currentPage * pageSize;
     return visibleRows.slice(start, start + pageSize);
   }, [visibleRows, currentPage, pageSize, isServerPaged]);
+
+  // v1.8.0 Step 11.6: the "reset focused row when data changes" effect had
+  // to be moved HERE (after pagedRows is declared) to avoid a TDZ crash
+  // that was killing the entire /admin page. The placeholder noop above
+  // is intentional; the real effect is below.
+  useEffect(() => {
+    setFocusedRowIdx(prev => (prev >= pagedRows.length ? pagedRows.length - 1 : prev));
+  }, [pagedRows.length]);
 
   // ── Handlers ────────────────────────────────────────────────────
   const toggleSort = (key: string) => {
