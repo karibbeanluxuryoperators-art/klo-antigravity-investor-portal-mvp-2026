@@ -12,6 +12,8 @@ import { LeadsManagement } from './LeadsManagement';
 import { AdminBundlesView, AdminStatsView, AdminSettingsView } from './AdminExtraViews';
 import { DataTable, StatusPill, type Column, type FilterOption, type BulkAction, type Language } from './ui/DataTable';
 import { AdminSidebar, type AdminSection } from './ui/AdminSidebar';
+import { EntityEditor } from './admin/EntityEditor';
+import { EXPERIENCES_CONFIG, ASSETS_CONFIG, SUPPLIERS_CONFIG } from './admin/EntityConfigs';
 
 interface Supplier {
   id: string;
@@ -624,6 +626,12 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
 
         {activeView === 'CLIENTS' && <ClientManagement lang={lang} />}
         {activeView === 'LEADS' && <LeadsManagement lang={lang} />}
+        {activeView === 'SERVICES' && (
+          <EntityEditor config={ASSETS_CONFIG} lang={lang} signedInEmail={signedInEmail ?? null} />
+        )}
+        {activeView === 'EXPERIENCES' && (
+          <EntityEditor config={EXPERIENCES_CONFIG} lang={lang} signedInEmail={signedInEmail ?? null} />
+        )}
         {activeView === 'BUNDLES' && <AdminBundlesView lang={lang} />}
         {activeView === 'STATS' && <AdminStatsView lang={lang} />}
         {activeView === 'SETTINGS' && <AdminSettingsView lang={lang} signedInEmail={signedInEmail ?? null} />}

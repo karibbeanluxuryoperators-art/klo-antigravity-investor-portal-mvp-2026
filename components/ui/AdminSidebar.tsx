@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, ClipboardList, UserCheck, Inbox,
-  Menu, X, LogOut, Layers, BarChart3, Settings, ChevronRight, Sparkles,
+  Menu, X, LogOut, Layers, BarChart3, Settings, ChevronRight, Sparkles, Package,
 } from 'lucide-react';
 
 // v1.8.0 Step 5: Admin sidebar nav.
@@ -17,7 +17,7 @@ import {
 //   text-[#B8963E] active · 10-11px uppercase tracking-[0.3em] labels
 
 export type AdminSection =
-  | 'SUPPLIERS' | 'BOOKINGS' | 'CLIENTS' | 'LEADS'
+  | 'SUPPLIERS' | 'SERVICES' | 'EXPERIENCES' | 'BOOKINGS' | 'CLIENTS' | 'LEADS'
   | 'BUNDLES'   | 'STATS'    | 'SETTINGS';
 
 interface AdminSidebarProps {
@@ -40,6 +40,8 @@ const T: Record<string, { EN: string; ES: string; PT: string }> = {
   brand_sub:    { EN: 'Concierge OS',   ES: 'Sistema Conserjería', PT: 'Sistema Concierge' },
   // Section labels
   suppliers:    { EN: 'Suppliers',  ES: 'Socios',     PT: 'Parceiros' },
+  services:     { EN: 'Services',   ES: 'Servicios',  PT: 'Serviços' },
+  experiences:  { EN: 'Experiences',ES: 'Experiencias',PT: 'Experiências' },
   bookings:     { EN: 'Bookings',   ES: 'Reservas',   PT: 'Reservas' },
   clients:      { EN: 'Clients',    ES: 'Clientes',   PT: 'Clientes' },
   leads:        { EN: 'Leads',      ES: 'Leads',      PT: 'Leads' },
@@ -48,6 +50,8 @@ const T: Record<string, { EN: string; ES: string; PT: string }> = {
   settings:     { EN: 'Settings',   ES: 'Ajustes',    PT: 'Configurações' },
   // Section subtitles (small, below label)
   suppliers_sub: { EN: 'Network Management',     ES: 'Gestión de Red',          PT: 'Gestão de Rede' },
+  services_sub:  { EN: 'Bookable Inventory',     ES: 'Inventario Reservable',  PT: 'Inventário Reservável' },
+  experiences_sub: { EN: 'Curated Journeys',      ES: 'Viajes Curados',         PT: 'Viagens Curadas' },
   bookings_sub:  { EN: 'Journey Orchestration',  ES: 'Orquestación de Viajes',  PT: 'Orquestração de Viagens' },
   clients_sub:   { EN: 'UHNWI Guest Relations',  ES: 'Relaciones Huéspedes UHNWI', PT: 'Relações Hóspedes UHNWI' },
   leads_sub:     { EN: 'Inbound Inquiries',      ES: 'Consultas Entrantes',     PT: 'Consultas Entrantes' },
@@ -73,13 +77,15 @@ interface SectionDef {
 }
 
 const SECTIONS: SectionDef[] = [
-  { key: 'SUPPLIERS', icon: Users,         labelKey: 'suppliers', subtitleKey: 'suppliers_sub' },
-  { key: 'BOOKINGS',  icon: ClipboardList, labelKey: 'bookings',  subtitleKey: 'bookings_sub' },
-  { key: 'CLIENTS',   icon: UserCheck,     labelKey: 'clients',   subtitleKey: 'clients_sub' },
-  { key: 'LEADS',     icon: Inbox,         labelKey: 'leads',     subtitleKey: 'leads_sub', badge: 'new' },
-  { key: 'BUNDLES',   icon: Layers,        labelKey: 'bundles',   subtitleKey: 'bundles_sub' },
-  { key: 'STATS',     icon: BarChart3,     labelKey: 'stats',     subtitleKey: 'stats_sub' },
-  { key: 'SETTINGS',  icon: Settings,      labelKey: 'settings',  subtitleKey: 'settings_sub' },
+  { key: 'SUPPLIERS',   icon: Users,         labelKey: 'suppliers',    subtitleKey: 'suppliers_sub' },
+  { key: 'SERVICES',    icon: Package,       labelKey: 'services',     subtitleKey: 'services_sub' },
+  { key: 'EXPERIENCES', icon: Sparkles,      labelKey: 'experiences',  subtitleKey: 'experiences_sub', badge: 'new' },
+  { key: 'BOOKINGS',    icon: ClipboardList, labelKey: 'bookings',     subtitleKey: 'bookings_sub' },
+  { key: 'CLIENTS',     icon: UserCheck,     labelKey: 'clients',      subtitleKey: 'clients_sub' },
+  { key: 'LEADS',       icon: Inbox,         labelKey: 'leads',        subtitleKey: 'leads_sub' },
+  { key: 'BUNDLES',     icon: Layers,        labelKey: 'bundles',      subtitleKey: 'bundles_sub' },
+  { key: 'STATS',       icon: BarChart3,     labelKey: 'stats',        subtitleKey: 'stats_sub' },
+  { key: 'SETTINGS',    icon: Settings,      labelKey: 'settings',     subtitleKey: 'settings_sub' },
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
