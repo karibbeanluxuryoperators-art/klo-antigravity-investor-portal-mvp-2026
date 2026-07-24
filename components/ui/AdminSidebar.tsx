@@ -17,8 +17,9 @@ import {
 //   text-[#B8963E] active · 10-11px uppercase tracking-[0.3em] labels
 
 export type AdminSection =
-  | 'SUPPLIERS' | 'SERVICES' | 'EXPERIENCES' | 'BOOKINGS' | 'CLIENTS' | 'LEADS'
-  | 'BUNDLES'   | 'STATS'    | 'SETTINGS';
+  | 'SUPPLIERS' | 'BOOKINGS' | 'CLIENTS' | 'LEADS'
+  | 'BUNDLES'   | 'STATS'    | 'SETTINGS'
+  | 'SERVICES'  | 'EXPERIENCES';  // v1.8.0 Step 11.5: added for EntityEditor tabs
 
 interface AdminSidebarProps {
   activeSection: AdminSection;
