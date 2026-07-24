@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { MapPin } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import Destinations from './components/Destinations';
@@ -13,6 +14,7 @@ import { PlanTripModal } from './components/PlanTripModal';
 import { HowKLOWorks } from './components/HowKLOWorks';
 import { KLOStats } from './components/KLOStats';
 import { KLOTestimonials } from './components/KLOTestimonials';
+import { PlanYourTripButton } from './components/ui/PlanYourTripButton';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // ── Supplier portal route guard ────────────────────────────────────────────
@@ -249,8 +251,9 @@ function App() {
             grid makes the page scannable — fewer redundant images,
             faster to /footer. */}
 
-        {/* Concierge CTA */}
-        <section className="py-24 bg-slate-50 text-center">
+        {/* Concierge CTA — v1.8.0 Step 9.4: split-button lets users pick
+            María / Destinations / WhatsApp / Email from a single CTA. */}
+        <section id="contact" className="py-24 bg-slate-50 text-center">
           <div className="container mx-auto px-6 max-w-3xl">
             <p className="text-luxury-teal font-bold text-[10px] uppercase tracking-[0.5em] mb-6">{t('nav.contact') || 'Contact'}</p>
             <h2 className="text-3xl md:text-5xl font-bold mb-6 text-slate-900 serif">
@@ -259,6 +262,25 @@ function App() {
             <p className="text-slate-600 text-lg font-light leading-relaxed mb-10">
               {t('concierge.desc')}
             </p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+              <PlanYourTripButton
+                variant="teal"
+                size="lg"
+                label={t('hero.cta')}
+                t={t}
+              />
+              <a
+                href="#destinos"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById('destinos')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="inline-flex items-center gap-2 px-10 py-4 border border-slate-300 text-slate-700 rounded-full text-[10px] font-bold uppercase tracking-[0.3em] hover:border-luxury-teal hover:text-luxury-teal transition-all"
+              >
+                <MapPin size={16} aria-hidden="true" />
+                {t('nav.destinations') || 'Destinations'}
+              </a>
+            </div>
             <p className="text-slate-400 text-sm">
               {t('concierge.or_email')}{' '}
               <a href="mailto:hola@karibbeanluxuryoperators.lat" className="text-luxury-teal hover:underline font-medium">
@@ -314,9 +336,11 @@ function App() {
                 <div className="space-y-8">
                   <h4 className="text-xs font-bold uppercase tracking-[0.4em] text-white/20">{t('footer.legal_title')}</h4>
                   <ul className="space-y-4">
-                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('footer.privacy')}</a></li>
-                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('footer.terms')}</a></li>
-                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('footer.cookies')}</a></li>
+                    {/* v1.8.0 Step 9.4 — Legal links routed to hola@karibbeanluxuryoperators.lat
+                        with pre-filled subjects so the team can route the request. */}
+                    <li><a href="mailto:hola@karibbeanluxuryoperators.lat?subject=Privacy%20Policy%20%7C%20KLO" className="text-white/60 hover:text-white transition-colors">{t('footer.privacy')}</a></li>
+                    <li><a href="mailto:hola@karibbeanluxuryoperators.lat?subject=Terms%20of%20Service%20%7C%20KLO" className="text-white/60 hover:text-white transition-colors">{t('footer.terms')}</a></li>
+                    <li><a href="mailto:hola@karibbeanluxuryoperators.lat?subject=Cookie%20Policy%20%7C%20KLO" className="text-white/60 hover:text-white transition-colors">{t('footer.cookies')}</a></li>
                   </ul>
                 </div>
               </div>

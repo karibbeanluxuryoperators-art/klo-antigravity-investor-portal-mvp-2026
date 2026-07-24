@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { MessageSquare, Search, FileCheck, Plane } from 'lucide-react';
+import PlanYourTripButton from './ui/PlanYourTripButton';
 
 // Local Language alias - see SupplierPortal.tsx for rationale
 type Language = 'EN' | 'ES' | 'PT';
@@ -113,19 +114,14 @@ export const HowKLOWorks: React.FC<HowKLOWorksProps> = ({ lang }) => {
           </div>
         </div>
 
-        {/* CTA */}
+        {/* CTA — v1.8.0 Step 9.4: split-button (María + Destinations + WhatsApp + Email) */}
         <div className="mt-20 text-center">
-          <button
-            onClick={() => {
-              // Fire the same handler the Navbar "Contact" button uses.
-              const navBtn = document.querySelector('button[aria-label*="Contact" i], button[aria-label*="Contacto" i]') as HTMLButtonElement | null;
-              if (navBtn) navBtn.click();
-              else document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="inline-flex items-center gap-3 px-10 py-4 bg-[#B8963E] text-white rounded-full text-[10px] font-bold uppercase tracking-[0.3em] hover:bg-white hover:text-slate-900 transition-all duration-500 shadow-lg shadow-[#B8963E]/20"
-          >
-            {t('cta', lang)}
-          </button>
+          <PlanYourTripButton
+            variant="gold"
+            size="lg"
+            label={t('cta', lang)}
+            t={(key) => t(key, lang) as string}
+          />
         </div>
       </div>
     </section>

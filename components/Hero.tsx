@@ -1,4 +1,5 @@
 import React from 'react';
+import PlanYourTripButton from './ui/PlanYourTripButton';
 
 interface HeroProps {
   t: (key: string) => any;
@@ -70,37 +71,12 @@ const Hero: React.FC<HeroProps> = ({ t, onInquiryOpen }) => {
             {t('hero.subtitle')}
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
-            <button
-              onClick={() => {
-                const btn = document.querySelector('[aria-label="Open Maria — KLO AI Concierge"]') as HTMLButtonElement;
-                if (btn) btn.click();
-              }}
-              className="cursor-pointer"
-              style={{
-                padding: '1rem 2.5rem',
-                background: 'rgba(184, 150, 62, 0.15)',
-                border: '1px solid rgba(184, 150, 62, 0.6)',
-                color: '#f4efe6',
-                fontFamily: '"Inter", sans-serif',
-                fontSize: '11px',
-                fontWeight: 500,
-                letterSpacing: '0.3em',
-                textTransform: 'uppercase',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                transition: 'all 0.4s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(184, 150, 62, 0.30)';
-                e.currentTarget.style.borderColor = 'rgba(184, 150, 62, 0.9)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(184, 150, 62, 0.15)';
-                e.currentTarget.style.borderColor = 'rgba(184, 150, 62, 0.6)';
-              }}
-            >
-              {t('hero.cta')}
-            </button>
+            <PlanYourTripButton
+              variant="ghost"
+              size="lg"
+              label={t('hero.cta')}
+              t={t}
+            />
             <a
               href="/supplier"
               style={{
