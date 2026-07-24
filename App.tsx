@@ -15,6 +15,7 @@ import { HowKLOWorks } from './components/HowKLOWorks';
 import { KLOStats } from './components/KLOStats';
 import { KLOTestimonials } from './components/KLOTestimonials';
 import { PlanYourTripButton } from './components/ui/PlanYourTripButton';
+import { Experiences } from './components/Experiences';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 // ── Supplier portal route guard ────────────────────────────────────────────
@@ -64,6 +65,14 @@ function App() {
   const [lang, setLang] = useState<Language>('es');
   const [isReady, setIsReady] = useState(false);
   const [isPlanTripOpen, setIsPlanTripOpen] = useState(false); // v1.8.0 Step 3: "Plan Your Trip" modal
+  // v1.8.0 Step 11: when a user clicks "Plan this trip" on an experience
+  // card, we open the modal with the experience pre-filled.
+  const [prefillExperience, setPrefillExperience] = useState<{ id: string; title: string; days: number; priceFrom: number } | null>(null);
+  const handleExperienceSelect = (e: any) => {
+    setPrefillExperience({ id: e.id, title: e.title_en || e.title, days: e.days, priceFrom: e.price_from });
+    setIsPlanTripOpen(true);
+  };
+  const closePlanTrip = () => { setIsPlanTripOpen(false); setPrefillExperience(null); };
 
   // ALL HOOKS MUST BE CALLED UNCONDITIONALLY — before any early return.
   // React error #310 ("Rendered more hooks than during the previous render")
@@ -242,6 +251,10 @@ function App() {
 {/* Testimonials + FAQ — same v1.8.0 Step 9.3 fix. */}
 <KLOTestimonials lang={lang.toUpperCase() as 'EN' | 'ES' | 'PT'} />
 
+{/* Curated Experiences (v1.8.0 Step 11) — multi-pillar itineraries the
+    user can pick and pre-fill the PlanTripModal. */}
+<Experiences lang={lang.toUpperCase() as 'EN' | 'ES' | 'PT'} onExperienceSelect={handleExperienceSelect} />
+
 {/* Destinations */}
         <Destinations t={t as any} />
 
@@ -369,11 +382,12 @@ function App() {
       {/* ── MARIA AI CONCIERGE ───────────────────────────────────────── */}
       <AIAssistant t={t} lang={lang} />
 
-      {/* ── Plan Your Trip modal (v1.8.0 Step 3) ────────────────────── */}
+      {/* ── Plan Your Trip modal (v1.8.0 Step 3, extended Step 11) ────── */}
       <PlanTripModal
         open={isPlanTripOpen}
-        onClose={() => setIsPlanTripOpen(false)}
+        onClose={closePlanTrip}
         lang={lang}
+        prefillExperience={prefillExperience}
       />
 
       <style>{`

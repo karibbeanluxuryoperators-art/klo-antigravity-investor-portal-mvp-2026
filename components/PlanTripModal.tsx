@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Send, Loader2, Check, AlertCircle, Calendar, MapPin, User, Phone, Mail, MessageSquare, DollarSign } from 'lucide-react';
 
@@ -9,6 +9,10 @@ interface PlanTripModalProps {
   open: boolean;
   onClose: () => void;
   lang: Language;
+  // v1.8.0 Step 11: optional prefill. When set, the modal opens with the
+  // experience_type field pre-filled with the experience name and a banner
+  // shows the experience context. Closes when onClose is called.
+  prefillExperience?: { id: string; title: string; days: number; priceFrom: number } | null;
 }
 
 // v1.8.0 Step 3: trilingual "Plan Your Trip" form.
@@ -59,7 +63,7 @@ const t = (key: keyof typeof T_TRIP, lang: Language): string => {
   return (entry && (entry[lang] || entry.EN)) || '';
 };
 
-export const PlanTripModal: React.FC<PlanTripModalProps> = ({ open, onClose, lang }) => {
+export const PlanTripModal: React.FC<PlanTripModalProps> = ({ open, onClose, lang, prefillExperience }) => {
   const [form, setForm] = useState({
     name: '', email: '', phone: '',
     experience_type: '', travel_dates: '', location: '',
@@ -68,6 +72,19 @@ export const PlanTripModal: React.FC<PlanTripModalProps> = ({ open, onClose, lan
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // v1.8.0 Step 11: when an experience is passed in, pre-fill the
+  // experience_type field with its title so the user just confirms and
+  // submits. The /api/leads endpoint receives experience_id via the
+  // prepended message context.
+  useEffect(() => {
+    if (prefillExperience && open) {
+      setForm((prev) => ({
+        ...prev,
+        experience_type: prefillExperience.title,
+      }));
+    }
+  }, [prefillExperience?.id, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +107,11 @@ export const PlanTripModal: React.FC<PlanTripModalProps> = ({ open, onClose, lan
           travel_dates: form.travel_dates || null,
           budget: form.budget ? parseFloat(form.budget) : null,
           message: form.message || null,
-          source: 'plan_your_trip_modal',
+          // v1.8.0 Step 11: forward the experience_id when the modal was
+          // launched from an experience card. /api/leads stores it as
+          // message metadata so the admin can filter the Leads tab by
+          // "started from a curated experience".
+          source: prefillExperience ? `experience:${prefillExperience.id}` : 'plan_your_trip_modal',
         }),
       });
       if (!res.ok) {
