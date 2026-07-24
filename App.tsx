@@ -328,10 +328,21 @@ function App() {
                 <div className="space-y-8">
                   <h4 className="text-xs font-bold uppercase tracking-[0.4em] text-white/20">{t('footer.menu_title')}</h4>
                   <ul className="space-y-4">
-                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('nav.destinations')}</a></li>
-                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('nav.services')}</a></li>
-                    <li><a href="#" className="text-white/60 hover:text-white transition-colors">{t('nav.investors')}</a></li>
+                    <li><a href="#destinos" onClick={(e) => { e.preventDefault(); document.getElementById('destinos')?.scrollIntoView({ behavior: 'smooth' }); }} className="text-white/60 hover:text-white transition-colors">{t('nav.destinations')}</a></li>
+                    <li><a href="#how-klo-works" onClick={(e) => { e.preventDefault(); document.getElementById('how-klo-works')?.scrollIntoView({ behavior: 'smooth' }); }} className="text-white/60 hover:text-white transition-colors">{t('nav.services')}</a></li>
+                    <li><a href="#voices" onClick={(e) => { e.preventDefault(); document.getElementById('voices')?.scrollIntoView({ behavior: 'smooth' }); }} className="text-white/60 hover:text-white transition-colors">{t('nav.investors')}</a></li>
                   </ul>
+                  {/* v1.8.0 Step 9.5 — discreet access links to the partner and admin
+                      portals. Kept in the menu column (sitemap convention) so they
+                      don't pollute the Legal column. */}
+                  <div className="pt-4 mt-4 border-t border-white/5 space-y-3">
+                    <a href="/supplier/login" className="block text-[10px] font-bold uppercase tracking-[0.3em] text-white/30 hover:text-[#B8963E] transition-colors">
+                      {t('footer.partner_login') || 'Partner Sign In'} →
+                    </a>
+                    <a href="/admin" className="block text-[10px] font-bold uppercase tracking-[0.3em] text-white/30 hover:text-[#B8963E] transition-colors">
+                      {t('footer.admin') || 'Admin'} →
+                    </a>
+                  </div>
                 </div>
                 <div className="space-y-8">
                   <h4 className="text-xs font-bold uppercase tracking-[0.4em] text-white/20">{t('footer.legal_title')}</h4>

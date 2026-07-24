@@ -371,7 +371,9 @@ export const TRANSLATIONS = {
       privacy: "Privacidad",
       terms: "Términos",
       cookies: "Cookies",
-      tagline: "Lujo Incomparable. Colombia."
+      tagline: "Lujo Incomparable. Colombia.",
+      partner_login: "Acceso de Socios",   // v1.8.0 Step 9.5
+      admin: "Admin"                       // v1.8.0 Step 9.5
     },
     modal: {
       name_placeholder: "Tu Nombre",
@@ -574,7 +576,9 @@ export const TRANSLATIONS = {
       privacy: "Privacy",
       terms: "Terms",
       cookies: "Cookies",
-      tagline: "Unparalleled Luxury. Colombia."
+      tagline: "Unparalleled Luxury. Colombia.",
+      partner_login: "Partner Sign In",  // v1.8.0 Step 9.5
+      admin: "Admin"                     // v1.8.0 Step 9.5
     },
     modal: {
       name_placeholder: "Your Name",
@@ -777,7 +781,9 @@ export const TRANSLATIONS = {
       privacy: "Privacidade",
       terms: "Termos",
       cookies: "Cookies",
-      tagline: "Luxo Incomparável. Colômbia."
+      tagline: "Luxo Incomparável. Colômbia.",
+      partner_login: "Acesso de Parceiros",  // v1.8.0 Step 9.5
+      admin: "Admin"                         // v1.8.0 Step 9.5
     },
     modal: {
       name_placeholder: "Seu Nome",
