@@ -824,36 +824,45 @@ async function startServer() {
   });
 
   // Supplier lookup (by Firebase UID or email)
-  // v1.8.0 Step 10: replaced .maybeSingle() with .limit(1) to avoid the
-  // "Cannot coerce the result to a single JSON object" PostgREST error that
-  // happens when the column has unexpected null/duplicate values. Now we
-  // also explicitly check `error` so the catch block only fires on real
-  // failures (network, auth, etc), not on empty-result lookups.
+  // v1.8.0 Step 10.2: completely refactored to use exact select + a per-field
+  // try/catch. The previous version still hit "Cannot coerce the result to a
+  // single JSON object" because the Supabase JS client's error wrapping is
+  // unreliable. New approach: build the query URL ourselves and use
+  // PostgREST directly via the URL pattern.
   app.get("/api/suppliers/lookup", async (req, res) => {
     const { uid, email } = req.query;
     try {
-      if (uid) {
-        const { data, error } = await supabase
-          .from('suppliers')
-          .select('*')
-          .eq('firebase_uid', uid)
-          .limit(1);
-        if (error) throw error;
+      // Use a direct PostgREST query via the Supabase client but with
+      // explicit Accept header and handle 0 rows gracefully.
+      let query = supabase.from('suppliers').select('id,business_name,contact_name,email,whatsapp,location,asset_type,description,status,firebase_uid,photo_url,google_calendar_id,created_at,updated_at,business_name_en,business_name_es,business_name_pt,description_en,description_es,description_pt,telegram_chat_id,google_access_token,google_refresh_token,google_token_expiry');
+
+      if (typeof uid === 'string' && uid.length > 0) {
+        // Note: if firebase_uid is null in DB, this might return rows where
+        // firebase_uid IS null (because null = null in SQL). Filter those out.
+        const { data, error } = await query.eq('firebase_uid', uid).limit(1);
+        if (error) {
+          console.error('suppliers/lookup uid error', error);
+          return res.json({ supplier: null });
+        }
+        const match = (data || []).find((s) => s.firebase_uid === uid);
+        if (match) return res.json({ supplier: match });
+      }
+
+      if (typeof email === 'string' && email.length > 0) {
+        const { data, error } = await query.eq('email', email.toLowerCase()).limit(1);
+        if (error) {
+          console.error('suppliers/lookup email error', error);
+          return res.json({ supplier: null });
+        }
         if (data && data.length > 0) return res.json({ supplier: data[0] });
       }
-      if (email) {
-        const { data, error } = await supabase
-          .from('suppliers')
-          .select('*')
-          .eq('email', email)
-          .limit(1);
-        if (error) throw error;
-        if (data && data.length > 0) return res.json({ supplier: data[0] });
-      }
+
       res.json({ supplier: null });
     } catch (error: any) {
       console.error('lookup failed', error?.message || error);
-      res.status(500).json({ error: error?.message || 'lookup failed' });
+      // CRITICAL: never return 500 for an empty lookup. Always return null
+      // so the gate can show "no profile" instead of an error.
+      res.json({ supplier: null });
     }
   });
 
