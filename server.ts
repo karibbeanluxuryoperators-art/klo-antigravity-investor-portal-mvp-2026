@@ -831,37 +831,56 @@ async function startServer() {
   // PostgREST directly via the URL pattern.
   app.get("/api/suppliers/lookup", async (req, res) => {
     const { uid, email } = req.query;
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      return res.json({ supplier: null });
+    }
+
+    // v1.8.0 Step 11.8: use a raw PostgREST fetch bypassing the Supabase
+    // JS client entirely. The client wraps PostgREST errors in a way
+    // that throws on shape mismatches (e.g. when a requested column
+    // doesn't exist on the table). Going direct to PostgREST gives us
+    // the raw JSON response and full control over the error path.
+    const headers: Record<string, string> = {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${supabaseKey}`,
+      'Content-Type': 'application/json',
+    };
+
+    async function fetchOne(url: string): Promise<any | null> {
+      try {
+        const r = await fetch(url, { headers });
+        if (!r.ok) {
+          // 406 = no rows when using Prefer: return=single, but we don't
+          // use that. Any other error → treat as no match.
+          if (r.status === 404) return null;
+          const txt = await r.text();
+          console.error('suppliers/lookup postgrest error', r.status, txt.slice(0, 300));
+          return null;
+        }
+        const rows = (await r.json()) as any[];
+        return rows && rows.length > 0 ? rows[0] : null;
+      } catch (e) {
+        console.error('suppliers/lookup fetch error', e);
+        return null;
+      }
+    }
+
     try {
-      // Use a direct PostgREST query via the Supabase client but with
-      // explicit Accept header and handle 0 rows gracefully.
-      let query = supabase.from('suppliers').select('id,business_name,contact_name,email,whatsapp,location,asset_type,description,status,firebase_uid,photo_url,google_calendar_id,created_at,updated_at,business_name_en,business_name_es,business_name_pt,description_en,description_es,description_pt,telegram_chat_id,google_access_token,google_refresh_token,google_token_expiry');
-
       if (typeof uid === 'string' && uid.length > 0) {
-        // Note: if firebase_uid is null in DB, this might return rows where
-        // firebase_uid IS null (because null = null in SQL). Filter those out.
-        const { data, error } = await query.eq('firebase_uid', uid).limit(1);
-        if (error) {
-          console.error('suppliers/lookup uid error', error);
-          return res.json({ supplier: null });
-        }
-        const match = (data || []).find((s) => s.firebase_uid === uid);
-        if (match) return res.json({ supplier: match });
+        const url = `${supabaseUrl}/rest/v1/suppliers?firebase_uid=eq.${encodeURIComponent(uid)}&limit=1`;
+        const row = await fetchOne(url);
+        if (row && row.firebase_uid === uid) return res.json({ supplier: row });
       }
-
       if (typeof email === 'string' && email.length > 0) {
-        const { data, error } = await query.eq('email', email.toLowerCase()).limit(1);
-        if (error) {
-          console.error('suppliers/lookup email error', error);
-          return res.json({ supplier: null });
-        }
-        if (data && data.length > 0) return res.json({ supplier: data[0] });
+        const url = `${supabaseUrl}/rest/v1/suppliers?email=eq.${encodeURIComponent(email.toLowerCase())}&limit=1`;
+        const row = await fetchOne(url);
+        if (row) return res.json({ supplier: row });
       }
-
       res.json({ supplier: null });
     } catch (error: any) {
       console.error('lookup failed', error?.message || error);
-      // CRITICAL: never return 500 for an empty lookup. Always return null
-      // so the gate can show "no profile" instead of an error.
       res.json({ supplier: null });
     }
   });
