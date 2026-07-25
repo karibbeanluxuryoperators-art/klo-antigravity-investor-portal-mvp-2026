@@ -77,32 +77,6 @@ const Hero: React.FC<HeroProps> = ({ t, onInquiryOpen }) => {
               label={t('hero.cta')}
               t={t}
             />
-            <a
-              href="/supplier"
-              style={{
-                padding: '0.5rem 1.5rem',
-                color: 'rgba(244, 239, 230, 0.55)',
-                fontFamily: '"Inter", sans-serif',
-                fontSize: '10px',
-                fontWeight: 400,
-                letterSpacing: '0.25em',
-                textTransform: 'uppercase',
-                textDecoration: 'none',
-                borderBottom: '1px solid rgba(244, 239, 230, 0.2)',
-                transition: 'all 0.3s ease',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = 'rgba(244, 239, 230, 0.85)';
-                e.currentTarget.style.borderColor = 'rgba(244, 239, 230, 0.5)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = 'rgba(244, 239, 230, 0.55)';
-                e.currentTarget.style.borderColor = 'rgba(244, 239, 230, 0.2)';
-              }}
-            >
-              {t('supplier.cta')}
-            </a>
           </div>
         </div>
       </div>

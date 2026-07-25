@@ -12,7 +12,6 @@ import { SupplierDashboardGate } from './components/SupplierDashboardGate';
 import { AdminGate } from './components/AdminGate';
 import { PlanTripModal } from './components/PlanTripModal';
 import { HowKLOWorks } from './components/HowKLOWorks';
-import { KLOStats } from './components/KLOStats';
 import { KLOTestimonials } from './components/KLOTestimonials';
 import { PlanYourTripButton } from './components/ui/PlanYourTripButton';
 import { Experiences } from './components/Experiences';
@@ -244,9 +243,6 @@ function App() {
     (lowercase 'es'). Without this, dI.eyebrow.es is undefined and the
     section always falls back to English. */}
 <HowKLOWorks lang={lang.toUpperCase() as 'EN' | 'ES' | 'PT'} />
-
-{/* Stats — same v1.8.0 Step 9.3 fix as HowKLOWorks. */}
-<KLOStats lang={lang.toUpperCase() as 'EN' | 'ES' | 'PT'} />
 
 {/* Testimonials + FAQ — same v1.8.0 Step 9.3 fix. */}
 <KLOTestimonials lang={lang.toUpperCase() as 'EN' | 'ES' | 'PT'} />
