@@ -772,58 +772,14 @@ async function startServer() {
     }
   });
 
-  app.get("/api/suppliers/:id", async (req, res) => {
-    const { id } = req.params;
-    try {
-      const { data: supplier, error: sError } = await supabase
-        .from('suppliers')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (sError) throw sError;
-      if (!supplier) return res.status(404).json({ error: "Supplier not found" });
-      
-      const { data: assets, error: aError } = await supabase
-        .from('assets')
-        .select('*')
-        .eq('supplier_id', id);
-      
-      if (aError) throw aError;
-      
-      res.json({ ...supplier, assets });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.patch("/api/suppliers/:id/status", async (req, res) => {
-    const { id } = req.params;
-    const { status, approved_by } = req.body;
-    try {
-      const { error: sError } = await supabase
-        .from('suppliers')
-        .update({ status })
-        .eq('id', id);
-
-      if (sError) throw sError;
-
-      if (status === 'APPROVED') {
-        await supabase.from('assets').update({ status: 'ACTIVE' }).eq('supplier_id', id);
-        console.log(`Supplier ${id} APPROVED. Assets activated.`);
-        // Fire-and-forget: notify partner (Telegram + email) — never breaks the response
-        notifyApproval(id, 'SUPPLIER_APPROVED', { supplier_id: id, approved_by: approved_by || null });
-      } else if (status === 'REJECTED') {
-        await supabase.from('assets').update({ status: 'REJECTED' }).eq('supplier_id', id);
-      }
-
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
   // Supplier lookup (by Firebase UID or email)
+  // v1.8.0 Step 11.12: MOVED HERE so it registers BEFORE /api/suppliers/:id.
+  // Express matches in order — the `:id` wildcard was shadowing `/lookup`,
+  // making the lookup route unreachable. The handler then ran `.single()` on
+  // `id="lookup"`, which threw "Cannot coerce the result to a single JSON
+  // object" because no supplier has that id, and returned 500 to the client.
+  // Registering the literal path first fixes the shadowing.
+  //
   // v1.8.0 Step 10.2: completely refactored to use exact select + a per-field
   // try/catch. The previous version still hit "Cannot coerce the result to a
   // single JSON object" because the Supabase JS client's error wrapping is
@@ -882,6 +838,61 @@ async function startServer() {
     } catch (error: any) {
       console.error('lookup failed', error?.message || error);
       res.json({ supplier: null });
+    }
+  });
+
+  // Get a single supplier by ID
+  // v1.8.0 Step 11.12: NOTE — this `:id` route SHADOWS any literal path that
+  // starts with `/api/suppliers/<literal>`. If you add another literal route
+  // like /api/suppliers/lookup, register it BEFORE this one.
+  app.get("/api/suppliers/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const { data: supplier, error: sError } = await supabase
+        .from('suppliers')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (sError) throw sError;
+      if (!supplier) return res.status(404).json({ error: "Supplier not found" });
+
+      const { data: assets, error: aError } = await supabase
+        .from('assets')
+        .select('*')
+        .eq('supplier_id', id);
+
+      if (aError) throw aError;
+
+      res.json({ ...supplier, assets });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/suppliers/:id/status", async (req, res) => {
+    const { id } = req.params;
+    const { status, approved_by } = req.body;
+    try {
+      const { error: sError } = await supabase
+        .from('suppliers')
+        .update({ status })
+        .eq('id', id);
+
+      if (sError) throw sError;
+
+      if (status === 'APPROVED') {
+        await supabase.from('assets').update({ status: 'ACTIVE' }).eq('supplier_id', id);
+        console.log(`Supplier ${id} APPROVED. Assets activated.`);
+        // Fire-and-forget: notify partner (Telegram + email) — never breaks the response
+        notifyApproval(id, 'SUPPLIER_APPROVED', { supplier_id: id, approved_by: approved_by || null });
+      } else if (status === 'REJECTED') {
+        await supabase.from('assets').update({ status: 'REJECTED' }).eq('supplier_id', id);
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 
