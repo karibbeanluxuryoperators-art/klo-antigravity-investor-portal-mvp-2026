@@ -45,6 +45,29 @@ export const EXPERIENCES_CONFIG: EntityConfig = {
       ] },
     { kind: 'boolean', key: 'featured',   label: { EN: 'Featured', ES: 'Destacado', PT: 'Destaque' } },
     { kind: 'number',  key: 'display_order', label: { EN: 'Display Order', ES: 'Orden', PT: 'Ordem' }, min: 0 },
+    // v1.8.0 Step 18: Phase A v0.5 fields — KLO service fee + bundle pricing.
+    { kind: 'number', key: 'klo_service_fee', label: { EN: 'KLO Service Fee (USD)', ES: 'Tarifa Servicio KLO (USD)', PT: 'Taxa Serviço KLO (USD)' }, min: 0, step: 100,
+      help: { EN: 'KLO seamless service charge: champagne, red carpet, butler, transitions. This is KLO\'s only revenue source.',
+              ES: 'Cargo de servicio KLO: champagne, tapete rojo, mayordomo, transiciones. Esta es la única fuente de ingresos KLO.',
+              PT: 'Taxa de serviço KLO: champagne, tapete vermelho, mordomo, transições. Esta é a única fonte de receita KLO.' } },
+    { kind: 'number', key: 'klo_markup_pct',  label: { EN: 'KLO Markup % (on service fee)', ES: 'Markup KLO % (sobre tarifa)', PT: 'Markup KLO % (sobre taxa)' }, min: 0, max: 100, step: 0.5, defaultValue: 10.00,
+      help: { EN: 'Markup on KLO\'s own service fee. Defaults to 10% from /api/settings. Suppliers don\'t see this.',
+              ES: 'Markup sobre la tarifa KLO. Default 10% desde /api/settings. Los proveedores no lo ven.',
+              PT: 'Markup sobre a taxa KLO. Default 10% de /api/settings. Os fornecedores não veem isso.' } },
+    { kind: 'number', key: 'bundle_price',    label: { EN: 'Override Total (USD)', ES: 'Override Total (USD)', PT: 'Override Total (USD)' }, min: 0, step: 100,
+      help: { EN: 'Leave NULL to auto-calc: sum(assets.cost) + klo_service_fee * (1 + klo_markup/100). Set to override (e.g. for premium bundles).',
+              ES: 'Dejar NULL para auto-calcular: sum(assets.cost) + klo_service_fee * (1 + klo_markup/100). Setear para override (ej. bundles premium).',
+              PT: 'Deixe NULL para auto-calcular. Sete para override (ex. bundles premium).' } },
+    { kind: 'select',  key: 'curated_by_role', label: { EN: 'Curated by', ES: 'Curado por', PT: 'Curado por' },
+      options: [
+        { value: 'admin',    label: { EN: 'KLO (admin)',  ES: 'KLO (admin)',  PT: 'KLO (admin)' } },
+        { value: 'supplier', label: { EN: 'Supplier',     ES: 'Proveedor',    PT: 'Fornecedor' } },
+      ], defaultValue: 'admin' },
+    { kind: 'select',  key: 'is_supplier_published', label: { EN: 'Visibility', ES: 'Visibilidad', PT: 'Visibilidade' },
+      options: [
+        { value: 'true',  label: { EN: 'Supplier only (private)', ES: 'Solo proveedor (privado)', PT: 'Só fornecedor (privado)' } },
+        { value: 'false', label: { EN: 'Public (KLO curated)',     ES: 'Público (curado por KLO)', PT: 'Público (curado por KLO)' } },
+      ], defaultValue: 'false' },
   ],
 };
 
@@ -110,6 +133,29 @@ export const ASSETS_CONFIG: EntityConfig = {
         { value: 'STAFF',     label: { EN: 'Staff',      ES: 'Personal',   PT: 'Equipe' } },
         { value: 'TRANSPORT', label: { EN: 'Transport',  ES: 'Transporte', PT: 'Transporte' } },
       ] },
+    // v1.8.0 Step 18: Pillar v0.5 (renamed from asset_type conceptually; both stay
+    // for backward compat with old records. cost_to_klo = what supplier quoted.
+    { kind: 'select', key: 'pillar', label: { EN: 'Pillar (v0.5)', ES: 'Pilar (v0.5)', PT: 'Pilar (v0.5)' },
+      options: [
+        { value: '',         label: { EN: '— none —',       ES: '— ninguno —',      PT: '— nenhum —' } },
+        { value: 'AVIATION',  label: { EN: 'Aviation',        ES: 'Aviación',        PT: 'Aviação' } },
+        { value: 'YACHTS',    label: { EN: 'Yachts',          ES: 'Yates',           PT: 'Iates' } },
+        { value: 'LODGING',   label: { EN: 'Lodging',         ES: 'Alojamiento',     PT: 'Hospedagem' } },
+        { value: 'STAFF',     label: { EN: 'Staff',           ES: 'Personal',        PT: 'Equipe' } },
+        { value: 'TRANSPORT', label: { EN: 'Transport',       ES: 'Transporte',      PT: 'Transporte' } },
+      ]
+    },
+    { kind: 'number',  key: 'cost_to_klo',     label: { EN: 'Cost to KLO (USD)', ES: 'Costo para KLO (USD)', PT: 'Custo para KLO (USD)' }, min: 0,
+      help: { EN: 'What the supplier quoted to you. This is the price the client sees for the asset itself (no markup).',
+              ES: 'Lo que el proveedor te cotizó. Este es el precio que el cliente ve para el servicio (sin markup).',
+              PT: 'O que o fornecedor te cotizou. Este é o preço que o cliente vê para o serviço (sem markup).' } },
+    { kind: 'select',  key: 'cost_currency',    label: { EN: 'Currency', ES: 'Moneda', PT: 'Moeda' },
+      options: [
+        { value: 'USD', label: { EN: 'USD', ES: 'USD', PT: 'USD' } },
+        { value: 'COP', label: { EN: 'COP', ES: 'COP', PT: 'COP' } },
+        { value: 'EUR', label: { EN: 'EUR', ES: 'EUR', PT: 'EUR' } },
+      ],
+      defaultValue: 'USD' },
     { kind: 'trilingual', key: 'description', label: { EN: 'Description', ES: 'Descripción', PT: 'Descrição' }, subKind: 'textarea', maxLength: 2000, rows: 4 },
     { kind: 'number',  key: 'price_per_night', label: { EN: 'Per Night (USD)', ES: 'Por Noche (USD)', PT: 'Por Noite (USD)' }, min: 0 },
     { kind: 'number',  key: 'price_per_day',   label: { EN: 'Per Day (USD)',   ES: 'Por Día (USD)',   PT: 'Por Dia (USD)' },   min: 0 },
