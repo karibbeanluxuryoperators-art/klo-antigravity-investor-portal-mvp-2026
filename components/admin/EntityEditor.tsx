@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X, Save, Trash2, Loader2, Plus, Search, AlertCircle, Eye, EyeOff,
-  Check, Image as ImageIcon, Tag as TagIcon,
+  Check, Image as ImageIcon, Tag as TagIcon, ArchiveRestore,
 } from 'lucide-react';
 import { TrilingualField } from './TrilingualField';
 import { ImageField } from './ImageField';
@@ -121,7 +121,11 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ config, lang, signed
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${config.apiBase}?status=ALL`, { headers });
+      // v1.8.0 Step 17: include both ?status=ALL (for experiences) and
+      // ?include_archived=true (for soft-delete). Servers that don't support
+      // a param ignore it. The archive button lets the user re-restore rows.
+      const url = `${config.apiBase}?status=ALL&include_archived=true`;
+      const res = await fetch(url, { headers });
       if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
       const data = await res.json();
       setRows(Array.isArray(data) ? data : []);
@@ -184,14 +188,32 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ config, lang, signed
     }
   };
 
-  // Delete (soft for experiences — set status=ARCHIVED via PATCH)
-  const handleDelete = async (record: any) => {
+  // v1.8.0 Step 17: Archive (soft delete) for any entity. Reversible.
+  // Uses the new POST /api/{table}/:id/archive endpoint which sets archived_at.
+  const handleArchive = async (record: any) => {
     if (!window.confirm(T.confirmDel[lang])) return;
     try {
-      const res = await fetch(`${config.apiBase}/${record[idKey]}`, { method: 'DELETE', headers });
+      const res = await fetch(`${config.apiBase}/${record[idKey]}/archive`, {
+        method: 'POST',
+        headers,
+      });
       if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
       await fetchRows();
       setEditing(null);
+    } catch (e: any) {
+      alert(`${T.error[lang]}: ${e?.message || e}`);
+    }
+  };
+
+  // v1.8.0 Step 17: Restore (un-archive) for any entity.
+  const handleRestore = async (record: any) => {
+    try {
+      const res = await fetch(`${config.apiBase}/${record[idKey]}/restore`, {
+        method: 'POST',
+        headers,
+      });
+      if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+      await fetchRows();
     } catch (e: any) {
       alert(`${T.error[lang]}: ${e?.message || e}`);
     }
@@ -367,7 +389,8 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ config, lang, signed
             lang={lang}
             onClose={() => { setEditing(null); setIsCreating(false); }}
             onSave={handleSave}
-            onDelete={handleDelete}
+            onDelete={handleArchive}
+            onRestore={handleRestore}
             onTogglePublish={handleTogglePublish}
           />
         )}
@@ -457,6 +480,7 @@ interface EntityEditModalProps {
   onClose: () => void;
   onSave: (record: any) => Promise<void>;
   onDelete: (record: any) => Promise<void>;
+  onRestore: (record: any) => Promise<void>;
   onTogglePublish: (record: any) => Promise<void>;
 }
 
@@ -468,6 +492,7 @@ const EntityEditModal: React.FC<EntityEditModalProps> = ({
   onClose,
   onSave,
   onDelete,
+  onRestore,
   onTogglePublish,
 }) => {
   const [record, setRecord] = useState<any>(initial);
@@ -793,7 +818,15 @@ const EntityEditModal: React.FC<EntityEditModalProps> = ({
 
         {/* Footer */}
         <div className="sticky bottom-0 bg-[#0a1518] border-t border-white/10 px-6 py-4 flex items-center justify-between gap-3">
-          {!isCreating && (
+          {!isCreating && record.archived_at && (
+            <button
+              onClick={() => onRestore(record)}
+              className="flex items-center gap-2 px-4 py-2 text-emerald-400 hover:text-emerald-300 transition-colors text-[10px] font-bold uppercase tracking-[0.3em]"
+            >
+              <ArchiveRestore size={12} /> {T.restore[lang]}
+            </button>
+          )}
+          {!isCreating && !record.archived_at && (
             <button
               onClick={() => onDelete(record)}
               className="flex items-center gap-2 px-4 py-2 text-red-400 hover:text-red-300 transition-colors text-[10px] font-bold uppercase tracking-[0.3em]"

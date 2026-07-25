@@ -362,7 +362,9 @@ const ProgressBar: React.FC<{ label: string; pct: number; accent: string; hint?:
 // ════════════════════════════════════════════════════════════════════════
 interface AdminUser {
   email: string;
-  role: 'admin' | 'partner' | 'viewer';
+  role: 'admin' | 'sales' | 'ops' | 'partner' | 'viewer';
+  job_title: string | null;
+  permissions: any | null;
   granted_by: string | null;
   granted_at: string;
   notes: string | null;
@@ -416,7 +418,8 @@ export const AdminSettingsView: React.FC<{ lang: Language; signedInEmail?: strin
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<'admin' | 'partner' | 'viewer'>('viewer');
+  const [role, setRole] = useState<'admin' | 'sales' | 'ops' | 'partner' | 'viewer'>('viewer');
+  const [jobTitle, setJobTitle] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -441,13 +444,18 @@ export const AdminSettingsView: React.FC<{ lang: Language; signedInEmail?: strin
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${(await getSupplierSession())?.access_token || ''}` },
-        body: JSON.stringify({ email, role, notes: notes || null }),
+        body: JSON.stringify({
+          email,
+          role,
+          job_title: jobTitle || null,
+          notes: notes || null,
+        }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || `HTTP ${res.status}`);
       }
-      setEmail(''); setNotes('');
+      setEmail(''); setJobTitle(''); setNotes('');
       await fetchUsers();
     } catch (e: any) {
       alert(`Grant failed: ${e.message}`);
@@ -481,7 +489,7 @@ export const AdminSettingsView: React.FC<{ lang: Language; signedInEmail?: strin
         <p className="text-xs text-white/40">{tst('allowlistHint', lang)}</p>
 
         {/* Grant form */}
-        <form onSubmit={grant} className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <form onSubmit={grant} className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <input
             type="email"
             required
@@ -490,14 +498,23 @@ export const AdminSettingsView: React.FC<{ lang: Language; signedInEmail?: strin
             placeholder={tst('email', lang)}
             className="md:col-span-2 bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#B8963E]"
           />
+          <input
+            type="text"
+            value={jobTitle}
+            onChange={(e) => setJobTitle(e.target.value)}
+            placeholder={lang === 'ES' ? 'Cargo (ej. COO)' : lang === 'PT' ? 'Cargo (ex. COO)' : 'Job title (e.g. COO)'}
+            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-[#B8963E]"
+          />
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as any)}
             className="bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#B8963E]"
           >
-            <option value="admin">admin</option>
+            <option value="admin">{lang === 'ES' ? 'admin (todo)' : lang === 'PT' ? 'admin (tudo)' : 'admin (full)'}</option>
+            <option value="sales">sales</option>
+            <option value="ops">ops</option>
             <option value="partner">partner</option>
-            <option value="viewer">viewer</option>
+            <option value="viewer">{lang === 'ES' ? 'viewer (solo lectura)' : lang === 'PT' ? 'viewer (somente leitura)' : 'viewer (read-only)'}</option>
           </select>
           <button
             type="submit"
@@ -525,6 +542,9 @@ export const AdminSettingsView: React.FC<{ lang: Language; signedInEmail?: strin
                 <tr>
                   <th className="px-4 py-3 text-[9px] uppercase tracking-[0.3em] text-[#B8963E] font-bold">{tst('email', lang)}</th>
                   <th className="px-4 py-3 text-[9px] uppercase tracking-[0.3em] text-[#B8963E] font-bold">{tst('role', lang)}</th>
+                  <th className="px-4 py-3 text-[9px] uppercase tracking-[0.3em] text-[#B8963E] font-bold hidden lg:table-cell">
+                    {lang === 'ES' ? 'Cargo' : lang === 'PT' ? 'Cargo' : 'Job Title'}
+                  </th>
                   <th className="px-4 py-3 text-[9px] uppercase tracking-[0.3em] text-[#B8963E] font-bold hidden md:table-cell">{tst('notes', lang)}</th>
                   <th className="px-4 py-3 text-[9px] uppercase tracking-[0.3em] text-[#B8963E] font-bold text-right">—</th>
                 </tr>
@@ -534,6 +554,7 @@ export const AdminSettingsView: React.FC<{ lang: Language; signedInEmail?: strin
                   <tr key={u.email} className="hover:bg-white/[0.03]">
                     <td className="px-4 py-3 text-sm text-white">{u.email}</td>
                     <td className="px-4 py-3"><StatusPill status={u.role.toUpperCase()} lang={lang} /></td>
+                    <td className="px-4 py-3 text-xs text-white/60 hidden lg:table-cell">{u.job_title || '—'}</td>
                     <td className="px-4 py-3 text-xs text-white/40 hidden md:table-cell">{u.notes || '—'}</td>
                     <td className="px-4 py-3 text-right">
                       <button

@@ -9,6 +9,9 @@ import {
 } from 'lucide-react';
 import { getSupplierSession } from '../services/supabase';
 import { DataTable, type Column } from './ui/DataTable';
+import { useArchive } from '../hooks/useArchive';
+import { ArchiveButton } from './ui/ArchiveButton';
+import { ShowArchivedToggle } from './ui/ShowArchivedToggle';
 
 // v1.8.0 Step 3.2: auth-aware fetch helper.
 // Admin endpoints require `Authorization: Bearer <access_token>`. This helper
@@ -164,16 +167,27 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
   const [dietaryInput, setDietaryInput] = useState('');
   const [beverageInput, setBeverageInput] = useState('');
   const [interestInput, setInterestInput] = useState('');
+  const [bearer, setBearer] = useState<string | null>(null);
+  // v1.8.0 Step 17: soft-delete. showArchived gates ?include_archived=true.
+  const [showArchived, setShowArchived] = useState<boolean>(false);
+
+  useEffect(() => {
+    (async () => {
+      const session = await getSupplierSession();
+      setBearer(session?.access_token ?? null);
+    })();
+  }, []);
 
   useEffect(() => {
     fetchClients();
-  }, []);
+  }, [showArchived]);
 
   const fetchClients = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await authedFetch('/api/clients');
+      const url = showArchived ? '/api/clients?include_archived=true' : '/api/clients';
+      const res = await authedFetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setClients(Array.isArray(data) ? data : []);
@@ -185,6 +199,14 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
       setLoading(false);
     }
   };
+
+  // v1.8.0 Step 17: soft-delete infrastructure. Declared after fetchClients
+  // so the onAfterChange callback can close over it without a TDZ.
+  const { archive, restore, busyId } = useArchive({
+    table: 'clients',
+    bearer,
+    onAfterChange: () => fetchClients(),
+  });
 
   const filtered = clients.filter(c => {
     const q = searchQuery.toLowerCase();
@@ -296,20 +318,9 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
     }
   };
 
-  const handleDelete = async (c: Client) => {
-    if (!confirm(t('confirm_delete', lang))) return;
-    try {
-      const res = await authedFetch(`/api/clients/${c.id}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `HTTP ${res.status}`);
-      }
-      await fetchClients();
-    } catch (e: any) {
-      console.error('Delete failed', e);
-      alert(`${t('err_delete', lang)}: ${e.message || 'unknown'}`);
-    }
-  };
+  // v1.8.0 Step 17: replaced hard DELETE with soft archive. The handleDelete
+  // function is gone — the row-level <ArchiveButton> below handles archive/restore
+  // and the useArchive hook's onAfterChange refetches. Recovery is one click.
 
   // ── Render ──────────────────────────────────────────────────────────────
   if (loading && clients.length === 0) {
@@ -340,6 +351,15 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
             <UserPlus size={16} /> {t('add_client', lang)}
           </button>
         </div>
+      </div>
+
+      {/* v1.8.0 Step 17: Show archived toggle */}
+      <div className="flex items-center justify-end -mt-3">
+        <ShowArchivedToggle
+          value={showArchived}
+          onChange={setShowArchived}
+          lang={lang}
+        />
       </div>
 
       {/* Error banner */}
@@ -448,13 +468,17 @@ export const ClientManagement: React.FC<ClientManagementProps> = ({ lang }) => {
             >
               <Edit3 size={14} />
             </button>
-            <button
-              onClick={() => handleDelete(c)}
-              className="p-2 text-white/40 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
-              title={t('delete', lang)}
-            >
-              <Trash2 size={14} />
-            </button>
+            {/* v1.8.0 Step 17: ArchiveButton replaces the old hard-delete Trash2.
+                Archive is reversible — Restore from the same row when "Show
+                archived" is on, or via the ArchivedBanner on the detail page. */}
+            <ArchiveButton
+              row={c}
+              isArchived={!!c.archived_at}
+              onArchive={archive}
+              onRestore={restore}
+              busyId={busyId}
+              lang={lang}
+            />
           </div>
         )}
       />

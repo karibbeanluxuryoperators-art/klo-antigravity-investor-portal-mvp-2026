@@ -28,7 +28,21 @@
 -- Run in Supabase Studio SQL Editor (idempotent).
 
 -- Drop the old constraint, add the new one with more roles.
-ALTER TABLE public.user_roles DROP CONSTRAINT IF EXISTS user_roles_role_check;
+-- Defensive: find the actual CHECK constraint name from pg_constraint (Postgres
+-- sometimes auto-names it as just "user_roles_check" or similar) and drop it.
+DO $$
+DECLARE
+  constraint_name text;
+BEGIN
+  SELECT conname INTO constraint_name
+  FROM pg_constraint
+  WHERE conrelid = 'public.user_roles'::regclass
+    AND contype = 'c'
+    AND pg_get_constraintdef(oid) ILIKE '%role%IN%';
+  IF constraint_name IS NOT NULL THEN
+    EXECUTE format('ALTER TABLE public.user_roles DROP CONSTRAINT %I', constraint_name);
+  END IF;
+END$$;
 ALTER TABLE public.user_roles
   ADD CONSTRAINT user_roles_role_check
   CHECK (role IN ('admin', 'sales', 'ops', 'partner', 'viewer'));
