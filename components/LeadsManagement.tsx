@@ -8,6 +8,9 @@ import {
 } from 'lucide-react';
 import { getSupplierSession } from '../services/supabase';
 import { DataTable, type Column, type BulkAction } from './ui/DataTable';
+import { useArchive } from '../hooks/useArchive';
+import { ArchiveButton } from './ui/ArchiveButton';
+import { ShowArchivedToggle } from './ui/ShowArchivedToggle';
 
 // v1.8.0 Step 8: Leads tab converted to DataTable for visual consistency
 // with the other admin tabs (SOCIOS, RESERVAS, CLIENTES). The expandable
@@ -148,12 +151,26 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+  const [bearer, setBearer] = useState<string | null>(null);
+  // v1.8.0 Step 14: showArchived is owned by the lead-list local state because
+  // it gates the fetchLeads URL below. The useArchive hook reads showArchived
+  // from props so both stay in sync without a TDZ dance.
+  const [showArchived, setShowArchived] = useState<boolean>(false);
+
+  useEffect(() => {
+    (async () => {
+      const session = await getSupplierSession();
+      setBearer(session?.access_token ?? null);
+    })();
+  }, []);
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await authedFetch('/api/leads');
+      // v1.8.0 Step 14: append ?include_archived when the toggle is on.
+      const url = showArchived ? '/api/leads?include_archived=true' : '/api/leads';
+      const res = await authedFetch(url);
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || `HTTP ${res.status}`);
@@ -167,9 +184,20 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
     } finally {
       setLoading(false);
     }
-  }, [lang]);
+  }, [lang, showArchived]);
 
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
+
+  // v1.8.0 Step 14: soft-delete infrastructure. The hook is declared AFTER
+  // fetchLeads so the onAfterChange callback can close over it without a TDZ.
+  // The `showArchived` state lives here (not in the hook) because it's also
+  // the dependency of fetchLeads — keeping them next to each other avoids a
+  // prop-drilling/circular-update dance.
+  const { archive, restore, busyId } = useArchive({
+    table: 'leads',
+    bearer,
+    onAfterChange: () => fetchLeads(),
+  });
 
   const updateStatus = async (lead: Lead, status: Lead['status']) => {
     setStatusUpdating(lead.id);
@@ -367,6 +395,15 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
         <StatCard label={t('won_count', lang)} value={counts.won} accent="text-[#B8963E]" />
       </div>
 
+      {/* ── Toolbar: Show archived toggle (v1.8.0 Step 14) ─────────── */}
+      <div className="flex items-center justify-end">
+        <ShowArchivedToggle
+          value={showArchived}
+          onChange={(v) => { setShowArchived(v); }}
+          lang={lang}
+        />
+      </div>
+
       {/* ── DataTable ──────────────────────────────────────────────── */}
       <DataTable<Lead>
         rows={leads}
@@ -431,14 +468,19 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
                   <Sparkles size={14} />
                 </button>
               )}
-              <button
-                onClick={(e) => { e.stopPropagation(); deleteLead(l); }}
-                disabled={statusUpdating === l.id}
-                className="p-2 text-white/40 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
-                title={t('delete', lang)}
-              >
-                <Trash2 size={14} />
-              </button>
+              {/* v1.8.0 Step 14: ArchiveButton replaces the old hard-delete Trash2.
+                  Archive is reversible — the user can hit Restore from the same
+                  row (when Show archived is on) or the ArchivedBanner on the
+                  detail page. No confirm dialog: friction-free since recovery
+                  is one click away. */}
+              <ArchiveButton
+                row={l}
+                isArchived={!!l.archived_at}
+                onArchive={archive}
+                onRestore={restore}
+                busyId={busyId}
+                lang={lang}
+              />
             </div>
           );
         }}

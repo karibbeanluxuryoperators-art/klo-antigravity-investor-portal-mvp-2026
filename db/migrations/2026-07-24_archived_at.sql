@@ -31,7 +31,13 @@ ALTER TABLE bookings    ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
 -- Partial indexes — only index active rows. The "list active" path (90% of
 -- queries) becomes a single B-tree lookup, the "list archived" path is a
 -- sequential scan on a tiny subset.
-CREATE INDEX IF NOT EXISTS idx_leads_active       ON leads (created_at DESC) WHERE archived_at IS NULL;
+--
+-- IMPORTANT: the `leads` table uses `timestamp` (not `created_at`) per the
+-- original schema (db/migrations/supabase_schema.sql). The other 5 tables
+-- have `created_at`. We index leads on `timestamp` and the rest on
+-- `created_at`. If you ever add a `created_at` column to `leads`, you can
+-- swap the index — `timestamp` is preserved for backward compat.
+CREATE INDEX IF NOT EXISTS idx_leads_active       ON leads (timestamp DESC) WHERE archived_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_clients_active     ON clients (created_at DESC) WHERE archived_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_suppliers_active   ON suppliers (created_at DESC) WHERE archived_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_assets_active      ON assets (created_at DESC) WHERE archived_at IS NULL;
