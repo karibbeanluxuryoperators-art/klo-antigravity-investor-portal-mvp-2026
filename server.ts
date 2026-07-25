@@ -249,7 +249,82 @@ async function startServer() {
 
   app.use(express.json());
 
-  // ── Health check (must be first so we can diagnose serverless cold-start issues) ──
+  // ── Soft-delete helper (v1.8.0 Step 13 — Phase 1 of CRM roadmap) ──────
+  // Adds POST /api/{entity}/:id/archive and /restore for the 6 admin entities.
+  // Both are admin-only, idempotent (archive of archived = no-op success),
+  // and record updated_at if the table has it. The matching partial indexes
+  // are in db/migrations/2026-07-24_archived_at.sql.
+  const SOFT_DELETE_TABLES = ['leads', 'clients', 'suppliers', 'assets', 'experiences', 'bookings'] as const;
+  const registerArchiveRoutes = (table: typeof SOFT_DELETE_TABLES[number]) => {
+    const path = `/api/${table}/:id`;
+
+    // POST .../archive — soft delete. Sets archived_at = now().
+    // Idempotent: archiving an already-archived row is a 200 success.
+    app.post(`${path}/archive`, async (req, res) => {
+      const { id } = req.params;
+      try {
+        const { role } = await resolveAuthFromRequest(req);
+        if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+        const now = new Date().toISOString();
+        // Only set archived_at if it's currently NULL — preserves the
+        // original archive timestamp on repeat calls.
+        const { data, error } = await supabase
+          .from(table)
+          .update({ archived_at: now })
+          .eq('id', id)
+          .is('archived_at', null)
+          .select();
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          // Either the row doesn't exist, or it was already archived.
+          // Disambiguate so the UI can show the right message.
+          const { data: existing } = await supabase
+            .from(table)
+            .select('id, archived_at')
+            .eq('id', id)
+            .maybeSingle();
+          if (!existing) return res.status(404).json({ error: `${table} not found` });
+          return res.json({ success: true, already_archived: true, archived_at: existing.archived_at });
+        }
+        res.json({ success: true, archived_at: now });
+      } catch (error: any) {
+        console.error(`POST ${path}/archive failed`, error?.message || error);
+        res.status(500).json({ error: error?.message || 'archive failed' });
+      }
+    });
+
+    // POST .../restore — un-archive. Sets archived_at = NULL.
+    // Idempotent: restoring an already-active row is a 200 success.
+    app.post(`${path}/restore`, async (req, res) => {
+      const { id } = req.params;
+      try {
+        const { role } = await resolveAuthFromRequest(req);
+        if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+        const { data, error } = await supabase
+          .from(table)
+          .update({ archived_at: null })
+          .eq('id', id)
+          .not('archived_at', 'is', null)
+          .select();
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          const { data: existing } = await supabase
+            .from(table)
+            .select('id, archived_at')
+            .eq('id', id)
+            .maybeSingle();
+          if (!existing) return res.status(404).json({ error: `${table} not found` });
+          return res.json({ success: true, already_active: true });
+        }
+        res.json({ success: true });
+      } catch (error: any) {
+        console.error(`POST ${path}/restore failed`, error?.message || error);
+        res.status(500).json({ error: error?.message || 'restore failed' });
+      }
+    });
+  };
+
+  // Health check (must be first so we can diagnose serverless cold-start issues)
   app.get('/api/health', (_req, res) => {
     const integrations = {
       supabase: Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY),
@@ -318,10 +393,12 @@ async function startServer() {
     try {
       const { role } = await resolveAuthFromRequest(req);
       if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
-      const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .order('timestamp', { ascending: false });
+      // v1.8.0 Step 14: ?include_archived=true returns archived leads too.
+      // Default = active only (archived_at IS NULL).
+      const includeArchived = String(req.query.include_archived || '').toLowerCase() === 'true';
+      let q = supabase.from('leads').select('*');
+      if (!includeArchived) q = q.is('archived_at', null);
+      const { data, error } = await q.order('timestamp', { ascending: false });
 
       if (error) throw error;
       res.json(data);
@@ -408,6 +485,11 @@ async function startServer() {
       let query = supabase.from('experiences').select('*');
       if (effectiveStatus !== 'ALL') {
         query = query.eq('status', effectiveStatus);
+      }
+      // v1.8.0 Step 14: default = active only. ?include_archived=true to see all.
+      // Only admins can pass include_archived; public always sees active rows.
+      if (isAdmin && String(req.query?.include_archived || '').toLowerCase() !== 'true') {
+        query = query.is('archived_at', null);
       }
       const { data, error } = await query
         .order('display_order', { ascending: true })
@@ -641,9 +723,11 @@ async function startServer() {
 
   // Bookings API
   app.get("/api/bookings", async (req, res) => {
-    const { supplier_id } = req.query;
+    const { supplier_id, include_archived } = req.query;
     try {
       let bookings;
+      // v1.8.0 Step 14: default = active only. ?include_archived=true to see all.
+      const showArchived = String(include_archived || '').toLowerCase() === 'true';
 
       if (supplier_id) {
         // Get asset IDs for this supplier first
@@ -655,19 +739,21 @@ async function startServer() {
           return res.json([]);
         }
 
-        const { data, error } = await supabase
+        let q = supabase
           .from('bookings')
           .select(`*, assets(name, type)`)
-          .in('asset_id', assetIds)
-          .order('created_at', { ascending: false });
+          .in('asset_id', assetIds);
+        if (!showArchived) q = q.is('archived_at', null);
+        const { data, error } = await q.order('created_at', { ascending: false });
 
         if (error) throw error;
         bookings = data;
       } else {
-        const { data, error } = await supabase
+        let q = supabase
           .from('bookings')
-          .select(`*, assets(name, type)`)
-          .order('created_at', { ascending: false });
+          .select(`*, assets(name, type)`);
+        if (!showArchived) q = q.is('archived_at', null);
+        const { data, error } = await q.order('created_at', { ascending: false });
 
         if (error) throw error;
         bookings = data;
@@ -771,11 +857,14 @@ async function startServer() {
 
   app.get("/api/suppliers", async (req, res) => {
     try {
-      const { data, error } = await supabase
-        .from('suppliers')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
+      const { include_archived } = req.query;
+      let q = supabase.from('suppliers').select('*');
+      // v1.8.0 Step 14: default = active only. ?include_archived=true to see all.
+      if (String(include_archived || '').toLowerCase() !== 'true') {
+        q = q.is('archived_at', null);
+      }
+      const { data, error } = await q.order('created_at', { ascending: false });
+
       if (error) throw error;
       res.json(data);
     } catch (error: any) {
@@ -1216,9 +1305,13 @@ async function startServer() {
   });
 
   app.get("/api/assets", async (req, res) => {
-    const { type, status, location } = req.query;
+    const { type, status, location, include_archived } = req.query;
     try {
       let query = supabase.from('assets').select('*');
+      // v1.8.0 Step 14: default = active only. ?include_archived=true to see all.
+      if (String(include_archived || '').toLowerCase() !== 'true') {
+        query = query.is('archived_at', null);
+      }
 
       if (type) query = query.eq('type', type);
       if (status) query = query.eq('status', status);
@@ -1741,11 +1834,15 @@ async function startServer() {
     try {
       const { role } = await resolveAuthFromRequest(req);
       if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
-      const { tier, status, search } = req.query;
+      const { tier, status, search, include_archived } = req.query;
       let query = supabase
         .from('clients')
         .select('*')
         .order('created_at', { ascending: false });
+      // v1.8.0 Step 14: default = active only. ?include_archived=true to see all.
+      if (String(include_archived || '').toLowerCase() !== 'true') {
+        query = query.is('archived_at', null);
+      }
       if (tier) query = query.eq('tier', String(tier));
       if (status) query = query.eq('status', String(status));
       if (search) {
@@ -2259,6 +2356,12 @@ ${assetContext}`;
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`KLO Ecosystem Server running on http://localhost:${PORT}`);
     });
+  }
+
+  // v1.8.0 Step 14: register archive/restore routes for all 6 admin entities.
+  // See `registerArchiveRoutes` definition near the top of this function.
+  for (const table of SOFT_DELETE_TABLES) {
+    registerArchiveRoutes(table);
   }
 
   return app;
