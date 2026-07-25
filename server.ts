@@ -415,6 +415,17 @@ async function startServer() {
       if (error) throw error;
       res.json(data || []);
     } catch (error: any) {
+      // v1.8.0 Step 11.10: if the table doesn't exist (migration not yet
+      // run), return an empty list instead of 500 so the EntityEditor
+      // shows "no records" instead of an error state. The migration file
+      // is `db/migrations/2026-07-24_experiences.sql` — until it's run,
+      // this endpoint stays healthy.
+      const msg = error?.message || '';
+      const code = (error as any)?.code || '';
+      if (code === 'PGRST116' || /relation.*does not exist/i.test(msg) || /table.*experiences/i.test(msg)) {
+        console.warn('[GET /api/experiences] table missing, returning [] — run db/migrations/2026-07-24_experiences.sql');
+        return res.json([]);
+      }
       console.error('GET /api/experiences failed', error?.message || error);
       res.status(500).json({ error: error?.message || 'list failed' });
     }
