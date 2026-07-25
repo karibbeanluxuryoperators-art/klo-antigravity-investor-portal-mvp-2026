@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight,
@@ -221,60 +221,30 @@ export function DataTable<T extends Record<string, any>>({
   //   Escape    → clear search
   // Only active when the user is NOT typing in an input/textarea.
   //
-  // v1.8.0 Step 11.6: the keyboard useEffect was previously placed BEFORE
-  // `pagedRows` was declared. React 19 + Vite's strict TDZ handling turned
-  // that into a "Cannot access 'pagedRows' before initialization" error
-  // that crashed the entire /admin page. The fix: the useEffect now lives
-  // AFTER `pagedRows` is declared (in the "after pagination" section below)
-  // and registers itself via a ref so the handler can still see the latest
-  // values without re-attaching the listener on every render.
-  const keyboardRowActionRef = useRef<((row: any) => void) | null>(null);
-  const keyboardPagedRowsRef = useRef<any[]>([]);
-  useEffect(() => {
-    keyboardPagedRowsRef.current = pagedRows;
-  }, [pagedRows]);
-  useEffect(() => {
-    keyboardRowActionRef.current = onRowClick || null;
-  }, [onRowClick]);
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-      if (isEditable) return;
-      const paged = keyboardPagedRowsRef.current;
-      if (e.key === '/') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-        return;
-      }
-      if (e.key === 'j' || e.key === 'k') {
-        e.preventDefault();
-        setFocusedRowIdx(prev => {
-          const max = paged.length - 1;
-          if (max < 0) return -1;
-          if (e.key === 'j') return Math.min(prev + 1, max);
-          return Math.max(prev - 1, 0);
-        });
-        return;
-      }
-      if (e.key === 'Enter' && focusedRowIdx >= 0 && focusedRowIdx < paged.length) {
-        e.preventDefault();
-        const row = paged[focusedRowIdx];
-        if (row && keyboardRowActionRef.current) keyboardRowActionRef.current(row);
-        return;
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [focusedRowIdx]);
-
-  // Reset focused row when data / page changes
-  // v1.8.0 Step 11.6: this is a placeholder; the real effect is registered
-  // AFTER `pagedRows` is declared (see below). We can't move the effect up
-  // without re-introducing the TDZ error.
-  useEffect(() => {
-    setFocusedRowIdx(prev => prev);
-  }, []);
+  // v1.8.0 Step 11.9: the actual handler is installed in the useEffect
+  // BELOW (right after `pagedRows` is declared). The reason: the original
+  // keyboard useEffect (Step 9) tried to read `pagedRows` indirectly via
+  // a ref kept in sync by ANOTHER useEffect whose dep array was
+  // `[pagedRows]`. React 19 + Vite's strict TDZ handling evaluates that
+  // dep array synchronously during render — and `pagedRows` is declared
+  // LATER in the function body — so it threw
+  // "Cannot access 'pagedRows' before initialization" and crashed the
+  // entire /admin page.
+  //
+  // The fix that actually works: install the listener in a useEffect
+  // placed AFTER the `pagedRows = useMemo(...)` declaration. The handler
+  // closes over `pagedRows` directly, so when the user presses a key
+  // and React fires the effect callback (post-render), the closure has
+  // the latest value. The dep array uses `pagedRows.length` so the
+  // listener re-attaches only when the visible page changes, not on
+  // every render. `onRowClick` is captured in a ref that's updated
+  // every render (no dep array, no TDZ) so the listener identity stays
+  // stable.
+  // Capture onRowClick in a ref (no dep array needed — runs every render,
+  // synchronizes the ref with the latest prop without re-attaching the
+  // keydown listener).
+  const onRowClickRef = useRef(onRowClick);
+  onRowClickRef.current = onRowClick;
 
   // Reset selection when data changes
   useEffect(() => {
@@ -343,12 +313,63 @@ export function DataTable<T extends Record<string, any>>({
     return visibleRows.slice(start, start + pageSize);
   }, [visibleRows, currentPage, pageSize, isServerPaged]);
 
-  // v1.8.0 Step 11.6: the "reset focused row when data changes" effect had
-  // to be moved HERE (after pagedRows is declared) to avoid a TDZ crash
-  // that was killing the entire /admin page. The placeholder noop above
-  // is intentional; the real effect is below.
+  // v1.8.0 Step 11.9: this is the only place the keyboard handler can
+  // safely reference `pagedRows` — it's declared NOW, on the line above.
+  // Two responsibilities, combined into one effect (same dep array):
+  //   1. Clamp `focusedRowIdx` to the visible page whenever it changes.
+  //   2. Install the keyboard shortcuts (/, j, k, Enter, Escape).
+  // The listener reads `pagedRows` and `focusedRowIdx` from refs (mutated
+  // synchronously during render — safe for refs), so the listener identity
+  // never changes and we don't have to deal with stale closures.
+  const pagedRowsRef = useRef<any[]>(pagedRows);
+  pagedRowsRef.current = pagedRows;
+  const focusedRowIdxRef = useRef<number>(focusedRowIdx);
+  focusedRowIdxRef.current = focusedRowIdx;
   useEffect(() => {
+    // (1) Clamp focused row to the visible page.
     setFocusedRowIdx(prev => (prev >= pagedRows.length ? pagedRows.length - 1 : prev));
+
+    // (2) Keyboard handler.
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      const isEditable =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable;
+      if (isEditable) return;
+
+      if (e.key === '/') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      if (e.key === 'j' || e.key === 'k') {
+        e.preventDefault();
+        const paged = pagedRowsRef.current;
+        setFocusedRowIdx(prev => {
+          const max = paged.length - 1;
+          if (max < 0) return -1;
+          if (e.key === 'j') return Math.min(prev + 1, max);
+          return Math.max(prev - 1, 0);
+        });
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        const paged = pagedRowsRef.current;
+        const idx = focusedRowIdxRef.current;
+        if (idx >= 0 && idx < paged.length) {
+          e.preventDefault();
+          const row = paged[idx];
+          if (row) onRowClickRef.current?.(row);
+        }
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [pagedRows.length]);
 
   // ── Handlers ────────────────────────────────────────────────────
