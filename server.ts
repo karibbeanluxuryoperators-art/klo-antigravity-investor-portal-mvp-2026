@@ -1752,6 +1752,83 @@ async function startServer() {
     }
   });
 
+  // ── Platform settings (v1.8.0 Step 18 — Phase A of bundling roadmap) ───
+  // v0.5 model: stores global defaults (e.g. default_klo_markup_pct).
+  // The values live in a key/value table with JSONB so we can extend
+  // without migrations (e.g. add 'default_currency' later).
+  // GET is admin-only because the values affect pricing across the platform.
+  // PATCH is admin-only because non-admins shouldn't be able to change global markup.
+
+  // GET /api/settings — return all platform settings as a flat object.
+  // Pattern: { default_klo_markup_pct: 10.00, default_currency: 'USD', ... }
+  app.get("/api/settings", async (req, res) => {
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const { data, error } = await supabase
+        .from('platform_settings')
+        .select('key, value, updated_at, updated_by');
+      if (error) throw error;
+      // Flatten {key, value} into a single object. JSONB values come back
+      // as parsed JSON (e.g. number 10.00, not string "10.00").
+      const flat: Record<string, any> = {};
+      for (const row of (data || [])) {
+        flat[row.key] = row.value;
+      }
+      res.json(flat);
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'load settings failed' });
+    }
+  });
+
+  // PATCH /api/settings — update one or more keys. Body: { default_klo_markup_pct: 12.5, ... }
+  // Only allows updating keys that already exist (prevents typos creating
+  // zombie settings). To add a new key, run a migration.
+  app.patch("/api/settings", async (req, res) => {
+    try {
+      const { email: callerEmail, role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const updates = req.body || {};
+      if (typeof updates !== 'object' || Array.isArray(updates) || Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'body must be a non-empty object of key: value pairs' });
+      }
+
+      // v0.5 validation: numeric percentages must be 0-100. Extend per-key
+      // as new settings are added.
+      for (const [k, v] of Object.entries(updates)) {
+        if (k.endsWith('_pct') || k.endsWith('_percent')) {
+          const n = Number(v);
+          if (isNaN(n) || n < 0 || n > 100) {
+            return res.status(400).json({ error: `${k} must be a number 0-100` });
+          }
+        }
+      }
+
+      // Update each key. upsert with a WHERE-clause check on existing rows
+      // to enforce "only existing keys can be updated".
+      const results: any[] = [];
+      for (const [k, v] of Object.entries(updates)) {
+        const { data, error } = await supabase
+          .from('platform_settings')
+          .update({
+            value: v as any,
+            updated_at: new Date().toISOString(),
+            updated_by: callerEmail,
+          })
+          .eq('key', k)
+          .select();
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          return res.status(404).json({ error: `unknown setting: ${k}` });
+        }
+        results.push(data[0]);
+      }
+      res.json({ updated: results });
+    } catch (e: any) {
+      res.status(500).json({ error: e?.message || 'update settings failed' });
+    }
+  });
+
   // ── Admin aggregate endpoints (v1.8.0 Step 8) ──────────────────────
   // Powers the STATS and BUNDLES sidebar sections in /admin.
 
