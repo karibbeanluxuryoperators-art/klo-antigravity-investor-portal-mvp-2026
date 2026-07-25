@@ -1628,24 +1628,30 @@ async function startServer() {
   // Shared helper: validate a Bearer token, return the email + role.
   // Returns { email: string, role: 'admin' | 'partner' | 'viewer' | null }
   // null role means "no entry in user_roles" — treated as not authorized.
-  const resolveAuthFromRequest = async (req: any): Promise<{ email: string | null; role: string | null; userId: string | null }> => {
+  const resolveAuthFromRequest = async (req: any): Promise<{ email: string | null; role: string | null; userId: string | null; job_title: string | null; permissions: any }> => {
     const auth = req.headers?.authorization || '';
     const m = auth.match(/^Bearer\s+(.+)$/i);
-    if (!m) return { email: null, role: null, userId: null };
+    if (!m) return { email: null, role: null, userId: null, job_title: null, permissions: null };
     const token = m[1].trim();
-    if (!token) return { email: null, role: null, userId: null };
+    if (!token) return { email: null, role: null, userId: null, job_title: null, permissions: null };
     try {
       const { data, error } = await supabase.auth.getUser(token);
-      if (error || !data?.user?.email) return { email: null, role: null, userId: null };
+      if (error || !data?.user?.email) return { email: null, role: null, userId: null, job_title: null, permissions: null };
       const email = data.user.email.toLowerCase();
       const { data: roleRow } = await supabase
         .from('user_roles')
-        .select('role')
+        .select('role, job_title, permissions')
         .eq('email', email)
         .maybeSingle();
-      return { email, role: (roleRow?.role as string) ?? null, userId: data.user.id };
+      return {
+        email,
+        role: (roleRow?.role as string) ?? null,
+        userId: data.user.id,
+        job_title: (roleRow?.job_title as string) ?? null,
+        permissions: roleRow?.permissions ?? null,
+      };
     } catch {
-      return { email: null, role: null, userId: null };
+      return { email: null, role: null, userId: null, job_title: null, permissions: null };
     }
   };
 
@@ -1654,7 +1660,23 @@ async function startServer() {
   app.get("/api/admin/check", async (req, res) => {
     try {
       const { email, role, userId } = await resolveAuthFromRequest(req);
-      res.json({ email, role, userId, isAdmin: role === 'admin' });
+      // v1.8.0 Step 17: include job_title + permissions from user_roles
+      // so the client can render role-aware UI (sidebar sections, action buttons).
+      let job_title: string | null = null;
+      let permissions: any = null;
+      if (email) {
+        const { data: roleRow } = await supabase
+          .from('user_roles')
+          .select('job_title, permissions')
+          .eq('email', email)
+          .maybeSingle();
+        job_title = roleRow?.job_title ?? null;
+        permissions = roleRow?.permissions ?? null;
+      }
+      res.json({
+        email, role, userId, isAdmin: role === 'admin',
+        job_title, permissions,
+      });
     } catch (e: any) {
       res.status(500).json({ error: e?.message || 'check failed' });
     }
@@ -1665,9 +1687,11 @@ async function startServer() {
     try {
       const { role } = await resolveAuthFromRequest(req);
       if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      // v1.8.0 Step 17: include job_title + permissions so the Settings table
+      // can show the human label + the granular overrides per user.
       const { data, error } = await supabase
         .from('user_roles')
-        .select('email, role, granted_by, granted_at, notes')
+        .select('email, role, job_title, permissions, granted_by, granted_at, notes')
         .order('granted_at', { ascending: false });
       if (error) throw error;
       res.json({ users: data || [] });
@@ -1677,20 +1701,29 @@ async function startServer() {
   });
 
   // POST /api/admin/users — grant a role to an email. Admin-only.
-  // body: { email, role: 'admin' | 'partner' | 'viewer', notes? }
+  // v1.8.0 Step 17: now accepts job_title + permissions overrides.
+  // body: { email, role: 'admin'|'sales'|'ops'|'partner'|'viewer', job_title?, notes?, permissions? }
   app.post("/api/admin/users", async (req, res) => {
     try {
       const { role, email: grantorEmail } = await resolveAuthFromRequest(req);
       if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
-      const { email, role: newRole, notes } = req.body || {};
+      const { email, role: newRole, job_title, notes, permissions } = req.body || {};
       if (!email || !newRole) return res.status(400).json({ error: 'email and role required' });
-      if (!['admin', 'partner', 'viewer'].includes(newRole)) {
-        return res.status(400).json({ error: 'role must be admin|partner|viewer' });
+      const ALLOWED = ['admin', 'sales', 'ops', 'partner', 'viewer'];
+      if (!ALLOWED.includes(newRole)) {
+        return res.status(400).json({ error: 'role must be admin|sales|ops|partner|viewer' });
       }
       const { data, error } = await supabase
         .from('user_roles')
         .upsert(
-          { email: String(email).toLowerCase(), role: newRole, granted_by: grantorEmail, notes: notes || null },
+          {
+            email: String(email).toLowerCase(),
+            role: newRole,
+            granted_by: grantorEmail,
+            notes: notes || null,
+            job_title: job_title || null,
+            permissions: permissions || null,
+          },
           { onConflict: 'email' }
         )
         .select()
