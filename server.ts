@@ -1085,6 +1085,90 @@ async function startServer() {
     }
   });
 
+  // POST /api/suppliers — create a new supplier (admin-only).
+  // Used by /admin → Suppliers when the operator hits "+" and fills the
+  // EntityEditModal. body shape mirrors the SUPPLIERS_CONFIG in EntityConfigs.tsx
+  // (trilingual fields, contact info, asset_type, status, photo_url).
+  app.post("/api/suppliers", async (req, res) => {
+    try {
+      const { role, email: creatorEmail } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const body = req.body || {};
+      if (!body.business_name && !body.business_name_en) {
+        return res.status(400).json({ error: 'business_name required' });
+      }
+      const id = body.id || ('S' + Date.now() + '_' + Math.random().toString(36).substring(2, 8).toUpperCase());
+      // The base `business_name` / `description` columns stay as the canonical
+      // Spanish value (per the trilingual migration contract). EN/ES/PT override.
+      const business_name = body.business_name || body.business_name_es || body.business_name_en || 'Unnamed Supplier';
+      const description = body.description || body.description_es || body.description_en || null;
+      const row = {
+        id,
+        business_name,
+        description,
+        business_name_en: body.business_name_en || null,
+        business_name_es: body.business_name_es || business_name,
+        business_name_pt: body.business_name_pt || null,
+        description_en: body.description_en || null,
+        description_es: body.description_es || description,
+        description_pt: body.description_pt || null,
+        contact_name: body.contact_name || null,
+        email: body.email || null,
+        whatsapp: body.whatsapp || null,
+        location: body.location || null,
+        asset_type: body.asset_type || 'LODGING',
+        status: body.status || 'PENDING',
+        photo_url: body.photo_url || null,
+        created_by: creatorEmail,
+      };
+      const { data, error } = await supabase.from('suppliers').insert(row).select().maybeSingle();
+      if (error) {
+        if (/duplicate key/i.test(error.message || '')) {
+          return res.status(409).json({ error: 'supplier with this id already exists' });
+        }
+        throw error;
+      }
+      res.json(data);
+    } catch (e: any) {
+      console.error('POST /api/suppliers failed', e?.message || e);
+      res.status(500).json({ error: e?.message || 'create supplier failed' });
+    }
+  });
+
+  // PATCH /api/suppliers/:id — partial update (used by EntityEditModal "Save" on an existing row).
+  // Only updates fields present in body. Skips unknown columns defensively.
+  app.patch("/api/suppliers/:id", async (req: express.Request<{ id: string }>, res) => {
+    const { id } = req.params;
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const allowed = [
+        'business_name', 'business_name_en', 'business_name_es', 'business_name_pt',
+        'description', 'description_en', 'description_es', 'description_pt',
+        'contact_name', 'email', 'whatsapp', 'location', 'asset_type', 'status', 'photo_url',
+      ];
+      const updates: any = {};
+      for (const k of allowed) {
+        if (k in (req.body || {})) updates[k] = req.body[k];
+      }
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'no updatable fields provided' });
+      }
+      const { data, error } = await supabase
+        .from('suppliers')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return res.status(404).json({ error: 'supplier not found' });
+      res.json(data);
+    } catch (e: any) {
+      console.error(`PATCH /api/suppliers/:id failed`, e?.message || e);
+      res.status(500).json({ error: e?.message || 'update failed' });
+    }
+  });
+
   app.patch("/api/suppliers/:id/status", async (req, res) => {
     const { id } = req.params;
     const { status, approved_by } = req.body;
