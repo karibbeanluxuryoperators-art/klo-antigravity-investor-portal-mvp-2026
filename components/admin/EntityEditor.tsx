@@ -7,6 +7,7 @@ import {
 import { TrilingualField } from './TrilingualField';
 import { ImageField } from './ImageField';
 import { ItineraryField } from './ItineraryField';
+import { ExperienceWizard } from './ExperienceWizard';
 import type { ExperienceItineraryDay } from '../../services/experiences';
 
 // ── EntityEditor (v1.8.0 Step 11) ─────────────────────────────────────────────
@@ -381,7 +382,20 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ config, lang, signed
 
       {/* Edit modal */}
       <AnimatePresence>
-        {editing && (
+        {/* v1.8.0 Step 19: Experiences use the multi-step wizard (Phase B of the
+            bundling roadmap). Other entities still use the flat EntityEditModal. */}
+        {editing && config.apiBase === '/api/experiences' && (
+          <ExperienceWizard
+            initial={editing}
+            isCreating={isCreating}
+            lang={lang}
+            bearer={bearer}
+            signedInEmail={signedInEmail ?? null}
+            onClose={() => { setEditing(null); setIsCreating(false); }}
+            onSaved={() => { setEditing(null); setIsCreating(false); fetchRows(); }}
+          />
+        )}
+        {editing && config.apiBase !== '/api/experiences' && (
           <EntityEditModal
             config={config}
             initial={editing}

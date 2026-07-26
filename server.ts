@@ -1305,7 +1305,7 @@ async function startServer() {
   });
 
   app.get("/api/assets", async (req, res) => {
-    const { type, status, location, include_archived } = req.query;
+    const { type, status, location, include_archived, pillar, supplier_id } = req.query;
     try {
       let query = supabase.from('assets').select('*');
       // v1.8.0 Step 14: default = active only. ?include_archived=true to see all.
@@ -1316,6 +1316,10 @@ async function startServer() {
       if (type) query = query.eq('type', type);
       if (status) query = query.eq('status', status);
       if (location) query = query.ilike('location', `%${location}%`);
+      // v1.8.0 Step 19: pillar + supplier_id filters (used by ExperienceWizard
+      // to fetch assets per pillar when building a bundle).
+      if (pillar) query = query.eq('pillar', String(pillar));
+      if (supplier_id) query = query.eq('supplier_id', String(supplier_id));
 
       const { data, error } = await query;
       if (error) {
