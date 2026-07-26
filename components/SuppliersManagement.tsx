@@ -805,6 +805,14 @@ const PageHeader: React.FC<{
       eyebrow: lang === 'ES' ? 'Gestión de Red' : lang === 'PT' ? 'Gestão de Rede' : 'Network Management',
       title:   lang === 'ES' ? 'Socios'     : lang === 'PT' ? 'Parceiros' : 'Suppliers',
     },
+    SERVICES: {
+      eyebrow: lang === 'ES' ? 'Activos de Socios' : lang === 'PT' ? 'Ativos de Parceiros' : 'Supplier Assets',
+      title:   lang === 'ES' ? 'Servicios'  : lang === 'PT' ? 'Serviços'  : 'Services',
+    },
+    EXPERIENCES: {
+      eyebrow: lang === 'ES' ? 'Itinerarios Curados' : lang === 'PT' ? 'Itinerários Curados' : 'Curated Itineraries',
+      title:   lang === 'ES' ? 'Experiencias' : lang === 'PT' ? 'Experiências' : 'Experiences',
+    },
     BOOKINGS: {
       eyebrow: lang === 'ES' ? 'Orquestación de Viajes' : lang === 'PT' ? 'Orquestração de Viagens' : 'Journey Orchestration',
       title:   lang === 'ES' ? 'Reservas'    : lang === 'PT' ? 'Reservas'     : 'Bookings',
@@ -830,7 +838,7 @@ const PageHeader: React.FC<{
       title:   lang === 'ES' ? 'Ajustes' : lang === 'PT' ? 'Configurações' : 'Settings',
     },
   };
-  const t = titles[activeView];
+  const t = titles[activeView] ?? { eyebrow: '', title: '' };
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 pb-2">
       <div>
