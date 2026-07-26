@@ -460,7 +460,7 @@ export const ExperienceWizard: React.FC<ExperienceWizardProps> = (props) => {
               transition={{ duration: 0.15 }}
             >
               {STEPS[stepIdx] === 'basics' && (
-                <StepBasics form={form} setForm={setForm} lang={lang} />
+                <StepBasics form={form} setForm={setForm} lang={lang} isCreating={isCreating} />
               )}
               {STEPS[stepIdx] === 'pillars' && (
                 <StepPillars form={form} setForm={setForm} lang={lang} />
@@ -539,7 +539,7 @@ export const ExperienceWizard: React.FC<ExperienceWizardProps> = (props) => {
 
 // ── Step components ────────────────────────────────────────────────────
 
-function StepBasics({ form, setForm, lang }: { form: ExperienceFormState; setForm: (f: ExperienceFormState) => void; lang: 'EN' | 'ES' | 'PT' }) {
+function StepBasics({ form, setForm, lang, isCreating }: { form: ExperienceFormState; setForm: (f: ExperienceFormState) => void; lang: 'EN' | 'ES' | 'PT'; isCreating: boolean }) {
   return (
     <div className="space-y-6">
       <div>
