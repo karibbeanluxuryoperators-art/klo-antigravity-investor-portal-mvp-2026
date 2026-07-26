@@ -19,6 +19,14 @@
     <link rel="alternate" hreflang="pt" href="https://www.karibbeanluxuryoperators.lat/?lang=pt" />
     <link rel="alternate" hreflang="x-default" href="https://www.karibbeanluxuryoperators.lat/" />
 
+    <!-- Global dark-mode styling for native <select> dropdowns.
+         Without this, browsers render <option> elements with white background
+         + black text, which is invisible on the KLO dark theme (#0a1518). -->
+    <style>
+      select option { background-color: #0a1518; color: #f4efe6; }
+      select option:checked { background-color: #B8963E; color: #ffffff; }
+    </style>
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="KLO — Karibbean Luxury Operators" />
