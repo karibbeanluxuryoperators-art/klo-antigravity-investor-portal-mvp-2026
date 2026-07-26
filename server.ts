@@ -260,7 +260,7 @@ async function startServer() {
 
     // POST .../archive — soft delete. Sets archived_at = now().
     // Idempotent: archiving an already-archived row is a 200 success.
-    app.post(`${path}/archive`, async (req, res) => {
+    app.post(`${path}/archive`, async (req: express.Request<{ id: string }>, res) => {
       const { id } = req.params;
       try {
         const { role } = await resolveAuthFromRequest(req);
@@ -295,7 +295,7 @@ async function startServer() {
 
     // POST .../restore — un-archive. Sets archived_at = NULL.
     // Idempotent: restoring an already-active row is a 200 success.
-    app.post(`${path}/restore`, async (req, res) => {
+    app.post(`${path}/restore`, async (req: express.Request<{ id: string }>, res) => {
       const { id } = req.params;
       try {
         const { role } = await resolveAuthFromRequest(req);
