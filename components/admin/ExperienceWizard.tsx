@@ -233,9 +233,18 @@ function fmtMoney(n: number, currency: string = 'USD'): string {
 
 // ── Component ──────────────────────────────────────────────────────────
 
-export const ExperienceWizard: React.FC<ExperienceWizardProps> = ({
-  initial, isCreating, lang, bearer, signedInEmail, onClose, onSaved,
-}) => {
+export const ExperienceWizard: React.FC<ExperienceWizardProps> = (props) => {
+  // Destructure with explicit defaults so a missing or undefined prop doesn't
+  // crash the wizard. Same pattern as the EntityEditor's `isCreating` — Vite's
+  // production build can tree-shake destructured props that look "unused" in
+  // some code paths, so we always read them from `props` to be safe.
+  const initial = props.initial;
+  const lang = props.lang;
+  const bearer = props.bearer;
+  const signedInEmail = props.signedInEmail;
+  const onClose = props.onClose;
+  const onSaved = props.onSaved;
+  const isCreating = props.isCreating ?? true;  // default to "creating" — safer than false
   const [stepIdx, setStepIdx] = useState(0);
   const [form, setForm] = useState<ExperienceFormState>(() => stateFromInitial(initial, signedInEmail));
   const [saving, setSaving] = useState(false);

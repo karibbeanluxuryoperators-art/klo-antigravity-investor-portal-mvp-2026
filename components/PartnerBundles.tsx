@@ -302,16 +302,16 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <p className="text-[10px] uppercase tracking-[0.3em] text-gold mb-2 font-semibold">
-            {t.eyebrow}
+            {t[lang].eyebrow}
           </p>
-          <h2 className="text-3xl font-serif italic text-text-main">{t.title}</h2>
-          <p className="text-sm text-text-main/40 font-light mt-1 max-w-xl">{t.sub}</p>
+          <h2 className="text-3xl font-serif italic text-text-main">{t[lang].title}</h2>
+          <p className="text-sm text-text-main/40 font-light mt-1 max-w-xl">{t[lang].sub}</p>
         </div>
         <button
           onClick={openCreate}
           className="px-6 py-3 bg-gold text-luxury-black rounded-full font-semibold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-white transition-all self-start"
         >
-          <Plus size={14} /> {t.create}
+          <Plus size={14} /> {t[lang].create}}
         </button>
       </div>
 
@@ -319,7 +319,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
       {loading ? (
         <div className="py-20 flex flex-col items-center gap-3">
           <Loader2 className="animate-spin text-gold" size={32} />
-          <p className="text-xs uppercase tracking-widest text-text-main/40">{t.loading}</p>
+          <p className="text-xs uppercase tracking-widest text-text-main/40">{t[lang].loading}}</p>
         </div>
       ) : loadError ? (
         <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-8 text-center">
@@ -329,7 +329,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
       ) : bundles.length === 0 ? (
         <div className="bg-luxury-slate border border-border-main rounded-2xl p-16 text-center">
           <Layers size={42} className="text-text-main/20 mx-auto mb-4" />
-          <p className="text-text-main/40 text-sm font-light">{t.empty}</p>
+          <p className="text-text-main/40 text-sm font-light">{t[lang].empty}}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -363,13 +363,13 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-border-main">
                     <div>
                       <p className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">
-                        {t.items}
+                        {t[lang].items}}
                       </p>
                       <p className="text-sm font-medium text-text-main">{b.items_count ?? b.items?.length ?? 0}</p>
                     </div>
                     <div>
                       <p className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold text-right">
-                        {t.createdAt}
+                        {t[lang].createdAt}}
                       </p>
                       <p className="text-sm text-text-main/70 text-right">{formatDate(b.created_at)}</p>
                     </div>
@@ -383,7 +383,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
 
                   {isLocked && (
                     <p className="mt-3 text-[10px] text-text-main/30 italic flex items-center gap-1.5">
-                      <Lock size={10} /> {t.readOnly}
+                      <Lock size={10} /> {t[lang].readOnly}}
                     </p>
                   )}
                 </div>
@@ -421,30 +421,30 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
                 <X size={20} />
               </button>
               <h3 className="text-2xl font-serif italic text-text-main mb-6 flex items-center gap-3">
-                <Package size={20} className="text-gold" /> {t.new}
+                <Package size={20} className="text-gold" /> {t[lang].new}}
               </h3>
 
               <div className="space-y-6">
                 {/* Name + description */}
                 <div className="space-y-2">
                   <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">
-                    {t.modal.name}
+                    {t[lang].modal.name}}
                   </label>
                   <input
                     value={name}
                     onChange={e => setName(e.target.value)}
-                    placeholder={t.modal.namePh}
+                    placeholder={t[lang].modal.namePh}}
                     className="w-full bg-luxury-black border border-border-main rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">
-                    {t.modal.desc}
+                    {t[lang].modal.desc}}
                   </label>
                   <textarea
                     value={description}
                     onChange={e => setDescription(e.target.value)}
-                    placeholder={t.modal.descPh}
+                    placeholder={t[lang].modal.descPh}}
                     rows={3}
                     className="w-full bg-luxury-black border border-border-main rounded-xl py-3 px-4 text-sm text-text-main focus:outline-none focus:border-gold/50 resize-none"
                   />
@@ -454,9 +454,9 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
                 <div className="space-y-3">
                   <div>
                     <label className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">
-                      {t.modal.pickAssets}
+                      {t[lang].modal.pickAssets}}
                     </label>
-                    <p className="text-[11px] text-text-main/30 mt-1">{t.modal.pickHint}</p>
+                    <p className="text-[11px] text-text-main/30 mt-1">{t[lang].modal.pickHint}}</p>
                   </div>
 
                   {loadingAvailable ? (
@@ -465,7 +465,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
                     </div>
                   ) : availableAssets.length === 0 ? (
                     <div className="bg-luxury-black border border-border-main rounded-xl p-8 text-center text-text-main/40 text-xs">
-                      {t.modal.none}
+                      {t[lang].modal.none}}
                     </div>
                   ) : (
                     <div className="space-y-3 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
@@ -491,7 +491,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
                                 </span>
                               </div>
                               <span className="text-[10px] text-gold uppercase tracking-widest font-semibold">
-                                {t.modal.from}
+                                {t[lang].modal.from}}
                               </span>
                             </button>
                             {!collapsed && (
@@ -531,7 +531,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
                                             onClick={e => e.stopPropagation()}
                                           >
                                             <label className="text-[9px] text-text-main/50 uppercase tracking-widest">
-                                              {t.modal.qty}
+                                              {t[lang].modal.qty}}
                                             </label>
                                             <input
                                               type="number"
@@ -560,7 +560,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
                   <div className="flex items-center gap-2 text-text-main/60">
                     <DollarSign size={14} className="text-gold" />
                     <span className="text-[10px] uppercase tracking-widest font-semibold">
-                      {t.modal.total}
+                      {t[lang].modal.total}}
                     </span>
                   </div>
                   <span className="text-2xl font-serif italic text-gold">{formatPrice(liveTotal)}</span>
@@ -580,7 +580,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
                   disabled={submitting}
                   className="flex-1 py-4 bg-white/5 border border-border-main rounded-xl text-[11px] uppercase tracking-widest font-semibold text-text-main hover:bg-white/10 transition-all"
                 >
-                  {t.modal.cancel}
+                  {t[lang].modal.cancel}}
                 </button>
                 <button
                   onClick={handleSubmit}
@@ -589,11 +589,11 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
                 >
                   {submitting ? (
                     <>
-                      <Loader2 size={14} className="animate-spin" /> {t.modal.submitting}
+                      <Loader2 size={14} className="animate-spin" /> {t[lang].modal.submitting}}
                     </>
                   ) : (
                     <>
-                      <Send size={14} /> {t.modal.submit}
+                      <Send size={14} /> {t[lang].modal.submit}}
                     </>
                   )}
                 </button>
