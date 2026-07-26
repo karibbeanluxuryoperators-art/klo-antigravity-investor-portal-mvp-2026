@@ -721,6 +721,121 @@ async function startServer() {
     }
   });
 
+  // POST /api/leads/:id/convert — Phase 2: convert an inbound lead into a client.
+  // Reads the lead, creates a new clients row (source='lead') with the lead's
+  // contact info, then updates the lead with converted_to_client_id + status='CONVERTED'.
+  // Both columns exist from db/migrations/2026-07-24_lead_client_link.sql.
+  //
+  // Idempotency: if the lead already has converted_to_client_id set, we return the
+  // existing client (200) instead of duplicating. The UI hides the button in that case.
+  //
+  // tier defaults to UHNWI for all converted leads — admin can change it later
+  // via PATCH /api/clients/:id. We don't try to auto-detect tier from budget
+  // because that's a judgement call the human should make on first contact.
+  app.post("/api/leads/:id/convert", async (req: express.Request<{ id: string }>, res) => {
+    const { id } = req.params;
+    try {
+      const { role, email: creatorEmail } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+
+      // 1) Load the lead. 404 if not found.
+      const { data: lead, error: leadErr } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      if (leadErr) throw leadErr;
+      if (!lead) return res.status(404).json({ error: 'lead not found' });
+
+      // 2) Idempotency check: already converted → return the existing client.
+      if (lead.converted_to_client_id) {
+        const { data: existingClient } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('id', lead.converted_to_client_id)
+          .maybeSingle();
+        return res.json({ lead, client: existingClient, already_converted: true });
+      }
+
+      // 3) Need at least a name to create a client. Email is optional but if it
+      //    exists on the lead we copy it. If a client with the same email already
+      //    exists, we still link the lead to it (don't dup) and return that one.
+      if (!lead.name) {
+        return res.status(400).json({ error: 'lead has no name — cannot convert' });
+      }
+      const lowerEmail = lead.email ? String(lead.email).toLowerCase() : null;
+      if (lowerEmail) {
+        const { data: dup } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('email', lowerEmail)
+          .maybeSingle();
+        if (dup) {
+          // Link the lead to the existing client and mark as converted.
+          const { data: updatedLead, error: linkErr } = await supabase
+            .from('leads')
+            .update({
+              converted_to_client_id: dup.id,
+              status: 'CONVERTED',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', lead.id)
+            .select()
+            .maybeSingle();
+          if (linkErr) throw linkErr;
+          return res.json({ lead: updatedLead, client: dup, linked_to_existing: true });
+        }
+      }
+
+      // 4) Create the new client. ID format: 'C' + epoch + 6 random chars, same as
+      //    POST /api/clients above. source='lead' so we know where it came from.
+      const newClientId = 'C' + Date.now() + '_' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      const newClient = {
+        id: newClientId,
+        name: lead.name,
+        email: lowerEmail,
+        phone: lead.phone || null,
+        whatsapp: lead.whatsapp || null,
+        tier: 'UHNWI',                     // default — admin can downgrade later
+        status: 'ACTIVE',
+        preferences: {
+          dietary: [], beverages: [], temperature: '22°C', interests: [],
+        },
+        past_experiences: 0,
+        total_spend: 0,
+        loyalty_points: 0,
+        notes: lead.message || lead.special_requests || null,
+        source: 'lead',
+        lead_id: lead.id,                  // back-link from the migration
+        created_by: creatorEmail,
+      };
+      const { data: createdClient, error: createErr } = await supabase
+        .from('clients')
+        .insert(newClient)
+        .select()
+        .maybeSingle();
+      if (createErr) throw createErr;
+
+      // 5) Mark the lead as converted. updated_at tracks the conversion time.
+      const { data: updatedLead, error: updateErr } = await supabase
+        .from('leads')
+        .update({
+          converted_to_client_id: createdClient.id,
+          status: 'CONVERTED',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', lead.id)
+        .select()
+        .maybeSingle();
+      if (updateErr) throw updateErr;
+
+      res.json({ lead: updatedLead, client: createdClient, already_converted: false });
+    } catch (error: any) {
+      console.error('POST /api/leads/:id/convert failed', error?.message || error);
+      res.status(500).json({ error: error?.message || 'convert failed' });
+    }
+  });
+
   // Bookings API
   app.get("/api/bookings", async (req, res) => {
     const { supplier_id, include_archived } = req.query;
