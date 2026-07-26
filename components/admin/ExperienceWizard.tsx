@@ -202,16 +202,27 @@ function emptyState(): ExperienceFormState {
 }
 
 function stateFromInitial(initial: Partial<ExperienceFormState>, signedInEmail?: string | null): ExperienceFormState {
+  // The DB returns trilingual fields as flat columns: title_en/title_es/title_pt,
+  // eyebrow_en/eyebrow_es/eyebrow_pt, etc. The wizard wants nested objects:
+  // { EN, ES, PT }. We normalise here so the wizard never sees `undefined`.
+  const pick = (en?: string | null, es?: string | null, pt?: string | null) => ({
+    EN: en || '',
+    ES: es || '',
+    PT: pt || '',
+  });
+  const i: any = initial || {};
   return {
     ...emptyState(),
-    ...initial,
-    title: initial.title || { EN: '', ES: '', PT: '' },
-    eyebrow: initial.eyebrow || { EN: '', ES: '', PT: '' },
-    summary: initial.summary || { EN: '', ES: '', PT: '' },
-    description: initial.description || { EN: '', ES: '', PT: '' },
-    pillars: (initial.pillars as Pillar[]) || [],
-    asset_ids: initial.asset_ids || [],
-    curated_by_email: initial.curated_by_email || signedInEmail || '',
+    ...i,
+    title: i.title_en != null || i.title_es != null || i.title_pt != null
+      ? pick(i.title_en, i.title_es, i.title_pt)
+      : (i.title || { EN: '', ES: '', PT: '' }),
+    eyebrow: pick(i.eyebrow_en, i.eyebrow_es, i.eyebrow_pt),
+    summary: pick(i.summary_en, i.summary_es, i.summary_pt),
+    description: pick(i.description_en, i.description_es, i.description_pt),
+    pillars: (i.pillars as Pillar[]) || [],
+    asset_ids: i.asset_ids || [],
+    curated_by_email: i.curated_by_email || signedInEmail || '',
   };
 }
 
@@ -329,8 +340,14 @@ export const ExperienceWizard: React.FC<ExperienceWizardProps> = ({
   const save = async (publish: boolean) => {
     setSaving(true);
     try {
+      // Flatten trilingual objects to _en/_es/_pt columns (DB schema).
+      // Leave the nested form on `form` so the UI state stays consistent.
       const body = {
         ...form,
+        title_en: form.title.EN, title_es: form.title.ES, title_pt: form.title.PT,
+        eyebrow_en: form.eyebrow.EN, eyebrow_es: form.eyebrow.ES, eyebrow_pt: form.eyebrow.PT,
+        summary_en: form.summary.EN, summary_es: form.summary.ES, summary_pt: form.summary.PT,
+        description_en: form.description.EN, description_es: form.description.ES, description_pt: form.description.PT,
         status: publish ? 'PUBLISHED' : form.status,
         pillars: form.pillars,
         asset_ids: form.asset_ids,
