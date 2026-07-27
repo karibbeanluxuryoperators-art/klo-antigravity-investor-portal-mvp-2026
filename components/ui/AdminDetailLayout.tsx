@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import {
   ArrowLeft, Loader2, AlertCircle, RefreshCw, ChevronRight,
 } from 'lucide-react';
 import { AdminSidebar, type AdminSection } from './AdminSidebar';
+import { displayFieldValue } from '../../services/formatters';
 
 // v1.8.0 Step 6: Shared detail-page layout.
 //
@@ -279,11 +280,21 @@ export const DetailField: React.FC<{
   lang: Language;
 }> = ({ label, value, mono, accent, lang }) => {
   const lbl = typeof label === 'string' ? label : (label[lang] || label.EN);
+  // Normalise: if value is a string that looks like {"EN":"…","ES":"…","PT":"…"}
+  // (legacy write from a trilingual state object into a single column), pull
+  // the active locale out. Same for plain JSONB objects.
+  const display = useMemo(() => {
+    if (value === null || value === undefined || value === '') return value;
+    if (typeof value === 'string' || typeof value === 'object') {
+      return displayFieldValue(value as any, lang);
+    }
+    return value;
+  }, [value, lang]);
   return (
     <div>
       <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/40 mb-1.5">{lbl}</p>
       <p className={`text-sm ${mono ? 'font-mono' : ''} ${accent ? 'text-[#B8963E] font-semibold' : 'text-white/90'}`}>
-        {value || <span className="text-white/30">—</span>}
+        {display || <span className="text-white/30">—</span>}
       </p>
     </div>
   );
