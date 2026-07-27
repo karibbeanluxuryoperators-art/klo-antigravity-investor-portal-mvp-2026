@@ -9,6 +9,7 @@ import { ImageField } from './ImageField';
 import { ItineraryField } from './ItineraryField';
 import { ExperienceWizard } from './ExperienceWizard';
 import type { ExperienceItineraryDay } from '../../services/experiences';
+import { authedFetch, getAccessToken } from '../../services/supabase';
 
 // ── EntityEditor (v1.8.0 Step 11) ─────────────────────────────────────────────
 // One generic CRUD component for any entity (Experiences, Services, Suppliers).
@@ -97,18 +98,15 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ config, lang, signed
   const [isCreating, setIsCreating] = useState(false);
 
   const idKey = config.idKey || 'id';
-  const bearer = useMemo(() => {
-    if (typeof window === 'undefined') return '';
-    // Pull the supabase session token from localStorage. Same pattern used by
-    // ClientManagement and LeadsManagement.
-    try {
-      const raw = localStorage.getItem('sb-vygfumqzlnloytmoaxav-auth-token');
-      if (!raw) return '';
-      const parsed = JSON.parse(raw);
-      return parsed?.access_token || '';
-    } catch {
-      return '';
-    }
+  // Bearer token via the shared authedFetch helper in services/supabase.ts.
+  // Reading localStorage directly is fragile (the storage key shape varies
+  // across Supabase versions). authedFetch grabs the token from the live
+  // auth client so this can't drift.
+  const [bearer, setBearer] = useState<string>('');
+  useEffect(() => {
+    let mounted = true;
+    getAccessToken().then(t => { if (mounted) setBearer(t || ''); });
+    return () => { mounted = false; };
   }, [signedInEmail]);
 
   const headers = useMemo(() => {

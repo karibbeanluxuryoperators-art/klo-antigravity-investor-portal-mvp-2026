@@ -133,6 +133,44 @@ export async function getSupplierSession(): Promise<Session | null> {
 }
 
 /**
+ * Get the current Supabase access token from the actual auth client.
+ * This is the SAFE way to grab a bearer — never read localStorage directly
+ * because the key shape (`sb-<ref>-auth-token`) varies between Supabase
+ * versions and projects.
+ *
+ * Use it from admin code like:
+ *   const token = await getAccessToken();
+ *   if (!token) return setState({ kind: 'not-authorized' });
+ *   await fetch('/api/clients', { headers: { Authorization: `Bearer ${token}` }});
+ */
+export async function getAccessToken(): Promise<string | null> {
+  const session = await getSupplierSession();
+  return session?.access_token ?? null;
+}
+
+/**
+ * authedFetch — drop-in replacement for fetch() that automatically attaches the
+ * Supabase bearer token and JSON content-type. Returns the raw Response so
+ * callers can decide on 401/403 handling.
+ *
+ * Use it from any admin component instead of raw fetch():
+ *   const res = await authedFetch('/api/suppliers', {
+ *     method: 'POST',
+ *     body: JSON.stringify(record),
+ *   });
+ *   if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+ */
+export async function authedFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  const token = await getAccessToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(init.headers as Record<string, string> | undefined ?? {}),
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return fetch(input, { ...init, headers });
+}
+
+/**
  * v1.7.1: returns whether the Supabase client was successfully built.
  * Gates call this to distinguish "no session" (needs sign-in) from
  * "config missing" (show the config-required error). Both states return
