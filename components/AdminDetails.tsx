@@ -3,6 +3,7 @@ import {
   Mail, MessageSquare, Phone, MapPin, Package, Calendar, Clock,
   DollarSign, User, Sparkles, ExternalLink, FileText, Edit3, Save,
   Loader2, AlertCircle, Inbox, X as XIcon, Check, Trash2,
+  UserPlus, UserCheck,
 } from 'lucide-react';
 import {
   AdminDetailLayout, DetailCard, DetailField, DetailGrid,
@@ -534,9 +535,17 @@ export interface LeadRecord {
   travel_dates: string | null;
   special_requests: string | null;
   message: string | null;
-  status: 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'WON' | 'LOST';
+  status: 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'WON' | 'LOST' | 'CONVERTED';
   timestamp: string;
   source: string | null;
+  // Phase 2 (Lead → Client convert): set when this lead has been promoted
+  // to a client. The matching clients.lead_id points back here.
+  converted_to_client_id?: string | null;
+  // Optional back-link from the migration. When the lead was created
+  // from a PlanTripModal that was already linked to a client, this is set.
+  // (Currently unused but reserved for the future Phase 2 reverse flow.)
+  // @ts-expect-error reserved
+  client_id?: string | null;
 }
 
 interface LeadDetailProps extends Omit<SupplierDetailProps, 'id'> {
@@ -557,6 +566,36 @@ export const LeadDetail: React.FC<LeadDetailProps> = (props) => {
     window.location.href = '/admin';
   };
 
+  // Phase 2: convert this lead into a client. The server endpoint
+  // (POST /api/leads/:id/convert) creates a new clients row from the
+  // lead's contact info, marks the lead status='CONVERTED' and links
+  // them via converted_to_client_id. The endpoint is idempotent so
+  // double-clicks are safe.
+  const [converting, setConverting] = useState(false);
+  const convertToClient = async (l: LeadRecord) => {
+    if (!l.name) {
+      alert(lang === 'ES' ? 'Este lead no tiene nombre — agrega uno antes de convertir.' : lang === 'PT' ? 'Este lead não tem nome — adicione um antes de converter.' : 'This lead has no name — add one before converting.');
+      return;
+    }
+    const confirmMsg = lang === 'ES'
+      ? `¿Convertir a "${l.name}" en cliente? Se creará un perfil UHNWI en /admin/clients.`
+      : lang === 'PT'
+      ? `Converter "${l.name}" em cliente? Será criado um perfil UHNWI em /admin/clients.`
+      : `Convert "${l.name}" to a client? A new UHNWI profile will be created in /admin/clients.`;
+    if (!confirm(confirmMsg)) return;
+    setConverting(true);
+    try {
+      const res = await authedFetchJSON(`/api/leads/${l.id}/convert`, { method: 'POST' });
+      const ok = lang === 'ES' ? 'Lead convertido en cliente.' : lang === 'PT' ? 'Lead convertido em cliente.' : 'Lead converted to client.';
+      alert(`${ok}\n\nClient ID: ${res?.client?.id || res?.already_converted ? '(existing)' : '(unknown)'}`);
+      window.location.reload();
+    } catch (e: any) {
+      alert(`Convert failed: ${e?.message || e}`);
+    } finally {
+      setConverting(false);
+    }
+  };
+
   return (
     <AdminDetailLayout<LeadRecord>
       section="LEADS"
@@ -574,10 +613,29 @@ export const LeadDetail: React.FC<LeadDetailProps> = (props) => {
         <span className="text-3xl md:text-4xl font-serif italic text-white flex items-center gap-3 flex-wrap">
           {l.name || (lang === 'ES' ? 'Sin nombre' : lang === 'PT' ? 'Sem nome' : 'Unnamed')}
           <StatusPill status={l.status} lang={lang} />
+          {l.converted_to_client_id && (
+            <a
+              href={`/admin/clients/${l.converted_to_client_id}`}
+              className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-500/30 transition-all"
+            >
+              <UserCheck size={10} />
+              {lang === 'ES' ? 'Convertido → Cliente' : lang === 'PT' ? 'Convertido → Cliente' : 'Converted → Client'}
+            </a>
+          )}
         </span>
       )}
       headerActions={(l) => (
         <>
+          {!l.converted_to_client_id && (
+            <button
+              onClick={() => convertToClient(l)}
+              disabled={converting}
+              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500/30 hover:text-emerald-200 disabled:opacity-50 transition-all"
+            >
+              {converting ? <Loader2 size={12} className="animate-spin" /> : <UserPlus size={12} />}
+              {lang === 'ES' ? 'Convertir a Cliente' : lang === 'PT' ? 'Converter em Cliente' : 'Convert to Client'}
+            </button>
+          )}
           {l.status === 'NEW' && (
             <button
               onClick={() => updateStatus(l, 'CONTACTED')}
@@ -586,7 +644,7 @@ export const LeadDetail: React.FC<LeadDetailProps> = (props) => {
               {lang === 'ES' ? 'Marcar Contactado' : lang === 'PT' ? 'Marcar Contatado' : 'Mark Contacted'}
             </button>
           )}
-          {l.status !== 'WON' && (
+          {l.status !== 'WON' && l.status !== 'CONVERTED' && (
             <button
               onClick={() => updateStatus(l, 'WON')}
               className="flex items-center gap-2 px-4 py-2.5 bg-[#B8963E] text-white rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-[#B8963E]/90"
