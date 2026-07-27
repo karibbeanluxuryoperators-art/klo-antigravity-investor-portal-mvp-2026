@@ -805,8 +805,13 @@ async function startServer() {
 
       // 4) Create the new client. ID format: 'C' + epoch + 6 random chars, same as
       //    POST /api/clients above. source='lead' so we know where it came from.
+      //
+      // Resilient to missing optional columns: if the migration that adds
+      // `lead_id` / `created_by` hasn't been run yet, we retry the insert
+      // without those fields. The basic CRM flow still works; the user just
+      // loses the back-link from client → lead until the migration lands.
       const newClientId = 'C' + Date.now() + '_' + Math.random().toString(36).substring(2, 8).toUpperCase();
-      const newClient = {
+      const newClient: any = {
         id: newClientId,
         name: lead.name,
         email: lowerEmail,
@@ -822,27 +827,58 @@ async function startServer() {
         loyalty_points: 0,
         notes: lead.message || lead.special_requests || null,
         source: 'lead',
-        lead_id: lead.id,                  // back-link from the migration
-        created_by: creatorEmail,
       };
-      const { data: createdClient, error: createErr } = await supabase
+      // Try with the back-link + audit fields first (they live in
+      // 2026-07-24_lead_client_link.sql and 2026-07-25_user_roles_rbac.sql).
+      const clientInsert = async (row: any) => supabase
         .from('clients')
-        .insert(newClient)
+        .insert(row)
         .select()
         .maybeSingle();
+      let createResult = await clientInsert({ ...newClient, lead_id: lead.id, created_by: creatorEmail });
+      let createErr = createResult.error;
+      let createdClient = createResult.data;
+      // If the optional columns don't exist, drop them and retry once.
+      if (createErr && (createErr.code === 'PGRST204' || /does not exist/i.test(createErr.message || ''))) {
+        console.warn('clients insert: optional columns missing, retrying without them:', createErr.message);
+        createResult = await clientInsert({ ...newClient, created_by: creatorEmail });
+        createErr = createResult.error;
+        createdClient = createResult.data;
+        if (createErr && (createErr.code === 'PGRST204' || /does not exist/i.test(createErr.message || ''))) {
+          // Even created_by missing? Drop it.
+          createResult = await clientInsert(newClient);
+          createErr = createResult.error;
+          createdClient = createResult.data;
+        }
+      }
       if (createErr) throw createErr;
+      if (!createdClient) throw new Error('client insert returned null');
 
-      // 5) Mark the lead as converted. updated_at tracks the conversion time.
-      const { data: updatedLead, error: updateErr } = await supabase
+      // 5) Mark the lead as converted. Same resilient pattern for the back-link.
+      const leadUpdate = async (extra: any) => supabase
         .from('leads')
-        .update({
-          converted_to_client_id: createdClient.id,
-          status: 'CONVERTED',
-          updated_at: new Date().toISOString(),
-        })
+        .update({ status: 'CONVERTED', ...extra })
         .eq('id', lead.id)
         .select()
         .maybeSingle();
+      let updateResult = await leadUpdate({
+        converted_to_client_id: createdClient.id,
+        updated_at: new Date().toISOString(),
+      });
+      let updateErr = updateResult.error;
+      let updatedLead = updateResult.data;
+      if (updateErr && (updateErr.code === 'PGRST204' || /does not exist/i.test(updateErr.message || ''))) {
+        console.warn('leads update: converted_to_client_id column missing, retrying without it:', updateErr.message);
+        updateResult = await leadUpdate({ updated_at: new Date().toISOString() });
+        updateErr = updateResult.error;
+        updatedLead = updateResult.data;
+        if (updateErr && /updated_at/i.test(updateErr.message || '')) {
+          // No updated_at either — just set status.
+          updateResult = await leadUpdate({});
+          updateErr = updateResult.error;
+          updatedLead = updateResult.data;
+        }
+      }
       if (updateErr) throw updateErr;
 
       res.json({ lead: updatedLead, client: createdClient, already_converted: false });
