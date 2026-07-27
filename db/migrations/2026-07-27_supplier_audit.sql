@@ -13,7 +13,8 @@
 alter table public.suppliers
   add column if not exists created_by text,
   add column if not exists updated_by text,
-  add column if not exists updated_at timestamptz default now();
+  add column if not exists updated_at timestamptz default now(),
+  add column if not exists photo_url text;
 
 -- Indexes for the "who created/updated supplier X" lookups in /admin
 create index if not exists suppliers_created_by_idx on public.suppliers (created_by) where created_by is not null;

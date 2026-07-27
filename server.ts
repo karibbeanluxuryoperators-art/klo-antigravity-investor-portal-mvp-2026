@@ -1118,11 +1118,11 @@ async function startServer() {
         location: body.location || null,
         asset_type: body.asset_type || 'LODGING',
         status: body.status || 'PENDING',
-        photo_url: body.photo_url || null,
-        // NOTE: suppliers table does not have a `created_by` column (yet).
-        // Until migration 2026-07-27_supplier_audit.sql is applied we skip it
-        // so the POST doesn't 500. The variable `creatorEmail` is still
-        // available above for when the column lands.
+        // NOTE: suppliers table does not have `photo_url`, `created_by`,
+        // `updated_by` or `updated_at` columns (yet). Until
+        // 2026-07-27_supplier_audit.sql runs we skip them. Variables
+        // `creatorEmail`, `body.photo_url` remain available for when the
+        // schema is extended.
       };
       const { data, error } = await supabase.from('suppliers').insert(row).select().maybeSingle();
       if (error) {
@@ -1148,7 +1148,8 @@ async function startServer() {
       const allowed = [
         'business_name', 'business_name_en', 'business_name_es', 'business_name_pt',
         'description', 'description_en', 'description_es', 'description_pt',
-        'contact_name', 'email', 'whatsapp', 'location', 'asset_type', 'status', 'photo_url',
+        'contact_name', 'email', 'whatsapp', 'location', 'asset_type', 'status',
+        // photo_url is only writable after 2026-07-27_supplier_audit.sql runs.
       ];
       const updates: any = {};
       for (const k of allowed) {
