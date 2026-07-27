@@ -111,6 +111,7 @@ export function AdminDetailLayout<T extends Record<string, any>>({
   pageTitle,
   pageEyebrow,
   statusPill,
+  renderHeader,
   endpoint,
   children,
   tabs,
