@@ -1404,26 +1404,38 @@ async function startServer() {
   // ═════════════════════════════════════════════════════════════════════
 
   // GET /api/bundles/available-assets
-  // Returns ACTIVE assets from APPROVED suppliers, with parent business_name
+  // Returns ACTIVE assets from APPROVED suppliers, with parent business_name.
   // (Mounted BEFORE /api/bundles/:id so it wins the static path match.)
+  // v1.8.0 Step 20.1: avoid nested embed (assets -> suppliers) for the
+  // same PostgREST schema-cache reason as the bundles list below. Two
+  // flat queries instead, then a Map merge in JS.
   app.get("/api/bundles/available-assets", async (_req, res) => {
     try {
       const { data, error } = await supabase
         .from('assets')
-        .select(`
-          id, name, type, location, description,
-          price_per_unit, price_type, capacity, status,
-          supplier_id,
-          suppliers:supplier_id ( business_name, status )
-        `)
+        .select('id, name, type, location, description, price_per_unit, price_type, capacity, status, supplier_id')
         .eq('status', 'ACTIVE');
 
       if (error) throw error;
+      const supplierIds = Array.from(new Set(
+        (data || []).map((a: any) => a.supplier_id).filter((x: any): x is string => typeof x === 'string' && x.length > 0)
+      ));
+      let supplierMap: Record<string, { business_name: string; status: string }> = {};
+      if (supplierIds.length > 0) {
+        const { data: supplierRows, error: sErr } = await supabase
+          .from('suppliers')
+          .select('id, business_name, status')
+          .in('id', supplierIds);
+        if (sErr) throw sErr;
+        supplierMap = Object.fromEntries(
+          (supplierRows || []).map((s: any) => [s.id, { business_name: s.business_name, status: s.status }])
+        );
+      }
 
       // Filter to only APPROVED suppliers (Supabase JS doesn't filter
       // nested relationship .eq() — do it client-side).
       const rows = (data || [])
-        .filter((row: any) => row.suppliers?.status === 'APPROVED')
+        .filter((row: any) => supplierMap[row.supplier_id]?.status === 'APPROVED')
         .map((row: any) => ({
           id: row.id,
           name: row.name,
@@ -1435,7 +1447,7 @@ async function startServer() {
           capacity: row.capacity,
           status: row.status,
           supplier_id: row.supplier_id,
-          business_name: row.suppliers?.business_name ?? 'Unknown',
+          business_name: supplierMap[row.supplier_id]?.business_name ?? 'Unknown',
         }));
 
       res.json(rows);
@@ -1463,18 +1475,32 @@ async function startServer() {
 
       const { data: assetRows, error: aErr } = await supabase
         .from('assets')
-        .select(`id, name, type, price_per_unit, supplier_id, suppliers:supplier_id ( status )`)
+        .select('id, name, type, price_per_unit, supplier_id')
         .in('id', assetIds);
 
       if (aErr) throw aErr;
 
       const found = new Map((assetRows || []).map((a: any) => [a.id, a]));
+      // v1.8.0 Step 20.1: second flat query for supplier statuses (no
+      // nested embed — same PostgREST schema-cache reason).
+      const supplierIds = Array.from(new Set(
+        (assetRows || []).map((a: any) => a.supplier_id).filter((x: any): x is string => typeof x === 'string' && x.length > 0)
+      ));
+      let supplierStatusById: Record<string, string> = {};
+      if (supplierIds.length > 0) {
+        const { data: sRows, error: sErr } = await supabase
+          .from('suppliers')
+          .select('id, status')
+          .in('id', supplierIds);
+        if (sErr) throw sErr;
+        supplierStatusById = Object.fromEntries((sRows || []).map((s: any) => [s.id, s.status]));
+      }
       for (const id of assetIds) {
         const a: any = found.get(id);
         if (!a) {
           return res.status(400).json({ error: `Asset ${id} not found` });
         }
-        if (a.suppliers?.status !== 'APPROVED') {
+        if (a.supplier_id && supplierStatusById[a.supplier_id] !== 'APPROVED') {
           return res.status(400).json({
             error: `Asset ${a.name || id} belongs to a non-approved supplier`,
           });
@@ -1536,20 +1562,40 @@ async function startServer() {
       if (!bundles || bundles.length === 0) return res.json([]);
 
       const bundleIds = bundles.map((b: any) => b.id);
+      // v1.8.0 Step 20.1: avoid nested embed (assets -> suppliers) — PostgREST
+      // schema cache sometimes can't resolve the second-level relationship
+      // ("Could not find a relationship between 'bundles' and 'supplier_id'"
+      // even though the FK exists). We split into 2 plain queries instead.
       const { data: items, error: iErr } = await supabase
         .from('bundle_items')
-        .select(`
-          id, bundle_id, asset_id, qty,
-          assets:asset_id ( name, type, location, supplier_id,
-            suppliers:supplier_id ( business_name ) )
-        `)
+        .select('id, bundle_id, asset_id, qty, assets:asset_id ( name, type, location, supplier_id )')
         .in('bundle_id', bundleIds);
 
       if (iErr) throw iErr;
 
+      // Second query: gather all distinct supplier_ids from the assets we
+      // just loaded, then look up their business_name in one go.
+      const supplierIds = Array.from(new Set(
+        (items || [])
+          .map((it: any) => it.assets?.supplier_id)
+          .filter((x: any): x is string => typeof x === 'string' && x.length > 0)
+      ));
+      let supplierNamesById: Record<string, string> = {};
+      if (supplierIds.length > 0) {
+        const { data: supplierRows, error: sErr } = await supabase
+          .from('suppliers')
+          .select('id, business_name')
+          .in('id', supplierIds);
+        if (sErr) throw sErr;
+        supplierNamesById = Object.fromEntries(
+          (supplierRows || []).map((s: any) => [s.id, s.business_name])
+        );
+      }
+
       const itemsByBundle: Record<string, any[]> = {};
       for (const it of items || []) {
         const a: any = (it as any).assets;
+        const supplierName = a?.supplier_id ? supplierNamesById[a.supplier_id] ?? null : null;
         itemsByBundle[it.bundle_id] = itemsByBundle[it.bundle_id] || [];
         itemsByBundle[it.bundle_id].push({
           id: it.id,
@@ -1559,7 +1605,7 @@ async function startServer() {
           asset_name: a?.name,
           asset_type: a?.type,
           asset_location: a?.location,
-          supplier_business_name: a?.suppliers?.business_name ?? null,
+          supplier_business_name: supplierName,
         });
       }
 
