@@ -538,21 +538,37 @@ async function startServer() {
   });
 
   // POST /api/experiences — admin-only create.
+  // Accepts BOTH flat columns (title_en, hero_image) AND nested form-state
+  // shape from the wizard (title: {EN,ES,PT}). Normalises to flat before insert.
   app.post("/api/experiences", async (req, res) => {
     try {
       const { email, role } = await resolveAuthFromRequest(req);
       if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
       const body = req.body || {};
-      if (!body.id || !body.title_en || !body.hero_image) {
-        return res.status(400).json({ error: 'id, title_en, hero_image are required' });
+      if (!body.id) {
+        return res.status(400).json({ error: 'id is required' });
       }
-      const row = {
-        ...body,
-        created_by: email,
-        updated_by: email,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      // Normalise trilingual nested objects → flat columns
+      const trilingual = ['title', 'eyebrow', 'summary', 'description'];
+      const row: any = { ...body };
+      for (const key of trilingual) {
+        if (row[key] && typeof row[key] === 'object') {
+          const obj = row[key];
+          for (const lang of ['EN', 'ES', 'PT']) {
+            const lower = lang.toLowerCase();
+            row[`${key}_${lower}`] = obj[lang] ?? obj[lang.toLowerCase()] ?? null;
+          }
+          // Keep the base column populated from ES (canonical per trilingual contract)
+          if (key === 'title' && !row[key]) row[key] = obj.ES || obj.en || '';
+        }
+      }
+      // hero_image is optional — default to null so the wizard can save drafts without a photo
+      if (!row.hero_image) row.hero_image = null;
+      // Audit fields
+      row.created_by = email;
+      row.updated_by = email;
+      row.created_at = new Date().toISOString();
+      row.updated_at = new Date().toISOString();
       const { data, error } = await supabase
         .from('experiences')
         .insert([row])
