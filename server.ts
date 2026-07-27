@@ -1119,7 +1119,10 @@ async function startServer() {
         asset_type: body.asset_type || 'LODGING',
         status: body.status || 'PENDING',
         photo_url: body.photo_url || null,
-        created_by: creatorEmail,
+        // NOTE: suppliers table does not have a `created_by` column (yet).
+        // Until migration 2026-07-27_supplier_audit.sql is applied we skip it
+        // so the POST doesn't 500. The variable `creatorEmail` is still
+        // available above for when the column lands.
       };
       const { data, error } = await supabase.from('suppliers').insert(row).select().maybeSingle();
       if (error) {
