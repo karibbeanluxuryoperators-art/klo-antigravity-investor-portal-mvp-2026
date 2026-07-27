@@ -3,14 +3,18 @@ import {
   Mail, MessageSquare, Phone, MapPin, Package, Calendar, Clock,
   DollarSign, User, Sparkles, ExternalLink, FileText, Edit3, Save,
   Loader2, AlertCircle, Inbox, X as XIcon, Check, Trash2,
-  UserPlus, UserCheck,
+  UserPlus, UserCheck, Archive, ArchiveRestore,
 } from 'lucide-react';
 import {
   AdminDetailLayout, DetailCard, DetailField, DetailGrid,
   type Language, type AdminSection,
 } from './ui/AdminDetailLayout';
 import { DataTable, StatusPill, type Column } from './ui/DataTable';
-import { getSupplierSession } from '../services/supabase';
+import { ArchiveButton } from './ui/ArchiveButton';
+import { ArchivedBanner } from './ui/ArchivedBanner';
+import { ShowArchivedToggle } from './ui/ShowArchivedToggle';
+import { useArchive } from '../hooks/useArchive';
+import { getSupplierSession, getAccessToken } from '../services/supabase';
 
 // v1.8.0 Step 6: Admin detail pages (4 routes).
 //
@@ -538,6 +542,9 @@ export interface LeadRecord {
   status: 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'WON' | 'LOST' | 'CONVERTED';
   timestamp: string;
   source: string | null;
+  // v1.8.0 Step 14: soft delete (null = active). When set, the row is hidden
+  // from the default DataTable view but can be unarchived.
+  archived_at?: string | null;
   // Phase 2 (Lead → Client convert): set when this lead has been promoted
   // to a client. The matching clients.lead_id points back here.
   converted_to_client_id?: string | null;
@@ -554,6 +561,21 @@ interface LeadDetailProps extends Omit<SupplierDetailProps, 'id'> {
 
 export const LeadDetail: React.FC<LeadDetailProps> = (props) => {
   const { id, lang, signedInEmail, onSignOut, counts, pendingSuppliersCount, newLeadsCount } = props;
+
+  const [bearer, setBearer] = useState<string | null>(null);
+  // v1.8.0 Step 17: soft-delete (archive/restore). The hook handles the API
+  // call and refetches; the button below just calls archive/restore with
+  // the row id. Recovery is one click — no data loss.
+  const { archive, restore, busyId } = useArchive({
+    table: 'leads',
+    bearer,
+    onAfterChange: () => { window.location.reload(); },
+  });
+  useEffect(() => {
+    let mounted = true;
+    getAccessToken().then(t => { if (mounted) setBearer(t); });
+    return () => { mounted = false; };
+  }, [signedInEmail]);
 
   const updateStatus = async (l: LeadRecord, status: LeadRecord['status']) => {
     await authedFetchJSON(`/api/leads/${l.id}`, { method: 'PATCH', body: JSON.stringify({ status }) });
@@ -652,6 +674,14 @@ export const LeadDetail: React.FC<LeadDetailProps> = (props) => {
               <Sparkles size={12} /> {lang === 'ES' ? 'Marcar Ganado' : lang === 'PT' ? 'Marcar Ganho' : 'Mark Won'}
             </button>
           )}
+          <ArchiveButton
+            row={l}
+            isArchived={!!l.archived_at}
+            onArchive={archive}
+            onRestore={restore}
+            busyId={busyId}
+            lang={lang}
+          />
           <button
             onClick={() => deleteLead(l)}
             className="flex items-center gap-2 px-4 py-2.5 text-red-300/70 hover:text-red-300 hover:bg-red-500/10 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"
