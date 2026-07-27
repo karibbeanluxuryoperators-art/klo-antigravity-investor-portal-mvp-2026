@@ -408,26 +408,53 @@ async function startServer() {
   });
 
   app.post("/api/leads", async (req, res) => {
-    const { name, email, phone, whatsapp, experience_type, budget, travel_dates, special_requests, message, source } = req.body;
+    const body = req.body || {};
+    const { name, email, phone, whatsapp, experience_type, budget, travel_dates, special_requests, message, source } = body;
     const id = 'L' + Date.now();
     const timestamp = new Date().toISOString();
     const status = 'NEW';
-    
+
     try {
-      const { data, error } = await supabase
-        .from('leads')
-        .insert([{ 
-          id, name, email, phone, whatsapp, experience_type, 
-          budget: budget || null, 
-          travel_dates: travel_dates || null, 
-          special_requests: special_requests || null, 
-          message, status, timestamp, source 
-        }])
-        .select();
-      
-      if (error) throw error;
-      res.json({ success: true, lead: data[0] });
+      // v1.8.0 Step 20: extended lead fields (research-based). Resilient
+      // insert: try each block, fall back on 42703.
+      const baseRow: any = {
+        id, name, email, phone, whatsapp, experience_type,
+        budget: budget || null,
+        travel_dates: travel_dates || null,
+        special_requests: special_requests || null,
+        message, status, timestamp, source,
+      };
+      const extendedBlocks: Array<Record<string, any>> = [
+        // Block A: meta
+        { notes: body.notes || null, preferred_language: body.preferred_language || 'ES', nationality: body.nationality || null },
+        // Block B: trip
+        { origin: body.origin || null, destination: body.destination || null, travel_date: body.travel_date || null, travel_end_date: body.travel_end_date || null, travelers: body.travelers != null ? Number(body.travelers) : null },
+        // Block C: budget
+        { budget_min: body.budget_min != null ? Number(body.budget_min) : null, budget_max: body.budget_max != null ? Number(body.budget_max) : null },
+        // Block D: trip meta
+        { trip_type: body.trip_type || null, accommodation: body.accommodation || null, pillar_interest: body.pillar_interest || null, experience_interest: body.experience_interest || null },
+        // Block E: lead profile + attribution
+        { job_title: body.job_title || null, tax_id: body.tax_id || null, tags: Array.isArray(body.tags) ? body.tags : [], utm_source: body.utm_source || null, utm_campaign: body.utm_campaign || null },
+      ];
+      const row: any = { ...baseRow };
+      for (const block of extendedBlocks) {
+        const trial: any = { ...row, ...block };
+        const trialRes = await supabase.from('leads').insert([trial]).select();
+        if (!trialRes.error) {
+          return res.json({ success: true, lead: trialRes.data![0] });
+        }
+        if (trialRes.error.code === 'PGRST204' || /does not exist/i.test(trialRes.error.message || '')) {
+          console.warn('POST /api/leads: extended block missing, retrying without it:', trialRes.error.message);
+          continue;
+        }
+        throw trialRes.error;
+      }
+      // No block succeeded → base alone.
+      const finalRes = await supabase.from('leads').insert([baseRow]).select();
+      if (finalRes.error) throw finalRes.error;
+      res.json({ success: true, lead: finalRes.data![0] });
     } catch (error: any) {
+      console.error('POST /api/leads failed', error?.message || error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -453,19 +480,51 @@ async function startServer() {
 
   app.patch("/api/leads/:id", async (req, res) => {
     const { id } = req.params;
-    const updates = req.body;
+    const body = req.body || {};
 
     try {
       const { role } = await resolveAuthFromRequest(req);
       if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
-      const { error } = await supabase
-        .from('leads')
-        .update(updates)
-        .eq('id', id);
-
-      if (error) throw error;
-      res.json({ success: true });
+      // v1.8.0 Step 20: extended fields are updatable here too. Any unknown
+      // column is silently dropped on 42703.
+      const allowed = [
+        // Core (existing)
+        'name', 'email', 'phone', 'whatsapp', 'experience_type', 'budget',
+        'travel_dates', 'special_requests', 'message', 'status', 'source',
+        // Extended
+        'notes', 'preferred_language', 'nationality',
+        'origin', 'destination', 'travel_date', 'travel_end_date', 'travelers',
+        'budget_min', 'budget_max',
+        'trip_type', 'accommodation', 'pillar_interest', 'experience_interest',
+        'job_title', 'tax_id', 'tags', 'utm_source', 'utm_campaign',
+      ];
+      const updates: any = {};
+      for (const k of allowed) {
+        if (k in body) updates[k] = body[k];
+      }
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'no updatable fields provided' });
+      }
+      // Try update; on 42703 drop the missing column and retry.
+      let result = await supabase.from('leads').update(updates).eq('id', id).select().maybeSingle();
+      let lastErr = result.error;
+      while (lastErr && (lastErr.code === 'PGRST204' || /does not exist/i.test(lastErr.message || ''))) {
+        const m = (lastErr.message || '').match(/column ['"]?([a-zA-Z0-9_]+)['"]? does not exist/i);
+        if (!m) break;
+        const col = m[1];
+        console.warn(`PATCH /api/leads/:id: column ${col} missing, stripping it`);
+        delete updates[col];
+        if (Object.keys(updates).length === 0) {
+          return res.status(400).json({ error: 'no updatable fields left after stripping missing columns' });
+        }
+        result = await supabase.from('leads').update(updates).eq('id', id).select().maybeSingle();
+        lastErr = result.error;
+      }
+      if (lastErr) throw lastErr;
+      if (!result.data) return res.status(404).json({ error: 'lead not found' });
+      res.json(result.data);
     } catch (error: any) {
+      console.error('PATCH /api/leads/:id failed', error?.message || error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1154,7 +1213,9 @@ async function startServer() {
       // Spanish value (per the trilingual migration contract). EN/ES/PT override.
       const business_name = body.business_name || body.business_name_es || body.business_name_en || 'Unnamed Supplier';
       const description = body.description || body.description_es || body.description_en || null;
-      const row = {
+      // v1.8.0 Step 20: extended supplier profile (SIA + Vendorful standard).
+      // Resilient insert: try each block, fall back on missing columns.
+      const baseRow: any = {
         id,
         business_name,
         description,
@@ -1170,20 +1231,52 @@ async function startServer() {
         location: body.location || null,
         asset_type: body.asset_type || 'LODGING',
         status: body.status || 'PENDING',
-        // NOTE: suppliers table does not have `photo_url`, `created_by`,
-        // `updated_by` or `updated_at` columns (yet). Until
-        // 2026-07-27_supplier_audit.sql runs we skip them. Variables
-        // `creatorEmail`, `body.photo_url` remain available for when the
-        // schema is extended.
+        // Audit fields added by 2026-07-27_supplier_audit.sql. Always
+        // present after that migration, safe to include from day one.
+        photo_url: body.photo_url || null,
+        created_by: creatorEmail,
+        updated_by: creatorEmail,
       };
-      const { data, error } = await supabase.from('suppliers').insert(row).select().maybeSingle();
-      if (error) {
-        if (/duplicate key/i.test(error.message || '')) {
+      // Extended fields (v1.8.0 Step 20). Each block can be dropped on 42703.
+      const extendedBlocks: Array<Record<string, any>> = [
+        // Block A: contact enrichment (pillar + geo)
+        { pillar: body.pillar || body.asset_type || null, country: body.country || null, city: body.city || null },
+        // Block B: digital presence
+        { tax_id: body.tax_id || null, website: body.website || null, instagram: body.instagram || null, linkedin_url: body.linkedin_url || null },
+        // Block C: capacity + licensing
+        { years_in_business: body.years_in_business != null ? Number(body.years_in_business) : null, fleet_size: body.fleet_size != null ? Number(body.fleet_size) : null, license_number: body.license_number || null },
+        // Block D: insurance
+        { insurance_provider: body.insurance_provider || null, insurance_expiry: body.insurance_expiry || null },
+        // Block E: banking (only last 4 stored, never full numbers)
+        { bank_name: body.bank_name || null, bank_account_last4: body.bank_account_last4 || null },
+        // Block F: commercial terms
+        { commission_pct: body.commission_pct != null ? Number(body.commission_pct) : 5.00, payment_terms: body.payment_terms || 'NET_48' },
+        // Block G: rating + tags
+        { rating_avg: body.rating_avg != null ? Number(body.rating_avg) : null, rating_count: body.rating_count != null ? Number(body.rating_count) : 0, tags: Array.isArray(body.tags) ? body.tags : [] },
+      ];
+      const row: any = { ...baseRow };
+      for (const block of extendedBlocks) {
+        const trial: any = { ...row, ...block };
+        const trialRes = await supabase.from('suppliers').insert(trial).select().maybeSingle();
+        if (!trialRes.error) return res.json(trialRes.data);
+        if (trialRes.error.code === 'PGRST204' || /does not exist/i.test(trialRes.error.message || '')) {
+          console.warn('POST /api/suppliers: extended block missing, retrying without it:', trialRes.error.message);
+          continue;
+        }
+        if (/duplicate key/i.test(trialRes.error.message || '')) {
           return res.status(409).json({ error: 'supplier with this id already exists' });
         }
-        throw error;
+        throw trialRes.error;
       }
-      res.json(data);
+      // No block succeeded → fall back to baseRow alone.
+      const finalRes = await supabase.from('suppliers').insert(baseRow).select().maybeSingle();
+      if (finalRes.error) {
+        if (/duplicate key/i.test(finalRes.error.message || '')) {
+          return res.status(409).json({ error: 'supplier with this id already exists' });
+        }
+        throw finalRes.error;
+      }
+      res.json(finalRes.data);
     } catch (e: any) {
       console.error('POST /api/suppliers failed', e?.message || e);
       res.status(500).json({ error: e?.message || 'create supplier failed' });
@@ -1195,13 +1288,25 @@ async function startServer() {
   app.patch("/api/suppliers/:id", async (req: express.Request<{ id: string }>, res) => {
     const { id } = req.params;
     try {
-      const { role } = await resolveAuthFromRequest(req);
+      const { role, email: updaterEmail } = await resolveAuthFromRequest(req);
       if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      // v1.8.0 Step 20: full supplier profile is now editable. Any unknown
+      // column is silently dropped on 42703 (Postgres missing column).
       const allowed = [
+        // Core + trilingual
         'business_name', 'business_name_en', 'business_name_es', 'business_name_pt',
         'description', 'description_en', 'description_es', 'description_pt',
-        'contact_name', 'email', 'whatsapp', 'location', 'asset_type', 'status',
-        // photo_url is only writable after 2026-07-27_supplier_audit.sql runs.
+        'contact_name', 'email', 'whatsapp', 'location',
+        'asset_type', 'pillar', 'status',
+        'photo_url', 'created_by', 'updated_by',
+        // Extended
+        'tax_id', 'website', 'instagram', 'linkedin_url',
+        'country', 'city',
+        'years_in_business', 'fleet_size', 'license_number',
+        'insurance_provider', 'insurance_expiry',
+        'bank_name', 'bank_account_last4',
+        'commission_pct', 'payment_terms',
+        'rating_avg', 'rating_count', 'tags',
       ];
       const updates: any = {};
       for (const k of allowed) {
@@ -1210,15 +1315,26 @@ async function startServer() {
       if (Object.keys(updates).length === 0) {
         return res.status(400).json({ error: 'no updatable fields provided' });
       }
-      const { data, error } = await supabase
-        .from('suppliers')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) return res.status(404).json({ error: 'supplier not found' });
-      res.json(data);
+      // Always set updated_by when we know the actor.
+      if (updaterEmail) updates.updated_by = updaterEmail;
+      // Try the update; if 42703 mentions a specific column, drop it and retry.
+      let result = await supabase.from('suppliers').update(updates).eq('id', id).select().maybeSingle();
+      let lastErr = result.error;
+      while (lastErr && (lastErr.code === 'PGRST204' || /does not exist/i.test(lastErr.message || ''))) {
+        const m = (lastErr.message || '').match(/column ['"]?([a-zA-Z0-9_]+)['"]? does not exist/i);
+        if (!m) break;
+        const col = m[1];
+        console.warn(`PATCH /api/suppliers/:id: column ${col} missing, stripping it`);
+        delete updates[col];
+        if (Object.keys(updates).length === 0) {
+          return res.status(400).json({ error: 'no updatable fields left after stripping missing columns' });
+        }
+        result = await supabase.from('suppliers').update(updates).eq('id', id).select().maybeSingle();
+        lastErr = result.error;
+      }
+      if (lastErr) throw lastErr;
+      if (!result.data) return res.status(404).json({ error: 'supplier not found' });
+      res.json(result.data);
     } catch (e: any) {
       console.error(`PATCH /api/suppliers/:id failed`, e?.message || e);
       res.status(500).json({ error: e?.message || 'update failed' });
@@ -2270,7 +2386,12 @@ async function startServer() {
         return res.status(400).json({ error: 'tier must be UHNWI|VVIP|VIP' });
       }
       const id = 'C' + Date.now() + '_' + Math.random().toString(36).substring(2, 8).toUpperCase();
-      const row = {
+      // v1.8.0 Step 20: extended CRM fields. The migration
+      // 2026-07-28_crm_extended_fields.sql adds these. We use the resilient
+      // insert pattern: try with all of them, fall back without optional
+      // ones if 42703 is returned. This way the endpoint works whether or
+      // not the migration has been run yet.
+      const baseRow: any = {
         id,
         name: body.name,
         email: String(body.email).toLowerCase(),
@@ -2288,15 +2409,49 @@ async function startServer() {
         source: body.source || 'manual',
         created_by: creatorEmail,
       };
-      const { data, error } = await supabase.from('clients').insert(row).select().maybeSingle();
-      if (error) {
-        if (/duplicate key/i.test(error.message || '')) {
+      // Extended fields, grouped so we can drop a whole group on failure.
+      const extendedBlocks: Array<Record<string, any>> = [
+        // Block A: contact enrichment
+        { job_title: body.job_title || null, company: body.company || null, industry: body.industry || null },
+        // Block B: residence / nationality
+        { nationality: body.nationality || null, country_residence: body.country_residence || null, city_residence: body.city_residence || null, address_line: body.address_line || null },
+        // Block C: KYC / wealth
+        { source_of_wealth: body.source_of_wealth || null, net_worth_band: body.net_worth_band || null, tax_id: body.tax_id || null, date_of_birth: body.date_of_birth || null, preferred_language: body.preferred_language || 'ES' },
+        // Block D: travel docs
+        { passport_number: body.passport_number || null, passport_expiry: body.passport_expiry || null, emergency_contact: body.emergency_contact || null, linkedin_url: body.linkedin_url || null },
+        // Block E: misc
+        { tags: Array.isArray(body.tags) ? body.tags : [], alt_phones: Array.isArray(body.alt_phones) ? body.alt_phones : [], alt_emails: Array.isArray(body.alt_emails) ? body.alt_emails : [] },
+      ];
+      // Build the row by attempting each extended block. If the block's
+      // columns are missing (PGRST204 / 42703), we drop it and continue.
+      const row: any = { ...baseRow };
+      for (const block of extendedBlocks) {
+        const trial: any = { ...row, ...block };
+        const trialRes = await supabase.from('clients').insert(trial).select().maybeSingle();
+        if (!trialRes.error) {
+          // Success — the row landed. Return it.
+          return res.json(trialRes.data);
+        }
+        if (trialRes.error.code === 'PGRST204' || /does not exist/i.test(trialRes.error.message || '')) {
+          console.warn('POST /api/clients: extended block missing columns, retrying without it:', trialRes.error.message);
+          continue; // drop the block, try the next one
+        }
+        if (/duplicate key/i.test(trialRes.error.message || '')) {
           return res.status(409).json({ error: 'client with this email already exists' });
         }
-        throw error;
+        throw trialRes.error;
       }
-      res.json(data);
+      // No block succeeded → the base row alone might still work. Try it.
+      const finalRes = await supabase.from('clients').insert(baseRow).select().maybeSingle();
+      if (finalRes.error) {
+        if (/duplicate key/i.test(finalRes.error.message || '')) {
+          return res.status(409).json({ error: 'client with this email already exists' });
+        }
+        throw finalRes.error;
+      }
+      res.json(finalRes.data);
     } catch (e: any) {
+      console.error('POST /api/clients failed', e?.message || e);
       res.status(500).json({ error: e?.message || 'create client failed' });
     }
   });
@@ -2307,9 +2462,21 @@ async function startServer() {
       const { role } = await resolveAuthFromRequest(req);
       if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
       const { id } = req.params;
-      const allowed = ['name', 'email', 'phone', 'whatsapp', 'tier', 'status',
-                       'preferences', 'past_experiences', 'total_spend',
-                       'loyalty_points', 'notes', 'source'];
+      // v1.8.0 Step 20: extended fields are updatable here too. Any unknown
+      // column is silently dropped on 42703 (Postgres missing column).
+      const allowed = [
+        // Core
+        'name', 'email', 'phone', 'whatsapp', 'tier', 'status',
+        'preferences', 'past_experiences', 'total_spend',
+        'loyalty_points', 'notes', 'source',
+        // Extended
+        'job_title', 'company', 'industry', 'nationality',
+        'country_residence', 'city_residence', 'address_line',
+        'source_of_wealth', 'net_worth_band', 'tax_id',
+        'date_of_birth', 'preferred_language',
+        'passport_number', 'passport_expiry', 'emergency_contact', 'linkedin_url',
+        'tags', 'alt_phones', 'alt_emails',
+      ];
       const updates: any = {};
       for (const k of allowed) {
         if (k in (req.body || {})) updates[k] = req.body[k];
@@ -2324,16 +2491,26 @@ async function startServer() {
         return res.status(400).json({ error: 'status must be ACTIVE|INACTIVE|PROSPECT' });
       }
       if (updates.email) updates.email = String(updates.email).toLowerCase();
-      const { data, error } = await supabase
-        .from('clients')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) return res.status(404).json({ error: 'client not found' });
-      res.json(data);
+      // Try the update; if 42703 mentions a specific column, drop it and retry.
+      let result = await supabase.from('clients').update(updates).eq('id', id).select().maybeSingle();
+      let lastErr = result.error;
+      while (lastErr && (lastErr.code === 'PGRST204' || /does not exist/i.test(lastErr.message || ''))) {
+        const m = (lastErr.message || '').match(/column ['"]?([a-zA-Z0-9_]+)['"]? does not exist/i);
+        if (!m) break;
+        const col = m[1];
+        console.warn(`PATCH /api/clients/:id: column ${col} missing, stripping it`);
+        delete updates[col];
+        if (Object.keys(updates).length === 0) {
+          return res.status(400).json({ error: 'no updatable fields left after stripping missing columns' });
+        }
+        result = await supabase.from('clients').update(updates).eq('id', id).select().maybeSingle();
+        lastErr = result.error;
+      }
+      if (lastErr) throw lastErr;
+      if (!result.data) return res.status(404).json({ error: 'client not found' });
+      res.json(result.data);
     } catch (e: any) {
+      console.error('PATCH /api/clients/:id failed', e?.message || e);
       res.status(500).json({ error: e?.message || 'update client failed' });
     }
   });

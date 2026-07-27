@@ -13,8 +13,10 @@ import { DataTable, StatusPill, type Column } from './ui/DataTable';
 import { ArchiveButton } from './ui/ArchiveButton';
 import { ArchivedBanner } from './ui/ArchivedBanner';
 import { ShowArchivedToggle } from './ui/ShowArchivedToggle';
+import { EditButton } from './ui/EditButton';
 import { useArchive } from '../hooks/useArchive';
 import { getSupplierSession, getAccessToken } from '../services/supabase';
+import { SUPPLIERS_CONFIG, CLIENTS_CONFIG, EXPERIENCES_CONFIG } from './admin/EntityConfigs';
 
 // v1.8.0 Step 6: Admin detail pages (4 routes).
 //
@@ -137,6 +139,14 @@ export const SupplierDetail: React.FC<SupplierDetailProps> = (props) => {
       )}
       headerActions={(s) => (
         <>
+          <EditButton
+            config={SUPPLIERS_CONFIG}
+            id={id}
+            record={s}
+            lang={lang}
+            signedInEmail={signedInEmail}
+            onSaved={() => { window.location.reload(); }}
+          />
           {s.status === 'PENDING' && (
             <>
               <button
@@ -295,6 +305,16 @@ export const ClientDetail: React.FC<ClientDetailProps> = (props) => {
           <StatusPill status={c.tier} lang={lang} />
           <StatusPill status={c.status} lang={lang} />
         </span>
+      )}
+      headerActions={(c) => (
+        <EditButton
+          config={CLIENTS_CONFIG}
+          id={id}
+          record={c}
+          lang={lang}
+          signedInEmail={signedInEmail}
+          onSaved={() => { window.location.reload(); }}
+        />
       )}
       tabs={[
         {
@@ -732,6 +752,185 @@ export const LeadDetail: React.FC<LeadDetailProps> = (props) => {
                   <DetailField lang={lang} label={{ EN: 'Source', ES: 'Origen', PT: 'Origem' }} value={l.source} />
                   <DetailField lang={lang} label={{ EN: 'Received', ES: 'Recibido', PT: 'Recebido' }} value={new Date(l.timestamp).toLocaleString(lang === 'ES' ? 'es-CO' : lang === 'PT' ? 'pt-BR' : 'en-US')} />
                 </DetailCard>
+              </div>
+            </div>
+          ),
+        },
+      ]}
+    />
+  );
+};
+
+// ── 5. Experience detail (v1.8.0 Step 20) ─────────────────────────────
+// Mirrors the structure of the other detail pages. Renders the
+// EXPERIENCES_CONFIG fields in a read-only view + Edit + Archive
+// buttons in the header. The full wizard (multi-step) lives in
+// /admin → Experiences → click row → ExperienceWizard. From this
+// page you can quick-edit basic fields (status, featured, price,
+// days, order) and the user is shown a "Open in Wizard" link to
+// access the full editing surface.
+export interface ExperienceRecord {
+  id: string;
+  title_en?: string;
+  title_es?: string;
+  title_pt?: string;
+  eyebrow_en?: string;
+  eyebrow_es?: string;
+  eyebrow_pt?: string;
+  summary_en?: string;
+  summary_es?: string;
+  summary_pt?: string;
+  description_en?: string;
+  description_es?: string;
+  description_pt?: string;
+  pillars?: string[];
+  days?: number;
+  price_from?: number;
+  hero_image?: string | null;
+  gallery?: string[];
+  status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  featured?: boolean;
+  display_order?: number;
+  klo_service_fee?: number;
+  klo_markup_pct?: number;
+  bundle_price?: number | null;
+  curated_by_role?: 'admin' | 'supplier';
+  is_supplier_published?: boolean;
+  created_at: string;
+}
+
+interface ExperienceDetailProps extends Omit<SupplierDetailProps, 'id'> {
+  id: string;
+}
+
+export const ExperienceDetail: React.FC<ExperienceDetailProps> = (props) => {
+  const { id, lang, signedInEmail, onSignOut, counts, pendingSuppliersCount, newLeadsCount } = props;
+
+  return (
+    <AdminDetailLayout<ExperienceRecord>
+      section="EXPERIENCES"
+      backHref="/admin"
+      backLabel={{ EN: 'Back to Experiences', ES: 'Volver a Experiencias', PT: 'Voltar a Experiências' }}
+      pageEyebrow={{ EN: 'Curated Journeys', ES: 'Viajes Curados', PT: 'Viagens Curadas' }}
+      endpoint={`/api/experiences/${id}`}
+      lang={lang}
+      signedInEmail={signedInEmail}
+      onSignOut={onSignOut}
+      counts={counts}
+      pendingSuppliersCount={pendingSuppliersCount}
+      newLeadsCount={newLeadsCount}
+      renderHeader={(e) => {
+        // Display localized title with fallback
+        const localized = e.title_en || e.title_es || e.title_pt || e.id;
+        return (
+          <span className="text-3xl md:text-4xl font-serif italic text-white flex items-center gap-3 flex-wrap">
+            {localized}
+            {e.status && <StatusPill status={e.status} lang={lang} />}
+            {e.featured && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-[#B8963E]/20 text-[#B8963E] border border-[#B8963E]/30 rounded-full text-[9px] font-bold uppercase tracking-widest">
+                <Sparkles size={9} /> {lang === 'ES' ? 'Destacado' : lang === 'PT' ? 'Destaque' : 'Featured'}
+              </span>
+            )}
+          </span>
+        );
+      }}
+      headerActions={(e) => (
+        <EditButton
+          config={EXPERIENCES_CONFIG}
+          id={id}
+          record={e}
+          lang={lang}
+          signedInEmail={signedInEmail}
+          onSaved={() => { window.location.reload(); }}
+        />
+      )}
+      tabs={[
+        {
+          key: 'profile',
+          label: { EN: 'Profile', ES: 'Perfil', PT: 'Perfil' },
+          render: (e) => (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <DetailCard title={{ EN: 'Copy', ES: 'Texto', PT: 'Texto' }} lang={lang}>
+                  <DetailGrid cols={2}>
+                    <DetailField lang={lang} label={{ EN: 'Title (EN)', ES: 'Título (EN)', PT: 'Título (EN)' }} value={e.title_en} />
+                    <DetailField lang={lang} label={{ EN: 'Title (ES)', ES: 'Título (ES)', PT: 'Título (ES)' }} value={e.title_es} />
+                    <DetailField lang={lang} label={{ EN: 'Title (PT)', ES: 'Título (PT)', PT: 'Título (PT)' }} value={e.title_pt} />
+                    <DetailField lang={lang} label={{ EN: 'Slug', ES: 'Slug', PT: 'Slug' }} value={e.id} mono />
+                  </DetailGrid>
+                  {(e.summary_en || e.summary_es || e.summary_pt) && (
+                    <div className="pt-2 border-t border-white/5">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/40 mb-2">
+                        {lang === 'ES' ? 'Resumen' : lang === 'PT' ? 'Resumo' : 'Summary'}
+                      </p>
+                      <p className="text-sm text-white/70 leading-relaxed italic border-l-2 border-[#B8963E]/30 pl-4">
+                        "{e.summary_en || e.summary_es || e.summary_pt}"
+                      </p>
+                    </div>
+                  )}
+                </DetailCard>
+
+                {e.description_en && (
+                  <DetailCard title={{ EN: 'Description (EN)', ES: 'Descripción (EN)', PT: 'Descrição (EN)' }} lang={lang}>
+                    <p className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">
+                      {e.description_en}
+                    </p>
+                  </DetailCard>
+                )}
+                {e.description_es && (
+                  <DetailCard title={{ EN: 'Description (ES)', ES: 'Descripción (ES)', PT: 'Descrição (ES)' }} lang={lang}>
+                    <p className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">
+                      {e.description_es}
+                    </p>
+                  </DetailCard>
+                )}
+                {e.description_pt && (
+                  <DetailCard title={{ EN: 'Description (PT)', ES: 'Descripción (PT)', PT: 'Descrição (PT)' }} lang={lang}>
+                    <p className="text-sm text-white/70 leading-relaxed whitespace-pre-wrap">
+                      {e.description_pt}
+                    </p>
+                  </DetailCard>
+                )}
+              </div>
+
+              <div className="space-y-6">
+                <DetailCard title={{ EN: 'Logistics', ES: 'Logística', PT: 'Logística' }} lang={lang}>
+                  <DetailGrid cols={2}>
+                    <DetailField lang={lang} label={{ EN: 'Days', ES: 'Días', PT: 'Dias' }} value={e.days} />
+                    <DetailField lang={lang} label={{ EN: 'Price From (USD)', ES: 'Precio Desde (USD)', PT: 'Preço A Partir De (USD)' }} value={e.price_from != null ? `$${e.price_from.toLocaleString()}` : null} accent />
+                    <DetailField lang={lang} label={{ EN: 'Display Order', ES: 'Orden', PT: 'Ordem' }} value={e.display_order} />
+                    <DetailField lang={lang} label={{ EN: 'Featured', ES: 'Destacado', PT: 'Destaque' }} value={e.featured ? (lang === 'ES' ? 'Sí' : lang === 'PT' ? 'Sim' : 'Yes') : (lang === 'ES' ? 'No' : lang === 'PT' ? 'Não' : 'No')} />
+                  </DetailGrid>
+                  {e.pillars && e.pillars.length > 0 && (
+                    <div className="pt-2 border-t border-white/5">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-white/40 mb-2">
+                        {lang === 'ES' ? 'Pilares' : lang === 'PT' ? 'Pilares' : 'Pillars'}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {e.pillars.map((p, i) => (
+                          <span key={i} className="text-[10px] font-bold uppercase tracking-widest text-[#B8963E] bg-[#B8963E]/10 border border-[#B8963E]/30 px-3 py-1 rounded-full">
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </DetailCard>
+
+                {/* v1.8.0 Step 18: Phase A v0.5 fields */}
+                <DetailCard title={{ EN: 'Pricing v0.5', ES: 'Precios v0.5', PT: 'Preços v0.5' }} lang={lang}>
+                  <DetailField lang={lang} label={{ EN: 'KLO Service Fee (USD)', ES: 'Tarifa Servicio KLO (USD)', PT: 'Taxa Serviço KLO (USD)' }} value={e.klo_service_fee != null ? `$${e.klo_service_fee.toLocaleString()}` : null} />
+                  <DetailField lang={lang} label={{ EN: 'KLO Markup %', ES: 'Markup KLO %', PT: 'Markup KLO %' }} value={e.klo_markup_pct != null ? `${e.klo_markup_pct}%` : null} />
+                  <DetailField lang={lang} label={{ EN: 'Override Total (USD)', ES: 'Override Total (USD)', PT: 'Override Total (USD)' }} value={e.bundle_price != null ? `$${e.bundle_price.toLocaleString()}` : (lang === 'ES' ? '(auto-calculado)' : lang === 'PT' ? '(auto-calculado)' : '(auto-calculated)')} />
+                  <DetailField lang={lang} label={{ EN: 'Curated by', ES: 'Curado por', PT: 'Curado por' }} value={e.curated_by_role} />
+                  <DetailField lang={lang} label={{ EN: 'Visibility', ES: 'Visibilidad', PT: 'Visibilidade' }} value={e.is_supplier_published ? (lang === 'ES' ? 'Solo proveedor' : lang === 'PT' ? 'Só fornecedor' : 'Supplier only') : (lang === 'ES' ? 'Público (KLO)' : lang === 'PT' ? 'Público (KLO)' : 'Public (KLO)')} />
+                </DetailCard>
+
+                {e.hero_image && (
+                  <DetailCard title={{ EN: 'Hero Image', ES: 'Imagen Principal', PT: 'Imagem Principal' }} lang={lang}>
+                    <img src={e.hero_image} alt="" className="w-full rounded-lg object-cover" />
+                  </DetailCard>
+                )}
               </div>
             </div>
           ),

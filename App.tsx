@@ -33,9 +33,10 @@ import { ErrorBoundary } from './components/ui/ErrorBoundary';
 // v1.8.0 Step 6: extended route detector to handle admin detail pages
 // (e.g. /admin/suppliers/S123). Returns an object so the App can render
 // the right surface (list vs detail) with the right ID.
+// v1.8.0 Step 20: now also handles /admin/experiences/:id for detail pages.
 type AdminSubroute =
   | { kind: 'list' }
-  | { kind: 'detail'; entity: 'suppliers' | 'clients' | 'bookings' | 'leads'; id: string }
+  | { kind: 'detail'; entity: 'suppliers' | 'clients' | 'bookings' | 'leads' | 'experiences'; id: string }
   | null;
 
 function useSupplierRoute(): 'portal' | 'login' | 'dashboard' | AdminSubroute {
@@ -47,7 +48,7 @@ function useSupplierRoute(): 'portal' | 'login' | 'dashboard' | AdminSubroute {
     if (p === '/supplier' || p.startsWith('/supplier')) return 'portal';
     // /admin (list) and /admin/{entity}/{id} (detail)
     if (p === '/admin') return { kind: 'list' };
-    const m = p.match(/^\/admin\/(suppliers|clients|bookings|leads)\/([^/]+)$/);
+    const m = p.match(/^\/admin\/(suppliers|clients|bookings|leads|experiences)\/([^/]+)$/);
     if (m) return { kind: 'detail', entity: m[1] as any, id: m[2] };
     return null;
   };

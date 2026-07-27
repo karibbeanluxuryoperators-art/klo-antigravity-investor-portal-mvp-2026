@@ -22,16 +22,16 @@ import { authedFetch, getAccessToken } from '../../services/supabase';
 // ── Field definitions ─────────────────────────────────────────────────────────
 
 export type FieldDef =
-  | { kind: 'text'; key: string; label: Trilingual; required?: boolean; maxLength?: number; placeholder?: Trilingual; pattern?: string }
-  | { kind: 'textarea'; key: string; label: Trilingual; required?: boolean; maxLength?: number; rows?: number; placeholder?: Trilingual }
-  | { kind: 'number'; key: string; label: Trilingual; required?: boolean; min?: number; max?: number; step?: number }
-  | { kind: 'select'; key: string; label: Trilingual; required?: boolean; options: Array<{ value: string; label: Trilingual }> | DynamicOptions }
-  | { kind: 'multiselect'; key: string; label: Trilingual; required?: boolean; options: Array<{ value: string; label: Trilingual }> | DynamicOptions }
-  | { kind: 'tags'; key: string; label: Trilingual; hint?: Trilingual }
-  | { kind: 'image'; key: string; label: Trilingual; multiple?: boolean; max?: number }
-  | { kind: 'trilingual'; key: string; label: Trilingual; required?: boolean; subKind: 'text' | 'textarea'; maxLength?: number; rows?: number }
-  | { kind: 'boolean'; key: string; label: Trilingual }
-  | { kind: 'itinerary'; key: string; label: Trilingual };
+  | { kind: 'text'; key: string; label: Trilingual; required?: boolean; maxLength?: number; placeholder?: Trilingual; pattern?: string; help?: Trilingual; defaultValue?: any }
+  | { kind: 'textarea'; key: string; label: Trilingual; required?: boolean; maxLength?: number; rows?: number; placeholder?: Trilingual; help?: Trilingual; defaultValue?: any }
+  | { kind: 'number'; key: string; label: Trilingual; required?: boolean; min?: number; max?: number; step?: number; help?: Trilingual; defaultValue?: any }
+  | { kind: 'select'; key: string; label: Trilingual; required?: boolean; options: Array<{ value: string; label: Trilingual }> | DynamicOptions; help?: Trilingual; defaultValue?: any }
+  | { kind: 'multiselect'; key: string; label: Trilingual; required?: boolean; options: Array<{ value: string; label: Trilingual }> | DynamicOptions; help?: Trilingual; defaultValue?: any }
+  | { kind: 'tags'; key: string; label: Trilingual; hint?: Trilingual; help?: Trilingual; defaultValue?: any }
+  | { kind: 'image'; key: string; label: Trilingual; multiple?: boolean; max?: number; help?: Trilingual; defaultValue?: any }
+  | { kind: 'trilingual'; key: string; label: Trilingual; required?: boolean; subKind: 'text' | 'textarea'; maxLength?: number; rows?: number; help?: Trilingual; defaultValue?: any }
+  | { kind: 'boolean'; key: string; label: Trilingual; help?: Trilingual; defaultValue?: any }
+  | { kind: 'itinerary'; key: string; label: Trilingual; help?: Trilingual; defaultValue?: any };
 
 export type Trilingual = { EN: string; ES: string; PT: string };
 
@@ -248,6 +248,10 @@ export const EntityEditor: React.FC<EntityEditorProps> = ({ config, lang, signed
   const buildNew = (): any => {
     const out: any = {};
     for (const f of config.fields) {
+      // v1.8.0 Step 20: honor field-level defaultValue when defined
+      // (e.g. tier='UHNWI', status='ACTIVE', commission_pct=5.00).
+      const dv = (f as any).defaultValue;
+      if (dv !== undefined) { out[f.key] = dv; continue; }
       if (f.kind === 'text' || f.kind === 'textarea') out[f.key] = '';
       else if (f.kind === 'number') out[f.key] = 0;
       else if (f.kind === 'select') out[f.key] = '';

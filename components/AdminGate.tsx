@@ -22,7 +22,7 @@ import {
   isSupabaseConfigured,
 } from '../services/supabase';
 import { SuppliersManagement } from './SuppliersManagement';
-import { SupplierDetail, ClientDetail, BookingDetail, LeadDetail } from './AdminDetails';
+import { SupplierDetail, ClientDetail, BookingDetail, LeadDetail, ExperienceDetail } from './AdminDetails';
 import {
   Section,
   SectionLabel,
@@ -79,7 +79,7 @@ const T = {
 
 type AdminSubroute =
   | { kind: 'list' }
-  | { kind: 'detail'; entity: 'suppliers' | 'clients' | 'bookings' | 'leads'; id: string }
+  | { kind: 'detail'; entity: 'suppliers' | 'clients' | 'bookings' | 'leads' | 'experiences'; id: string }
   | null;
 
 interface AdminGateProps {
@@ -183,6 +183,7 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
       if (subroute.entity === 'clients')   return <ClientDetail {...detailProps} />;
       if (subroute.entity === 'bookings')  return <BookingDetail {...detailProps} />;
       if (subroute.entity === 'leads')     return <LeadDetail {...detailProps} />;
+      if (subroute.entity === 'experiences') return <ExperienceDetail {...detailProps} />;
     }
     // List route: /admin
     return (
