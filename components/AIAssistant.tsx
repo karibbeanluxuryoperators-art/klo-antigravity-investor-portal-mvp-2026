@@ -117,6 +117,18 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
           history: history.slice(0, -1),
           lang: lang === 'en' ? 'EN' : lang === 'pt' ? 'PT' : 'ES',
           leadId: leadId,
+          // Pass accumulated state from previous turns so the server
+          // doesn't lose context when a later message is just contact info
+          context: {
+            servicesNeeded: qualification.servicesNeeded,
+            hasContact: !!(qualification.email || qualification.phone),
+            fullName: qualification.fullName,
+            origin: qualification.origin,
+            destination: qualification.destination,
+            passengers: qualification.passengers,
+            budget: qualification.budget,
+            travelDates: qualification.travelDates,
+          },
         }),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -245,6 +257,35 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
                 </p>
               </div>
             </div>
+            <button
+              onClick={() => {
+                // Hard reset: clear all stored state and start fresh
+                try { sessionStorage.removeItem(STORAGE_KEY_HISTORY); } catch {}
+                try { localStorage.removeItem(STORAGE_KEY_LEAD_ID); } catch {}
+                try { localStorage.removeItem(STORAGE_KEY_QUAL); } catch {}
+                try { localStorage.removeItem(STORAGE_KEY_EMAIL); } catch {}
+                setMessages([]);
+                setQualification({
+                  fullName: null, email: null, phone: null, servicesNeeded: [],
+                  travelDates: null, origin: null, destination: null,
+                  passengers: null, budget: null, documentationReady: null,
+                  qualified: false, preferredLanguage: null,
+                });
+                setLeadId(null);
+                setTurnsUsed(0);
+                setNotified(false);
+              }}
+              aria-label="Start new conversation"
+              title="Start a new conversation"
+              style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginRight: '6px' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(244,239,230,0.50)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                <path d="M3 21v-5h5" />
+              </svg>
+            </button>
             <button
               onClick={() => setIsOpen(false)}
               aria-label="Close chat"

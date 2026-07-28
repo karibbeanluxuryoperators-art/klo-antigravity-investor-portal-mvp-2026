@@ -2896,7 +2896,7 @@ ${assetContext}`;
   // - Returns contract that AIAssistant.tsx expects: { success, reply, lead, meta }
   // ─────────────────────────────────────────────────────────────────────────
   app.post("/api/maria/chat", async (req, res) => {
-    const { message, history, lang: reqLang, leadId: existingLeadId } = req.body || {};
+    const { message, history, lang: reqLang, leadId: existingLeadId, context } = req.body || {};
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'message is required' });
     }
@@ -3166,6 +3166,121 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       result.experienceDna = dna;
       if (servicesNeeded.length > 0) result.pillarInterest = servicesNeeded[0];
 
+      // ── Passengers extraction (broader patterns) ──
+      // "10 people", "10 personas", "10 guests", "party of 10", "for 10", "para 10"
+      const paxPatterns = [
+        /(\d+)\s*(people|persons?|guests|pax|adults|travelers|families)/i,
+        /(?:for|party\s*of|para|grupo\s*de|grupo)\s+(\d+)/i,
+        /(\d+)\s*(personas|h[uú]spedes|invitados|viajeros)/i,
+        /\bim\s+(?:a\s+group\s+of\s+)?(\d+)/i,
+      ];
+      for (const re of paxPatterns) {
+        const m = message.match(re);
+        if (m) {
+          const v = parseInt(m[1], 10);
+          if (v >= 1 && v <= 100) {
+            result.passengers = v;
+            // Apply to all DNA items that need it
+            for (const item of dna) {
+              if (['aviation', 'yacht', 'villa', 'transport', 'staff', 'events'].includes(item.pillar)) {
+                item.details = { ...item.details, passengers: v };
+              }
+            }
+            break;
+          }
+        }
+      }
+
+      // ── Date extraction (natural language) ──
+      // "7th of august", "august 7", "7 agosto", "on 7/8/2026", "on 2026-08-07"
+      const monthMap: Record<string, number> = {
+        january: 1, jan: 1, enero: 1,
+        february: 2, feb: 2, febrero: 2,
+        march: 3, mar: 3, marzo: 3,
+        april: 4, apr: 4, abril: 4,
+        may: 5, mayo: 5,
+        june: 6, jun: 6, junio: 6,
+        july: 7, jul: 7, julio: 7,
+        august: 8, aug: 8, agosto: 8,
+        september: 9, sep: 9, sept: 9, septiembre: 9, setiembre: 9,
+        october: 10, oct: 10, octubre: 10,
+        november: 11, nov: 11, noviembre: 11,
+        december: 12, dec: 12, diciembre: 12,
+      };
+      let parsedDate: string | null = null;
+      // Pattern 1: "7th of august" or "7 of august"
+      const ofMonthMatch = message.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?([A-Za-z]+)/i);
+      if (ofMonthMatch) {
+        const day = parseInt(ofMonthMatch[1], 10);
+        const monthName = ofMonthMatch[2].toLowerCase();
+        const month = monthMap[monthName];
+        if (month && day >= 1 && day <= 31) {
+          // Default year = current year, or next year if date is in the past
+          const now = new Date();
+          let year = now.getFullYear();
+          const candidate = new Date(year, month - 1, day);
+          if (candidate < now) year += 1;
+          parsedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        }
+      }
+      // Pattern 2: "august 7"
+      if (!parsedDate) {
+        const monthFirstMatch = message.match(/([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?/i);
+        if (monthFirstMatch) {
+          const monthName = monthFirstMatch[1].toLowerCase();
+          const day = parseInt(monthFirstMatch[2], 10);
+          const month = monthMap[monthName];
+          if (month && day >= 1 && day <= 31) {
+            const now = new Date();
+            let year = now.getFullYear();
+            const candidate = new Date(year, month - 1, day);
+            if (candidate < now) year += 1;
+            parsedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          }
+        }
+      }
+      // Pattern 3: ISO date 2026-08-07
+      if (!parsedDate) {
+        const isoMatch = message.match(/(\d{4}-\d{2}-\d{2})/);
+        if (isoMatch) parsedDate = isoMatch[1];
+      }
+      // Pattern 4: "7/8/2026" or "8/7/2026" (ambiguous, assume MM/DD/YYYY for EN, DD/MM/YYYY for ES/PT)
+      if (!parsedDate) {
+        const slashMatch = message.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+        if (slashMatch) {
+          const a = parseInt(slashMatch[1], 10);
+          const b = parseInt(slashMatch[2], 10);
+          let year = parseInt(slashMatch[3], 10);
+          if (year < 100) year += 2000;
+          let month, day;
+          if (lang === 'EN') { month = a; day = b; } else { month = a; day = b; }
+          if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            parsedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          }
+        }
+      }
+      if (parsedDate) {
+        result.travelDates = parsedDate;
+        for (const item of dna) {
+          if (['aviation', 'yacht', 'villa', 'transport', 'staff', 'events'].includes(item.pillar)) {
+            item.details = { ...item.details, travel_date: parsedDate };
+          }
+        }
+      }
+
+      // ── Name extraction (capture "im juan" or "my name is carlos") ──
+      const namePatterns = [
+        /\b(?:i'?m|mi\s+nombre\s+es|me\s+llamo|soy|my\s+name\s+is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})/i,
+        /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/m,
+      ];
+      for (const re of namePatterns) {
+        const m = message.match(re);
+        if (m) {
+          result.fullName = m[1].trim();
+          break;
+        }
+      }
+
       // ── Contact extraction ──
       const emailMatch = message.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
       if (emailMatch) result.email = emailMatch[0];
@@ -3341,6 +3456,22 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
 
       result.missingForQuote = Array.from(new Set(missingForQuote));
       result.isInternational = isInternational;
+
+      // ── Merge accumulated context from previous turns (if any) ──
+      // If the frontend sends `context.servicesNeeded` from earlier turns,
+      // and the current message didn't add new services, keep the previous
+      // services so the conversation doesn't lose state on the server.
+      if (context && typeof context === 'object') {
+        if (Array.isArray(context.servicesNeeded) && context.servicesNeeded.length > 0 && servicesNeeded.length === 0) {
+          result.servicesNeeded = Array.from(new Set([...(result.servicesNeeded || []), ...context.servicesNeeded]));
+        }
+        if (context.fullName && !result.fullName) result.fullName = context.fullName;
+        if (context.origin && !result.origin) result.origin = context.origin;
+        if (context.destination && !result.destination) result.destination = context.destination;
+        if (context.passengers && !result.passengers) result.passengers = context.passengers;
+        if (context.budget && !result.budget) result.budget = context.budget;
+        if (context.travelDates && !result.travelDates) result.travelDates = context.travelDates;
+      }
 
       if (result.missingForQuote.length === 0 && dna.length > 0) {
         // All minimums present → compute price
