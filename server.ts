@@ -3102,23 +3102,28 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
   // Resilient insert: drops fields that 42703 (column doesn't exist) or PGRST204.
   // Uses the same block-by-block pattern as POST /api/clients (Step 20) so the
   // endpoint works whether or not the user has run the migration.
+  //
+  // Real leads schema (verified live 2026-07-28):
+  //   name (NOT full_name) | message (NOT notes) | timestamp auto-set by DB
+  //   All 60+ Step 20 fields confirmed present (preferred_language, origin, destination,
+  //   travel_date, travelers, budget_min, budget_max, trip_type, accommodation,
+  //   pillar_interest, experience_interest, job_title, tags, utm_source, utm_campaign,
+  //   tax_id, nationality, travel_end_date, source, status, email, phone, etc.)
   async function persistMariaLead(result: any, existingLeadId?: string | null) {
     try {
       const sb = getSupabase();
       if (!sb) { console.warn('[maria] supabase not configured'); return null; }
 
-      // Core fields (always present in leads table)
+      // Core fields (real schema column names)
       const core: any = {
-        full_name: result.fullName || 'Anonymous (María Chat)',
+        name: result.fullName || 'Anonymous (María Chat)',
         email: result.email || null,
         phone: result.phone || null,
         source: 'maria_chat',
         status: result.qualified ? 'QUALIFIED' : 'NEW',
-        notes: result.servicesNeeded?.length
+        message: result.servicesNeeded?.length
           ? `María chat: interested in ${result.servicesNeeded.join(', ')}. ${result.travelDates ? 'Dates: ' + result.travelDates + '. ' : ''}${result.qualified ? '[AUTO-QUALIFIED]' : ''}`
           : 'Lead from María chat',
-        tags: result.qualified ? ['maria-chat', 'auto-qualified'] : ['maria-chat'],
-        updated_at: new Date().toISOString(),
       };
 
       // Step 20 extended fields (resilient — drop block on 42703)
@@ -3132,13 +3137,14 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         pillar_interest: result.pillarInterest || null,
         trip_type: 'LEISURE',
         accommodation: 'PRIVATE_VILLA',
+        tags: result.qualified ? ['maria-chat', 'auto-qualified'] : ['maria-chat'],
       };
       if (result.travelDates) {
         const m = String(result.travelDates).match(/(\d{4}-\d{2}-\d{2})/);
         if (m) extended.travel_date = m[1];
       }
 
-      // Helper: try insert, drop the extended block on 42703
+      // Helper: try insert, return the row (real leads table returns the full row)
       async function tryInsert(record: any): Promise<{ data: any; error: any }> {
         return await sb.from('leads').insert(record).select().maybeSingle();
       }
@@ -3150,25 +3156,21 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
 
       // 1) Core only
       let r = await op(core);
-      if (r.error && /column.*not exist|42703|PGRST204/i.test(String(r.error.message || r.error.code || ''))) {
-        // Even core failed — abort
+      if (r.error) {
         console.warn('[maria] core insert failed:', r.error.message);
         return null;
       }
       let lead = r.data;
-      if (!lead) {
-        // Insert succeeded but returned no data — fetch the latest maria_chat row
-        const { data: last } = await sb.from('leads').select('*').eq('source', 'maria_chat').order('created_at', { ascending: false }).limit(1).maybeSingle();
-        if (last) lead = last;
-      }
 
-      // 2) Extended block (best-effort)
-      if (lead) {
-        const upd = await sb.from('leads').update(extended).eq('id', lead.id);
+      // 2) Extended block (best-effort, PATCH only)
+      if (lead && lead.id) {
+        const upd = await sb.from('leads').update(extended).eq('id', lead.id).select().maybeSingle();
         if (upd.error && /42703|PGRST204/i.test(String(upd.error.message || upd.error.code || ''))) {
-          console.info('[maria] extended fields not yet migrated — skipping (run db/migrations/2026-07-28_crm_extended_fields.sql)');
+          console.info('[maria] extended fields not yet migrated — skipping extended update');
         } else if (upd.error) {
           console.warn('[maria] extended update failed:', upd.error.message);
+        } else if (upd.data) {
+          lead = upd.data;
         }
       }
 
