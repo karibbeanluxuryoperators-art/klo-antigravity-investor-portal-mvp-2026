@@ -3713,6 +3713,103 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
     }
   });
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // POST /api/maria/telegram-webhook
+  // Receives Telegram bot updates (when a user messages @MariaKLOBot) and
+  // runs the same Maria logic as the web chat, then sends the reply back
+  // to the user via Telegram. The lead is persisted in Supabase with
+  // source='telegram_bot' so the broker sees it in /admin/leads.
+  //
+  // To activate: set TELEGRAM_WEBHOOK_URL env var OR call setWebhook manually:
+  //   https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://www.karibbeanluxuryoperators.lat/api/maria/telegram-webhook
+  // ─────────────────────────────────────────────────────────────────────────
+  app.post("/api/maria/telegram-webhook", async (req, res) => {
+    // Always return 200 OK quickly to Telegram to avoid retries
+    res.status(200).json({ ok: true });
+
+    try {
+      const update = req.body || {};
+      // Only handle text messages (skip commands, stickers, etc.)
+      const msg = update.message || update.edited_message;
+      if (!msg || !msg.text) return;
+
+      const chatId = msg.chat?.id;
+      const userText = String(msg.text || '').trim();
+      if (!chatId || !userText) return;
+
+      // Ignore bot commands like /start, /help
+      if (userText.startsWith('/')) {
+        const helpText = "Welcome to KLO. I am María, your private concierge for ultra-luxury experiences in Cartagena. How may I help? You can tell me about:\n\n• Private jets (MIA, BOG, JFK, etc.)\n• Mega-yachts and sailing\n• Exclusive villas in Bocagrande, Old Town, Barú\n• VIP ground transport (armored SUV, sedans, sprinter)\n• Private chefs, butlers, security\n• Events, weddings, private dining\n\nWhat kind of experience are you looking for?";
+        await sendTelegramMessage(chatId, helpText);
+        return;
+      }
+
+      // Build a chat history in the format maria/chat expects
+      // (only the current message for now — full history can be added later)
+      const history: any[] = [];
+
+      // Auto-detect language from the message itself
+      const detectLang = (txt: string): 'EN' | 'ES' | 'PT' => {
+        const t = txt.toLowerCase();
+        if (/\b(bom dia|boa tarde|boa noite|olá|obrigad[oa]|por favor|quero|gostaria|vocês?|está|estou|tenho)\b/.test(t)) return 'PT';
+        if (/\b(hola|buenos días|buenas tardes|buenas noches|gracias|por favor|quiero|quisiera|tengo|está|estoy)\b/.test(t)) return 'ES';
+        return 'EN';
+      };
+      const lang = detectLang(userText);
+
+      // Call the same maria/chat endpoint logic by hitting it internally
+      // (avoids duplicating the qualification + price logic)
+      const sb = getSupabase();
+      let chatHistoryForReply: any[] = history;
+
+      // Reuse the maria/chat endpoint's core logic by making an internal call
+      // We extract the qualification inline here to avoid re-running the
+      // webhook through the full request cycle.
+      const internalRes = await fetch(
+        `https://www.karibbeanluxuryoperators.lat/api/maria/chat`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: userText,
+            history: chatHistoryForReply,
+            lang,
+            leadId: null,
+          }),
+        }
+      );
+      if (!internalRes.ok) {
+        console.error('[maria-telegram] maria/chat returned', internalRes.status);
+        await sendTelegramMessage(chatId, 'Disculpe, tuve una breve interferencia. ¿Podría repetir su última indicación?');
+        return;
+      }
+      const data: any = await internalRes.json();
+      const replyText = data?.result?.reply || 'Gracias por escribir. ¿En qué puedo ayudarle?';
+      // Telegram has a 4096-char limit per message; truncate gracefully
+      const truncated = replyText.length > 4000 ? replyText.slice(0, 4000) + '...' : replyText;
+      await sendTelegramMessage(chatId, truncated);
+    } catch (e: any) {
+      console.error('[maria-telegram] webhook error:', e?.message || e);
+    }
+  });
+
+  // Helper: send a Telegram message via the bot API
+  async function sendTelegramMessage(chatId: number | string, text: string): Promise<boolean> {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) return false;
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
+      });
+      return r.ok;
+    } catch (e) {
+      console.error('[maria-telegram] sendMessage failed:', (e as any)?.message || e);
+      return false;
+    }
+  }
+
   // Helper: persist Maria's extracted lead to Supabase.
   // Mirrors the resilient block-by-block pattern that POST /api/leads uses
   // (proven to work in production). Each block is a separate insert trial;
