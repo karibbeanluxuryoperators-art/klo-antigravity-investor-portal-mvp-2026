@@ -2960,7 +2960,7 @@ ${assetContext}`;
         },
         priceEstimate: {
           type: "OBJECT",
-          description: "USD price range Maria is comfortable quoting. Compute as: services-needed sum + 20% KLO management. Confidence: 'low' = only services known, 'medium' = services+passengers, 'high' = services+passengers+dates+duration.",
+          description: "USD price range Maria is comfortable quoting. CRITICAL: only set this when MINIMUM INFO is present for EVERY service requested. If ANY required detail is missing, return null. Per-service minimums: aviation = origin + destination + day + passengers. yacht = day + passengers (+ duration if multi-day). villa = nights + guests (+ zone). transport = days + passengers. staff = days + guests. events = type + guests + day. Compute as: services-needed sum + 20% KLO management. Confidence: 'low' = only services known, 'medium' = services+passengers, 'high' = services+passengers+dates+duration. If you cannot quote a price, return null for priceEstimate and ask for the missing required fields in the reply.",
           properties: {
             low: { type: "INTEGER", description: "Lower bound in USD" },
             high: { type: "INTEGER", description: "Upper bound in USD" },
@@ -2968,6 +2968,11 @@ ${assetContext}`;
             confidence: { type: "STRING", description: "'low' | 'medium' | 'high'" },
             reasoning: { type: "STRING", description: "One-line explanation in the user's language. E.g. 'Heavy jet MIA-CTG + 5 nights beachfront villa in Barú + private chef'." }
           }
+        },
+        missingForQuote: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+          description: "List of missing required fields that prevent quoting. Empty array if everything is present. Examples: ['aviation:origin', 'aviation:date', 'yacht:passengers', 'villa:nights']. Maria should ask for these in the reply to enable pricing."
         }
       },
       required: ["reply"]
@@ -3028,14 +3033,27 @@ EXPERIENCE DNA (auto-extract — do not ask extra questions for these):
   - "helicóptero" → pillar: "aviation", type: "helicopter"
   - Always capture details: { passengers, route, bedrooms, nights, dietary, dates } if mentioned.
 
-PRICE ESTIMATE (auto-compute once services are clear):
-- Sum the per-service price range from the calibration table.
-- Apply ±20% buffer for orchestration.
-- Set confidence:
-  - "low" — only services mentioned, no passengers/dates
-  - "medium" — services + passengers known
-  - "high" — services + passengers + dates + duration
-- Provide a one-line "reasoning" in the user's language.
+PRICE ESTIMATE — STRICT RULE: NO QUOTE WITHOUT MINIMUM INFO.
+We cannot quote without the required minimums per service. Maria must respect this — her credibility depends on it.
+- Aviation: needs origin, destination, date, passengers
+- Yacht: needs date, passengers (and duration if multi-day)
+- Villa: needs nights, guests (and zone)
+- Transport: needs days, passengers
+- Staff: needs days, guests
+- Events: needs type, guests, date
+
+Process:
+1. Extract everything you can from the user's message.
+2. If EVERY required field is present for EVERY service requested → compute priceEstimate, apply 20% KLO buffer, set confidence, give reasoning.
+3. If ANY required field is missing → set priceEstimate = null AND fill "missingForQuote" with the missing fields (e.g. ['aviation:origin', 'villa:nights']). In the reply, ask ONLY for those missing fields — one short sentence.
+
+MIN-INTERACTION PHILOSOPHY (revised):
+- Be fast, but be ACCURATE. A wrong quote is worse than no quote.
+- Once you have contact AND the minimums for a price, propose it immediately and offer broker handoff.
+- If minimums are missing, ask for them in ONE single line — don't interrogate.
+- Examples:
+  - "Got it. To quote your jet, may I have origin, destination, date, and party size?" (one line, 4 items)
+  - "Perfect. To finalize pricing on the villa, I need the number of nights and zone (Bocagrande, Old Town, Barú)?" (one line)
 
 LANGUAGE:
 Respond in the user's language. Mirror their tone. Always reply in JSON matching the specified schema.`;
@@ -3144,8 +3162,68 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         }
       }
 
-      // ── Price estimate (uses the same calibration as the Gemini prompt) ──
-      if (dna.length > 0) {
+      // ── Price estimate — STRICT MINIMUM VALIDATION ──
+      // Per-service minimums required to quote. If ANY required field is missing,
+      // do NOT compute a price — return null and ask only for what's missing.
+      const missingForQuote: string[] = [];
+      const labelByKey: Record<string, string> = {
+        'aviation:origin': 'origen del vuelo',
+        'aviation:destination': 'destino del vuelo',
+        'aviation:date': 'fecha del vuelo',
+        'aviation:passengers': '# pasajeros',
+        'yacht:date': 'fecha del yate',
+        'yacht:passengers': '# pasajeros en el yate',
+        'villa:nights': '# noches',
+        'villa:guests': '# huéspedes',
+        'villa:zone': 'zona (Bocagrande / Old Town / Barú)',
+        'transport:days': '# días de transporte',
+        'transport:passengers': '# pasajeros',
+        'staff:days': '# días del staff',
+        'staff:guests': '# huéspedes',
+        'events:type': 'tipo de evento',
+        'events:guests': '# invitados',
+        'events:date': 'fecha del evento',
+      };
+
+      for (const item of dna) {
+        if (item.pillar === 'aviation') {
+          // Multi-leg → origin/destination per leg. Use a simple heuristic:
+          // origin = first 3-letter airport code or city, destination = last one.
+          const codeMatches = (message.match(/\b([A-Z]{3})\b/g) || []);
+          if (codeMatches.length < 2) missingForQuote.push('aviation:origin', 'aviation:destination');
+          if (!item.details?.travel_date && !result.travelDates) missingForQuote.push('aviation:date');
+          if (!result.passengers) missingForQuote.push('aviation:passengers');
+        }
+        if (item.pillar === 'yacht') {
+          if (!item.details?.travel_date && !result.travelDates) missingForQuote.push('yacht:date');
+          if (!result.passengers) missingForQuote.push('yacht:passengers');
+        }
+        if (item.pillar === 'villa') {
+          if (!item.details?.nights) missingForQuote.push('villa:nights');
+          if (!result.passengers) missingForQuote.push('villa:guests');
+        }
+        if (item.pillar === 'transport') {
+          // Transport: needs at least days + pax. Use travel_dates as day proxy or nights from villa.
+          const days = item.details?.days || item.details?.nights || (result.travelDates ? 1 : null);
+          if (!days) missingForQuote.push('transport:days');
+          if (!result.passengers) missingForQuote.push('transport:passengers');
+        }
+        if (item.pillar === 'staff') {
+          const days = item.details?.days || item.details?.nights || (result.travelDates ? 1 : null);
+          if (!days) missingForQuote.push('staff:days');
+          if (!result.passengers) missingForQuote.push('staff:guests');
+        }
+        if (item.pillar === 'events') {
+          if (!item.details?.event_type && !item.type) missingForQuote.push('events:type');
+          if (!result.passengers) missingForQuote.push('events:guests');
+          if (!item.details?.travel_date && !result.travelDates) missingForQuote.push('events:date');
+        }
+      }
+
+      result.missingForQuote = Array.from(new Set(missingForQuote));
+
+      if (result.missingForQuote.length === 0 && dna.length > 0) {
+        // All minimums present → compute price
         const priceTable: Record<string, [number, number]> = {
           'aviation:light_jet': [4500, 9000],
           'aviation:midsize_jet': [18000, 32000],
@@ -3199,6 +3277,8 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           return d.pillar;
         }).join(' + ');
         result.priceEstimate = { low, high, currency: 'USD', confidence, reasoning };
+      } else {
+        result.priceEstimate = null;
       }
 
       // ── Min-interaction reply logic ──
@@ -3207,8 +3287,53 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       const hasServices = servicesNeeded.length > 0;
       const hasPrice = result.priceEstimate && result.priceEstimate.high > 0;
 
+      // ── Reply logic — STRICT minimums: NO QUOTE without required fields ──
+      const hasMissing = (result.missingForQuote || []).length > 0;
+      const hasContact = !!(result.email || result.phone);
+      const hasServices = servicesNeeded.length > 0;
+      const hasPrice = result.priceEstimate && result.priceEstimate.high > 0;
+
+      // Helper: format the list of missing fields in the user's language
+      const labelByKey: Record<string, Record<string, string>> = {
+        ES: {
+          'aviation:origin': 'origen',
+          'aviation:destination': 'destino',
+          'aviation:date': 'fecha',
+          'aviation:passengers': '# pasajeros',
+          'yacht:date': 'fecha',
+          'yacht:passengers': '# pasajeros',
+          'villa:nights': '# noches',
+          'villa:guests': '# huéspedes',
+          'villa:zone': 'zona (Bocagrande / Old Town / Barú)',
+          'transport:days': '# días',
+          'transport:passengers': '# pasajeros',
+          'staff:days': '# días',
+          'staff:guests': '# huéspedes',
+          'events:type': 'tipo de evento',
+          'events:guests': '# invitados',
+          'events:date': 'fecha',
+        },
+        EN: {
+          'aviation:origin': 'origin', 'aviation:destination': 'destination', 'aviation:date': 'date', 'aviation:passengers': '# passengers',
+          'yacht:date': 'date', 'yacht:passengers': '# passengers',
+          'villa:nights': '# nights', 'villa:guests': '# guests', 'villa:zone': 'zone (Bocagrande / Old Town / Barú)',
+          'transport:days': '# days', 'transport:passengers': '# passengers',
+          'staff:days': '# days', 'staff:guests': '# guests',
+          'events:type': 'event type', 'events:guests': '# guests', 'events:date': 'date',
+        },
+        PT: {
+          'aviation:origin': 'origem', 'aviation:destination': 'destino', 'aviation:date': 'data', 'aviation:passengers': '# passageiros',
+          'yacht:date': 'data', 'yacht:passengers': '# passageiros',
+          'villa:nights': '# noites', 'villa:guests': '# hóspedes', 'villa:zone': 'zona (Bocagrande / Old Town / Barú)',
+          'transport:days': '# dias', 'transport:passengers': '# passageiros',
+          'staff:days': '# dias', 'staff:guests': '# hóspedes',
+          'events:type': 'tipo de evento', 'events:guests': '# convidados', 'events:date': 'data',
+        },
+      };
+      const missingLabels = (result.missingForQuote || []).map((k: string) => labelByKey[lang]?.[k] || k);
+
       if (hasContact && hasServices && hasPrice) {
-        // MIN-INTERACTION FLOW: we have enough — propose + offer broker
+        // MIN-INTERACTION FLOW: we have everything — propose + offer broker
         const pe = result.priceEstimate;
         const priceStr = `$${pe.low.toLocaleString()}-$${pe.high.toLocaleString()} USD`;
         result.reply = lang === 'ES'
@@ -3216,8 +3341,16 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           : lang === 'PT'
             ? `Perfeito. Para ${pe.reasoning}, nossa orquestração estimada está em ${priceStr} (tudo incluso, sem surpresas). Um broker dedicado entrará em contato via ${result.email || result.phone} nas próximas 2 horas com uma proposta personalizada. Prefere WhatsApp, e-mail ou chamada?`
             : `Perfect. For ${pe.reasoning}, our estimated orchestration is ${priceStr} (all-inclusive, no surprises). A dedicated broker will reach out to ${result.email || result.phone} within 2 hours with a bespoke proposal. WhatsApp, email, or call?`;
+      } else if (hasContact && hasServices && hasMissing) {
+        // Have contact + services but missing fields — ask ONLY for missing
+        const listStr = missingLabels.join(', ');
+        result.reply = lang === 'ES'
+          ? `Entendido. Para cotizar ${result.experienceDna?.[0]?.type || 'su solicitud'}, necesito: ${listStr}.`
+          : lang === 'PT'
+            ? `Entendido. Para cotizar ${result.experienceDna?.[0]?.type || 'sua solicitação'}, preciso de: ${listStr}.`
+            : `Noted. To quote your ${result.experienceDna?.[0]?.type || 'request'}, I need: ${listStr}.`;
       } else if (result.qualified && !hasContact) {
-        // UHNW with budget but no contact — ask for it (priority #1)
+        // UHNW with budget but no contact — ask for it
         result.reply = lang === 'ES'
           ? `Excelente. Con un presupuesto de $${result.budget?.toLocaleString()} USD podemos activar nuestro nivel elite. Para asignar un broker dedicado, ¿podría compartir su nombre completo y un correo o WhatsApp?`
           : lang === 'PT'
@@ -3231,21 +3364,20 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
             ? `Obrigado. Registrei seus dados. Que tipo de experiência lhe interessa? Jatos, iates, villas, transporte ou eventos?`
             : `Thank you. I have noted your contact. What type of experience interests you? Private jets, mega-yachts, exclusive villas, transport, or events?`;
       } else if (hasServices && !hasContact) {
-        // Have services but no contact — propose a rough estimate + ask for contact
-        if (hasPrice) {
-          const pe = result.priceEstimate;
-          const priceStr = `$${pe.low.toLocaleString()}-$${pe.high.toLocaleString()} USD`;
+        // Have services but no contact — ask for contact + minimums
+        if (hasMissing) {
+          const listStr = missingLabels.join(', ');
           result.reply = lang === 'ES'
-            ? `${pe.reasoning.charAt(0).toUpperCase() + pe.reasoning.slice(1)} — estimación inicial ${priceStr} (todo incluido). Para enviarle una propuesta personalizada, ¿me comparte su correo o WhatsApp?`
+            ? `Entendido. Para preparar su cotización de ${result.experienceDna?.[0]?.type || 'servicios'}, necesito: ${listStr}. Y, ¿cómo prefiere que le contactemos — correo o WhatsApp?`
             : lang === 'PT'
-              ? `${pe.reasoning.charAt(0).toUpperCase() + pe.reasoning.slice(1)} — estimativa inicial ${priceStr} (tudo incluso). Para enviar uma proposta personalizada, poderia compartilhar seu e-mail ou WhatsApp?`
-              : `${pe.reasoning.charAt(0).toUpperCase() + pe.reasoning.slice(1)} — initial estimate ${priceStr} (all-inclusive). To send you a bespoke proposal, may I have your email or WhatsApp?`;
+              ? `Entendido. Para preparar a cotação de ${result.experienceDna?.[0]?.type || 'serviços'}, preciso de: ${listStr}. E, como prefere que entremos em contato — e-mail ou WhatsApp?`
+              : `Noted. To prepare your quote for ${result.experienceDna?.[0]?.type || 'services'}, I need: ${listStr}. And how would you prefer to be contacted — email or WhatsApp?`;
         } else {
           result.reply = lang === 'ES'
-            ? `Entendido. ¿Para cuántos huéspedes? Y, ¿cómo prefiere que le contactemos — correo o WhatsApp?`
+            ? `Entendido. Para enviarle la propuesta, ¿me comparte su correo o WhatsApp?`
             : lang === 'PT'
-              ? `Entendido. Para quantos hóspedes? E, como prefere que entremos em contato — e-mail ou WhatsApp?`
-              : `Noted. For how many guests? And how would you prefer to be contacted — email or WhatsApp?`;
+              ? `Entendido. Para enviar a proposta, poderia compartilhar seu e-mail ou WhatsApp?`
+              : `Noted. To send you the proposal, may I have your email or WhatsApp?`;
         }
       } else if (hasContact) {
         // Just contact, nothing else — confirm
