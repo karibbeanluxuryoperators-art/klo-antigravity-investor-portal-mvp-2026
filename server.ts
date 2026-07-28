@@ -3166,6 +3166,26 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       result.experienceDna = dna;
       if (servicesNeeded.length > 0) result.pillarInterest = servicesNeeded[0];
 
+      // ── EARLY CONTEXT MERGE: if the current message didn't detect new
+      // services but the frontend says we had services before, propagate
+      // them into the local `servicesNeeded` and `dna` arrays BEFORE the
+      // missing-field check (so the reply logic knows about them).
+      if (context && typeof context === 'object') {
+        if (Array.isArray(context.servicesNeeded) && context.servicesNeeded.length > 0) {
+          for (const svc of context.servicesNeeded) {
+            if (!servicesNeeded.includes(svc)) servicesNeeded.push(svc);
+          }
+        }
+        if (context.fullName && !result.fullName) result.fullName = context.fullName;
+        if (context.origin && !result.origin) result.origin = context.origin;
+        if (context.destination && !result.destination) result.destination = context.destination;
+        if (context.passengers && !result.passengers) result.passengers = context.passengers;
+        if (context.budget && !result.budget) result.budget = context.budget;
+        if (context.travelDates && !result.travelDates) result.travelDates = context.travelDates;
+      }
+      // Re-sync result.servicesNeeded after the merge
+      result.servicesNeeded = servicesNeeded;
+
       // ── Passengers extraction (broader patterns) ──
       // "10 people", "10 personas", "10 guests", "party of 10", "for 10", "para 10"
       const paxPatterns = [
@@ -3208,14 +3228,13 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         december: 12, dec: 12, diciembre: 12,
       };
       let parsedDate: string | null = null;
-      // Pattern 1: "7th of august" or "7 of august"
-      const ofMonthMatch = message.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?([A-Za-z]+)/i);
+      // Pattern 1: "on the 7th of august" or "the 7 of august" — must have "on"/"of" before day
+      const ofMonthMatch = message.match(/(?:on|of|in|for)\s+(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?([A-Za-z]+)/i);
       if (ofMonthMatch) {
         const day = parseInt(ofMonthMatch[1], 10);
         const monthName = ofMonthMatch[2].toLowerCase();
         const month = monthMap[monthName];
         if (month && day >= 1 && day <= 31) {
-          // Default year = current year, or next year if date is in the past
           const now = new Date();
           let year = now.getFullYear();
           const candidate = new Date(year, month - 1, day);
@@ -3223,9 +3242,9 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           parsedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         }
       }
-      // Pattern 2: "august 7"
+      // Pattern 2: "august 7" (month first, must be a month name, not random word)
       if (!parsedDate) {
-        const monthFirstMatch = message.match(/([A-Za-z]+)\s+(\d{1,2})(?:st|nd|rd|th)?/i);
+        const monthFirstMatch = message.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+(\d{1,2})(?:st|nd|rd|th)?/i);
         if (monthFirstMatch) {
           const monthName = monthFirstMatch[1].toLowerCase();
           const day = parseInt(monthFirstMatch[2], 10);
@@ -3306,8 +3325,11 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         nightsValue = 30;
       }
       if (nightsValue !== null) {
-        const v = dna.find((d) => d.pillar === 'villa');
-        if (v) v.details = { ...v.details, nights: nightsValue };
+        // Apply to villa (overnight stays) and yacht (multi-day charters)
+        for (const item of dna) {
+          if (item.pillar === 'villa') item.details = { ...item.details, nights: nightsValue };
+          if (item.pillar === 'yacht') item.details = { ...item.details, days: nightsValue };
+        }
       }
 
       // Staff schedule detection: medio día / día completo / 8h jornada
@@ -3457,21 +3479,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       result.missingForQuote = Array.from(new Set(missingForQuote));
       result.isInternational = isInternational;
 
-      // ── Merge accumulated context from previous turns (if any) ──
-      // If the frontend sends `context.servicesNeeded` from earlier turns,
-      // and the current message didn't add new services, keep the previous
-      // services so the conversation doesn't lose state on the server.
-      if (context && typeof context === 'object') {
-        if (Array.isArray(context.servicesNeeded) && context.servicesNeeded.length > 0 && servicesNeeded.length === 0) {
-          result.servicesNeeded = Array.from(new Set([...(result.servicesNeeded || []), ...context.servicesNeeded]));
-        }
-        if (context.fullName && !result.fullName) result.fullName = context.fullName;
-        if (context.origin && !result.origin) result.origin = context.origin;
-        if (context.destination && !result.destination) result.destination = context.destination;
-        if (context.passengers && !result.passengers) result.passengers = context.passengers;
-        if (context.budget && !result.budget) result.budget = context.budget;
-        if (context.travelDates && !result.travelDates) result.travelDates = context.travelDates;
-      }
+      // (Context merge already happened at the start of the fallback)
 
       if (result.missingForQuote.length === 0 && dna.length > 0) {
         // All minimums present → compute price
