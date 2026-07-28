@@ -3186,11 +3186,26 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         dna.push({ pillar: 'villa', type: villaType, details: {} });
       }
 
-      if (/transport|car|driver|suburban|sprinter|carro|camioneta|sedan|suv/.test(msgLower)) {
+      if (/transport|car|driver|suburban|sprinter|carro|camioneta|sedan|suv|blindado|blindada/.test(msgLower)) {
         servicesNeeded.push('transport');
-        // Note: "armor" must match "armored" (with -ed) AND "armour" (British)
-        const isArmored = /armor|armour|blindad[oa]|blindado/.test(msgLower);
-        dna.push({ pillar: 'transport', type: isArmored ? 'armored_suv' : 'luxury_sedan', details: {} });
+        // ── Luxury transport sub-types (KLO is exclusively HNW/UHNW) ──
+        // Priority detection: armored > executive van > executive sedan > sprinter
+        const isArmoredSUV = /armor|armour|blindad[oa]|blindado/.test(msgLower);
+        const isExecutiveVan = /maybach|range\s*rover|cadillac\s*escalade|escalade/.test(msgLower);
+        const isSprinterVIP = /sprinter\s*vip|vip\s*sprinter|sprinter/.test(msgLower);
+        const isExecutiveSedan = /mercedes\s*s\s*class|s\s*class|maybach\s*sedan|bmw\s*7|7\s*series/.test(msgLower);
+        const isLimo = /limousine|limo/.test(msgLower);
+        let transportType = 'luxury_sedan'; // default executive sedan
+        if (isArmoredSUV) transportType = 'armored_suv';
+        else if (isExecutiveVan) transportType = 'executive_van';
+        else if (isLimo) transportType = 'limousine';
+        else if (isSprinterVIP) transportType = 'sprinter';
+        else if (isExecutiveSedan) transportType = 'executive_sedan';
+        dna.push({
+          pillar: 'transport',
+          type: transportType,
+          details: { pricingUnit: 'day', pricingNote: 'Transport is priced per full day or half day. Service includes driver + premium vehicle.' },
+        });
       }
 
       if (/chef|security|staff|concierge|guard/.test(msgLower)) {
@@ -3375,7 +3390,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         }
       }
 
-      // Staff schedule detection: medio día / día completo / 8h jornada
+      // Staff AND transport schedule detection: medio día / día completo / 8h jornada
       const scheduleHint = (msgLower: string): 'half_day' | 'full_day' | 'eight_hour' | null => {
         if (/\b(medio\s*d[ií]a|half\s*day|meia\s*tar(é|e)de)\b/.test(msgLower)) return 'half_day';
         if (/\b(d[ií]a\s*completo|full\s*day|dia\s*inteiro|24\s*h\b)/.test(msgLower)) return 'full_day';
@@ -3384,8 +3399,12 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       };
       const staffSchedule = scheduleHint(msgLower);
       if (staffSchedule) {
-        const s = dna.find((d) => d.pillar === 'staff');
-        if (s) s.details = { ...s.details, schedule: staffSchedule };
+        // Apply to BOTH staff and transport (both use day-based pricing)
+        for (const item of dna) {
+          if (item.pillar === 'staff' || item.pillar === 'transport') {
+            item.details = { ...item.details, schedule: staffSchedule };
+          }
+        }
       }
 
       const dateMatch = message.match(/(\d{4}-\d{2}-\d{2})/);
@@ -3499,13 +3518,12 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         if (item.pillar === 'transport') {
           if (!item.details?.travel_date && !result.travelDates) missingForQuote.push('transport:date');
           if (!result.passengers) missingForQuote.push('transport:passengers');
-          // Route type: airport transfer, city tour, inter-city. Detect heuristically.
-          if (!item.details?.route_type) {
-            if (/airport|aeropuerto|llegada|arrival|transfer/.test(msgLower)) item.details = { ...item.details, route_type: 'airport_transfer' };
-            else if (/inter\s*-?\s*city|otra\s*ciudad|bogot|medell|santa\s*marta/.test(msgLower)) item.details = { ...item.details, route_type: 'inter_city' };
-            else if (/city|tour|recorrido|recorr/.test(msgLower)) item.details = { ...item.details, route_type: 'city_tour' };
-            else missingForQuote.push('transport:route');
-          }
+          // Schedule (half_day / full_day) — required, pricing varies 2-3x
+          if (!item.details?.schedule) missingForQuote.push('transport:schedule');
+          // Type: we set the default 'luxury_sedan' upfront, but the user can
+          // upgrade. Don't ask unless they want to change — but make the option
+          // visible in the reply.
+        }
         }
         if (item.pillar === 'staff') {
           if (!item.details?.days && !item.details?.nights && !result.travelDates) missingForQuote.push('staff:days');
@@ -3541,9 +3559,18 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           'villa:private_villa': [6000, 18000],
           'villa:private_island': [15000, 40000],
           'villa:penthouse': [3000, 8000],
-          'transport:armored_suv': [1200, 2200],
-          'transport:luxury_sedan': [800, 1500],
-          'transport:sprinter': [1500, 2800],
+          // Transport — KLO is HNW/UHNW exclusive. We price per full day or half day,
+          // never per hour. Each sub-type has a half_day and full_day variant.
+          'transport:armored_suv_half_day':   [900, 1500],   // Armored Suburban w/ armed driver option
+          'transport:armored_suv_full_day':   [1800, 3500],
+          'transport:executive_sedan_half_day':[600, 1000],   // Mercedes S-Class / BMW 7 / Maybach sedan
+          'transport:executive_sedan_full_day':[1100, 2000],
+          'transport:executive_van_half_day': [900, 1700],   // Range Rover, Cadillac Escalade, Mercedes V-Class
+          'transport:executive_van_full_day':  [1800, 3200],
+          'transport:sprinter_half_day':       [1100, 1900],  // VIP Sprinter (10-14 pax)
+          'transport:sprinter_full_day':       [2000, 3500],
+          'transport:limousine_half_day':      [1500, 2800],  // Stretch limousine
+          'transport:limousine_full_day':      [2800, 5000],
           // Staff pricing depends on schedule:
           //   half_day  ≈ 50% of full_day
           //   eight_hour = baseline
@@ -3565,8 +3592,9 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         };
         let low = 0, high = 0;
         for (const item of dna) {
-          // Staff: include schedule in the lookup key
-          const scheduleKey = item.pillar === 'staff' && item.details?.schedule
+          // Staff AND Transport: include schedule in the lookup key
+          const needsSchedule = (item.pillar === 'staff' || item.pillar === 'transport') && item.details?.schedule;
+          const scheduleKey = needsSchedule
             ? `${item.pillar}:${item.type}_${item.details.schedule}`
             : `${item.pillar}:${item.type}`;
           const range = priceTable[scheduleKey] || priceTable[`${item.pillar}:${item.type}`];
@@ -3686,7 +3714,8 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           'villa:zone': 'zona (Bocagrande / Old Town / Barú)',
           'transport:date': 'fecha del servicio',
           'transport:passengers': '# pasajeros',
-          'transport:route': 'tipo de ruta (airport transfer / city tour / inter-city)',
+          'transport:schedule': 'jornada (medio día / día completo) — incluye chofer profesional',
+          'transport:type': 'tipo de vehículo (blindado / sedan ejecutivo / van ejecutiva / sprinter VIP / limusina)',
           'staff:days': '# días',
           'staff:guests': '# huéspedes',
           'staff:schedule': 'jornada (medio día / 8h / día completo)',
@@ -3699,7 +3728,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           'aviation:nationality': 'passenger nationality (for flight plan, antinarcotics, migration)',
           'yacht:date': 'date', 'yacht:passengers': '# passengers', 'yacht:nationality': 'nationality (for clearance)',
           'villa:nights': '# nights', 'villa:guests': '# guests', 'villa:zone': 'zone (Bocagrande / Old Town / Barú)',
-          'transport:date': 'service date', 'transport:passengers': '# passengers', 'transport:route': 'route type (airport transfer / city tour / inter-city)',
+          'transport:date': 'service date', 'transport:passengers': '# passengers', 'transport:schedule': 'shift (half day / full day) — includes professional driver', 'transport:type': 'vehicle type (armored SUV / executive sedan / executive van / VIP sprinter / limousine)',
           'staff:days': '# days', 'staff:guests': '# guests', 'staff:schedule': 'shift (half day / 8h / full day)',
           'events:type': 'event type', 'events:guests': '# guests', 'events:date': 'date',
         },
@@ -3708,7 +3737,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           'aviation:nationality': 'nacionalidade dos passageiros (para plano de voo, antinarcóticos, migração)',
           'yacht:date': 'data', 'yacht:passengers': '# passageiros', 'yacht:nationality': 'nacionalidade (para desembaraço)',
           'villa:nights': '# noites', 'villa:guests': '# hóspedes', 'villa:zone': 'zona (Bocagrande / Old Town / Barú)',
-          'transport:date': 'data do serviço', 'transport:passengers': '# passageiros', 'transport:route': 'tipo de rota (airport transfer / city tour / inter-city)',
+          'transport:date': 'data do serviço', 'transport:passengers': '# passageiros', 'transport:schedule': 'jornada (meio período / integral) — inclui motorista profissional', 'transport:type': 'tipo de veículo (blindado / sedan executivo / van executiva / sprinter VIP / limusine)',
           'staff:days': '# dias', 'staff:guests': '# hóspedes', 'staff:schedule': 'jornada (meio período / 8h / integral)',
           'events:type': 'tipo de evento', 'events:guests': '# convidados', 'events:date': 'data',
         },
@@ -3754,7 +3783,8 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
             else if (p === 'aviation' && missing.includes('nationality')) sentencesES.push('¿Qué nacionalidad tienen los pasajeros? (Para antinarcóticos y migración.)');
             else if (p === 'yacht' && missing.includes('passengers')) sentencesES.push('Para el yate, ¿cuántas personas y qué día?');
             else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) sentencesES.push('Para la villa, ¿cuántas noches y huéspedes?');
-            else if (p === 'transport' && missing.includes('route')) sentencesES.push('Para el transporte, ¿es airport transfer, city tour o inter-city?');
+            else if (p === 'transport' && missing.includes('schedule')) sentencesES.push('Para el transporte, ¿medio día o día completo?');
+            else if (p === 'transport' && missing.includes('type')) sentencesES.push('¿Qué tipo de vehículo prefiere — blindado, sedán ejecutivo, van ejecutiva o sprinter VIP?');
             else if (p === 'transport' && missing.includes('passengers')) sentencesES.push('Para el transporte, ¿cuántas personas?');
             else if (p === 'staff' && missing.includes('schedule')) sentencesES.push('Para el staff, ¿medio día, jornada de 8h o día completo?');
           } else if (lang === 'EN') {
@@ -3763,7 +3793,8 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
             else if (p === 'aviation' && missing.includes('nationality')) sentencesEN.push('What nationality are the passengers? (For antinarcotics and migration.)');
             else if (p === 'yacht' && missing.includes('passengers')) sentencesEN.push('For the yacht, how many guests and on what date?');
             else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) sentencesEN.push('For the villa, how many nights and guests?');
-            else if (p === 'transport' && missing.includes('route')) sentencesEN.push('For ground transport, will it be airport transfer, city tour, or inter-city?');
+            else if (p === 'transport' && missing.includes('schedule')) sentencesEN.push('For the transport, will that be half day or full day?');
+            else if (p === 'transport' && missing.includes('type')) sentencesEN.push('What vehicle would you like — armored SUV, executive sedan, executive van, or VIP sprinter?');
             else if (p === 'staff' && missing.includes('schedule')) sentencesEN.push('For staff, would that be half day, 8-hour shift, or full day?');
           } else {
             if (p === 'aviation' && missing.includes('passengers')) sentencesPT.push('Quantas pessoas viajam e quais datas?');
