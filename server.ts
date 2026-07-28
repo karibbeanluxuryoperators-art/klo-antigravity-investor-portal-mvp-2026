@@ -3222,29 +3222,8 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       //     varies significantly (4h lunch vs 8h standard vs 12h full day).
       //   - events → type + guests + date for: venue, vendors, permits, security plan.
       const missingForQuote: string[] = [];
-      const labelByKey: Record<string, string> = {
-        'aviation:origin': 'origen del vuelo',
-        'aviation:destination': 'destino del vuelo',
-        'aviation:date': 'fecha del vuelo',
-        'aviation:passengers': '# pasajeros',
-        'aviation:nationality': 'nacionalidad de los pasajeros (para plan de vuelo, migración, antinarcóticos)',
-        'aviation:passports': 'pasaportes listos (sí/no)',
-        'yacht:date': 'fecha del yate',
-        'yacht:passengers': '# pasajeros en el yate',
-        'yacht:nationality': 'nacionalidad (para clearance internacional)',
-        'villa:nights': '# noches',
-        'villa:guests': '# huéspedes',
-        'villa:zone': 'zona (Bocagrande / Old Town / Barú)',
-        'transport:date': 'fecha del servicio',
-        'transport:passengers': '# pasajeros',
-        'transport:route': 'tipo de ruta (airport transfer / city tour / inter-city)',
-        'staff:days': '# días',
-        'staff:guests': '# huéspedes',
-        'staff:schedule': 'jornada (medio día / 8h / día completo)',
-        'events:type': 'tipo de evento',
-        'events:guests': '# invitados',
-        'events:date': 'fecha del evento',
-      };
+      // (labelByKey is declared once below in the reply section, with the full
+      // multilingual version. This validator just collects the raw missing keys.)
 
       // Detect if aviation is international (origin/destination are non-CO airports)
       const intlAirports = /\b(mia|jfk|nyc|lax|mex|sao|gru|eze|mco|ord|yyz|lhr|cdg|frankfurt|munich|bcn|mad|lis|panama|sjo|gua|lim|clo|ups|aqp)\b/i;
