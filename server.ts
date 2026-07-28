@@ -3131,11 +3131,16 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         if (y) y.type = 'mega';
       }
 
-      if (/villa|casa|mansion|estate|resort/.test(msgLower)) {
+      if (/villa|casa|mansion|estate|resort|island|isla|private island/.test(msgLower)) {
         servicesNeeded.push('villa');
         const isOldTown = /centro|old town|histórico|historico|ciudad amurallada/.test(msgLower);
-        const isBeach = /playa|beach|baru|baru|bocagrande/.test(msgLower);
-        dna.push({ pillar: 'villa', type: isOldTown ? 'old_town' : isBeach ? 'beachfront' : 'private_villa', details: {} });
+        const isBeach = /playa|beach|baru|bocagrande/.test(msgLower);
+        const isIsland = /island|isla/.test(msgLower);
+        let villaType = 'private_villa';
+        if (isOldTown) villaType = 'old_town';
+        else if (isBeach) villaType = 'beachfront';
+        else if (isIsland) villaType = 'private_island';
+        dna.push({ pillar: 'villa', type: villaType, details: {} });
       }
 
       if (/transport|car|driver|suburban|sprinter|carro|camioneta|sedan|suv/.test(msgLower)) {
@@ -3171,11 +3176,23 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       const paxMatch = message.match(/(\d+)\s*(personas|guests|pax|huespedes|hóspedes|people)/i);
       if (paxMatch) result.passengers = parseInt(paxMatch[1], 10);
 
+      // Detect nights: explicit number, or "a week" → 7
+      let nightsValue: number | null = null;
       const nightsMatch = message.match(/(\d+)\s*(noches|nights|noite)/i);
       if (nightsMatch) {
-        const n = parseInt(nightsMatch[1], 10);
+        nightsValue = parseInt(nightsMatch[1], 10);
+      } else if (/\b(a\s+week|una\s+semana|uma\s+semana|week\s+long)\b/i.test(message)) {
+        nightsValue = 7;
+      } else if (/\b(weekend|fin\s+de\s+semana)\b/i.test(message)) {
+        nightsValue = 2;
+      } else if (/\b(long\s+weekend|puente)\b/i.test(message)) {
+        nightsValue = 3;
+      } else if (/\b(month|un\s+mes|um\s+m[eê]s)\b/i.test(message)) {
+        nightsValue = 30;
+      }
+      if (nightsValue !== null) {
         const v = dna.find((d) => d.pillar === 'villa');
-        if (v) v.details = { ...v.details, nights: n };
+        if (v) v.details = { ...v.details, nights: nightsValue };
       }
 
       // Staff schedule detection: medio día / día completo / 8h jornada
@@ -3215,7 +3232,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         'colombiano': 'CO', 'colombiana': 'CO', 'colombia': 'CO', 'co': 'CO',
         'mexicano': 'MX', 'mexicana': 'MX', 'méxico': 'MX', 'mexico': 'MX', 'mx': 'MX',
         'brasileño': 'BR', 'brasileña': 'BR', 'brasil': 'BR', 'brazil': 'BR', 'br': 'BR',
-        'argentino': 'AR', 'argentina': 'AR', 'argentina': 'AR', 'ar': 'AR',
+        'argentino': 'AR', 'argentina': 'AR', 'ar': 'AR',
         'español': 'ES', 'española': 'ES', 'españa': 'ES', 'spain': 'ES', 'es': 'ES',
         'británico': 'GB', 'británica': 'GB', 'inglés': 'GB', 'inglesa': 'GB', 'uk': 'GB', 'gb': 'GB',
         'francés': 'FR', 'francesa': 'FR', 'francia': 'FR', 'france': 'FR', 'fr': 'FR',
@@ -3794,7 +3811,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       //   - Premium:  pick the asset with highest capacity (or last)
       //   - Bespoke:  include all matching assets (broker picks)
       const options: any[] = [];
-      const tierSpecs = [
+      const tierSpecs: Array<{ key: 'standard' | 'premium' | 'bespoke'; label: string; count: number }> = [
         { key: 'standard', label: 'Standard', count: 1 },
         { key: 'premium',  label: 'Premium',  count: 2 },
         { key: 'bespoke',  label: 'Bespoke',  count: 5 },
