@@ -3328,15 +3328,11 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         result.priceEstimate = null;
       }
 
-      // ── Min-interaction reply logic ──
-      // PRIORITY 1: Once we have contact + services, propose a price range
+      // ── Reply logic — STRICT minimums: NO QUOTE without required fields ──
       const hasContact = !!(result.email || result.phone);
       const hasServices = servicesNeeded.length > 0;
       const hasPrice = result.priceEstimate && result.priceEstimate.high > 0;
-
-      // ── Reply logic — STRICT minimums: NO QUOTE without required fields ──
       const hasMissing = (result.missingForQuote || []).length > 0;
-      const hasContact = !!(result.email || result.phone);
       const hasServices = servicesNeeded.length > 0;
       const hasPrice = result.priceEstimate && result.priceEstimate.high > 0;
 
