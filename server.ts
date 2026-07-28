@@ -2960,7 +2960,7 @@ ${assetContext}`;
         },
         priceEstimate: {
           type: "OBJECT",
-          description: "USD price range Maria is comfortable quoting. CRITICAL: only set this when MINIMUM INFO is present for EVERY service requested. If ANY required detail is missing, return null. Per-service minimums — these are NOT negotiable: aviation (any route) = origin + destination + day + passengers. aviation (INTERNATIONAL, route outside Colombia e.g. MIA/JFK/SAO/PTY) = ALSO nationality + passport readiness. yacht = day + passengers. yacht (INTERNATIONAL) = ALSO nationality. villa = nights + guests. transport = days + passengers. staff = days + guests. events = type + guests + day. INTERNATIONAL DETECTION: if origin or destination is a non-CO airport code, mark isInternational=true and require the international minimums. Compute as: services-needed sum + 20% KLO management buffer. Confidence: 'low' = services only, 'medium' = + passengers, 'high' = + passengers + dates + duration. If ANY minimum is missing, return null for priceEstimate, fill missingForQuote[] with the missing keys (e.g. ['aviation:nationality','aviation:passports']) and explain in the reply WHY each is needed (flight plan, migration, antinarcotics coordination). NEVER quote a price without the minimums — a wrong quote is worse than no quote.",
+          description: "USD price range Maria is comfortable quoting. CRITICAL: only set this when MINIMUM INFO is present for EVERY service requested. If ANY required detail is missing, return null. Per-service minimums — these are NOT negotiable: aviation (any route) = origin + destination + day + passengers. aviation (INTERNATIONAL, route outside Colombia e.g. MIA/JFK/SAO/PTY) = ALSO nationality (passport numbers and expiry dates are NOT required at this stage — broker collects them during the call, not in chat). yacht = day + passengers. yacht (INTERNATIONAL) = ALSO nationality. villa = nights + guests. transport = days + passengers. staff = days + guests. events = type + guests + day. INTERNATIONAL DETECTION: if origin or destination is a non-CO airport code, mark isInternational=true and require the international minimums. Compute as: services-needed sum + 20% KLO management buffer. Confidence: 'low' = services only, 'medium' = + passengers, 'high' = + passengers + dates + duration. If ANY minimum is missing, return null for priceEstimate, fill missingForQuote[] with the missing keys and explain in the reply WHY each is needed. NEVER quote a price without the minimums — a wrong quote is worse than no quote.",
           properties: {
             low: { type: "INTEGER", description: "Lower bound in USD" },
             high: { type: "INTEGER", description: "Upper bound in USD" },
@@ -2981,7 +2981,7 @@ ${assetContext}`;
         missingForQuote: {
           type: "ARRAY",
           items: { type: "STRING" },
-          description: "List of missing required fields that prevent quoting. Empty array if everything is present. Examples: ['aviation:nationality', 'aviation:passports', 'villa:nights', 'yacht:passengers']. Maria should ask for these in the reply to enable pricing, and may briefly explain WHY each is operationally required."
+          description: "List of missing required fields that prevent quoting. Empty array if everything is present. Examples: ['aviation:nationality', 'villa:nights', 'yacht:passengers']. Maria should ask for these in the reply to enable pricing, and may briefly explain WHY each is operationally required."
         }
       },
       required: ["reply"]
@@ -3050,8 +3050,8 @@ Per-service minimums (these are operationally required, not negotiable):
   - # passengers is critical for: slot request, ATC, FBO handling, manifest, weight & balance
 - Aviation INTERNATIONAL (MIA-CTG, JFK-CTG, CTG-SAO, BOG-PTY, etc.): ALL of the above PLUS
   - passenger nationality (required for: flight plan filing, customs manifest, immigration, antinarcotics coordination)
-  - passport readiness yes/no (required for: visa checks, customs clearance at destination)
   - **You CANNOT quote an international flight without this info. The broker physically cannot file the flight plan.**
+  - **Passport numbers, expiry dates, and document numbers are NOT required at this stage.** Those are collected by the broker during the qualification call, never in chat. Don't ask for them.
 - Yacht DOMESTIC: date + passengers (captain briefing, catering, fuel)
 - Yacht INTERNATIONAL: + nationality for customs clearance
 - Villa: nights + guests (and zone if not obvious)
@@ -3138,9 +3138,10 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         dna.push({ pillar: 'villa', type: isOldTown ? 'old_town' : isBeach ? 'beachfront' : 'private_villa', details: {} });
       }
 
-      if (/transport|car|driver|suburban|sprinter|carro|camioneta/.test(msgLower)) {
+      if (/transport|car|driver|suburban|sprinter|carro|camioneta|sedan|suv/.test(msgLower)) {
         servicesNeeded.push('transport');
-        const isArmored = /armor|blindado|blindada/.test(msgLower);
+        // Note: "armor" must match "armored" (with -ed) AND "armour" (British)
+        const isArmored = /armor|armour|blindad[oa]|blindado/.test(msgLower);
         dna.push({ pillar: 'transport', type: isArmored ? 'armored_suv' : 'luxury_sedan', details: {} });
       }
 
@@ -3205,6 +3206,53 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         }
       }
 
+      // ── Nationality detection (gentilicios + country names + ISO codes) ──
+      // Common gentilicios: americano, colombiana, británica, francesa, etc.
+      // Plus country names: USA, Colombia, Brasil, México, España, etc.
+      // Plus ISO-3166-1 alpha-2 codes: US, CO, BR, MX, etc.
+      const nationalityMap: Record<string, string> = {
+        'americano': 'US', 'americana': 'US', 'estadounidense': 'US', 'usa': 'US', 'us': 'US',
+        'colombiano': 'CO', 'colombiana': 'CO', 'colombia': 'CO', 'co': 'CO',
+        'mexicano': 'MX', 'mexicana': 'MX', 'méxico': 'MX', 'mexico': 'MX', 'mx': 'MX',
+        'brasileño': 'BR', 'brasileña': 'BR', 'brasil': 'BR', 'brazil': 'BR', 'br': 'BR',
+        'argentino': 'AR', 'argentina': 'AR', 'argentina': 'AR', 'ar': 'AR',
+        'español': 'ES', 'española': 'ES', 'españa': 'ES', 'spain': 'ES', 'es': 'ES',
+        'británico': 'GB', 'británica': 'GB', 'inglés': 'GB', 'inglesa': 'GB', 'uk': 'GB', 'gb': 'GB',
+        'francés': 'FR', 'francesa': 'FR', 'francia': 'FR', 'france': 'FR', 'fr': 'FR',
+        'alemán': 'DE', 'alemana': 'DE', 'alemania': 'DE', 'germany': 'DE', 'de': 'DE',
+        'italiano': 'IT', 'italiana': 'IT', 'italia': 'IT', 'italy': 'IT', 'it': 'IT',
+        'canadiense': 'CA', 'canadá': 'CA', 'canada': 'CA', 'ca': 'CA',
+        'peruano': 'PE', 'peruana': 'PE', 'perú': 'PE', 'peru': 'PE', 'pe': 'PE',
+        'chileno': 'CL', 'chilena': 'CL', 'chile': 'CL', 'cl': 'CL',
+        'panameño': 'PA', 'panameña': 'PA', 'panamá': 'PA', 'panama': 'PA', 'pa': 'PA',
+        'venezolano': 'VE', 'venezolana': 'VE', 'venezuela': 'VE', 've': 'VE',
+        'ecuatoriano': 'EC', 'ecuatoriana': 'EC', 'ecuador': 'EC', 'ec': 'EC',
+      };
+      for (const [key, iso] of Object.entries(nationalityMap)) {
+        const re = new RegExp(`\\b${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+        if (re.test(message)) {
+          // Apply to all aviation items
+          for (const item of dna) {
+            if (item.pillar === 'aviation') {
+              item.details = { ...item.details, nationality: iso };
+            }
+          }
+          break;
+        }
+      }
+
+      // Passport readiness detection
+      if (/\b(pasaportes?\s+(listos?|ready|ok|al\s+d[ií]a|prontos?)|passports?\s+ready|todo\s+en\s+regla|documentos?\s+listos?)\b/i.test(message)) {
+        result.documentationReady = true;
+        for (const item of dna) {
+          if (item.pillar === 'aviation') {
+            item.details = { ...item.details, passports_ready: true };
+          }
+        }
+      } else if (/\b(no\s+tiene|sin\s+pasaporte|no\s+passport|pasaporte\s+vencido|expired)\b/i.test(message)) {
+        result.documentationReady = false;
+      }
+
       // ── Price estimate — STRICT MINIMUM VALIDATION ──
       // Per-service minimums required to quote. If ANY required field is missing,
       // do NOT compute a price — return null and ask only for what's missing.
@@ -3237,7 +3285,8 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           if (!result.passengers) missingForQuote.push('aviation:passengers');
           if (isInternational) {
             if (!item.details?.nationality && !item.details?.passenger_nationality) missingForQuote.push('aviation:nationality');
-            if (result.documentationReady === null || result.documentationReady === undefined) missingForQuote.push('aviation:passports');
+            // Passport readiness is collected as metadata but does NOT block the quote.
+            // The broker follows up on docs in the qualification call, not in chat.
           }
         }
         if (item.pillar === 'yacht') {
@@ -3383,8 +3432,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           'aviation:destination': 'destino',
           'aviation:date': 'fecha',
           'aviation:passengers': '# pasajeros (necesario para plan de vuelo y manifiesto)',
-          'aviation:nationality': 'nacionalidad de los pasajeros',
-          'aviation:passports': 'pasaportes listos (sí/no)',
+          'aviation:nationality': 'nacionalidad de los pasajeros (para plan de vuelo, antinarcóticos, migración)',
           'yacht:date': 'fecha',
           'yacht:passengers': '# pasajeros',
           'yacht:nationality': 'nacionalidad (para clearance)',
@@ -3403,7 +3451,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         },
         EN: {
           'aviation:origin': 'origin', 'aviation:destination': 'destination', 'aviation:date': 'date', 'aviation:passengers': '# passengers (required for flight plan + manifest)',
-          'aviation:nationality': 'passenger nationality', 'aviation:passports': 'passports ready (yes/no)',
+          'aviation:nationality': 'passenger nationality (for flight plan, antinarcotics, migration)',
           'yacht:date': 'date', 'yacht:passengers': '# passengers', 'yacht:nationality': 'nationality (for clearance)',
           'villa:nights': '# nights', 'villa:guests': '# guests', 'villa:zone': 'zone (Bocagrande / Old Town / Barú)',
           'transport:date': 'service date', 'transport:passengers': '# passengers', 'transport:route': 'route type (airport transfer / city tour / inter-city)',
@@ -3412,7 +3460,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         },
         PT: {
           'aviation:origin': 'origem', 'aviation:destination': 'destino', 'aviation:date': 'data', 'aviation:passengers': '# passageiros (necessário para plano de voo e manifesto)',
-          'aviation:nationality': 'nacionalidade dos passageiros', 'aviation:passports': 'passaportes prontos (sim/não)',
+          'aviation:nationality': 'nacionalidade dos passageiros (para plano de voo, antinarcóticos, migração)',
           'yacht:date': 'data', 'yacht:passengers': '# passageiros', 'yacht:nationality': 'nacionalidade (para desembaraço)',
           'villa:nights': '# noites', 'villa:guests': '# hóspedes', 'villa:zone': 'zona (Bocagrande / Old Town / Barú)',
           'transport:date': 'data do serviço', 'transport:passengers': '# passageiros', 'transport:route': 'tipo de rota (airport transfer / city tour / inter-city)',
