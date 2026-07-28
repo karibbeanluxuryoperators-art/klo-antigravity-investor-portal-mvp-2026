@@ -1562,22 +1562,36 @@ async function startServer() {
       if (!bundles || bundles.length === 0) return res.json([]);
 
       const bundleIds = bundles.map((b: any) => b.id);
-      // v1.8.0 Step 20.1: avoid nested embed (assets -> suppliers) — PostgREST
-      // schema cache sometimes can't resolve the second-level relationship
-      // ("Could not find a relationship between 'bundles' and 'supplier_id'"
-      // even though the FK exists). We split into 2 plain queries instead.
+      // v1.8.0 Step 20.1 + Step 22.12: avoid nested embed (assets -> suppliers)
+      // PostgREST schema cache can't resolve the second-level relationship
+      // ("Could not find a relationship between 'bundles' and 'supplier_id'")
+      // even though the FK exists. We split into 3 flat queries: bundle_items
+      // → assets (flat, by id) → suppliers (flat, by id).
       const { data: items, error: iErr } = await supabase
         .from('bundle_items')
-        .select('id, bundle_id, asset_id, qty, assets:asset_id ( name, type, location, supplier_id )')
+        .select('id, bundle_id, asset_id, qty')
         .in('bundle_id', bundleIds);
-
       if (iErr) throw iErr;
 
-      // Second query: gather all distinct supplier_ids from the assets we
-      // just loaded, then look up their business_name in one go.
+      // Second query: get the assets referenced by the bundle_items
+      const assetIds = Array.from(new Set(
+        (items || []).map((it: any) => it.asset_id).filter(Boolean)
+      ));
+      let assetMap: Record<string, any> = {};
+      if (assetIds.length > 0) {
+        const { data: assetRows, error: aErr } = await supabase
+          .from('assets')
+          .select('id, name, type, location, supplier_id')
+          .in('id', assetIds);
+        if (aErr) throw aErr;
+        assetMap = Object.fromEntries((assetRows || []).map((a: any) => [a.id, a]));
+      }
+
+      // Third query: gather all distinct supplier_ids from the assets, then
+      // look up their business_name in one flat query.
       const supplierIds = Array.from(new Set(
-        (items || [])
-          .map((it: any) => it.assets?.supplier_id)
+        Object.values(assetMap)
+          .map((a: any) => a.supplier_id)
           .filter((x: any): x is string => typeof x === 'string' && x.length > 0)
       ));
       let supplierNamesById: Record<string, string> = {};
@@ -1594,7 +1608,7 @@ async function startServer() {
 
       const itemsByBundle: Record<string, any[]> = {};
       for (const it of items || []) {
-        const a: any = (it as any).assets;
+        const a: any = assetMap[it.asset_id];
         const supplierName = a?.supplier_id ? supplierNamesById[a.supplier_id] ?? null : null;
         itemsByBundle[it.bundle_id] = itemsByBundle[it.bundle_id] || [];
         itemsByBundle[it.bundle_id].push({
@@ -2337,18 +2351,38 @@ async function startServer() {
     try {
       const { role } = await resolveAuthFromRequest(req);
       if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      // Step 22.12: split into flat queries — PostgREST schema cache can't
+      // resolve the bundles->suppliers nested embed ("Could not find a
+      // relationship between 'bundles' and 'supplier_id' in the schema cache")
       const { data, error } = await supabase
         .from('bundles')
-        .select(`id, name, description, status, price_total, created_at, supplier_id, suppliers:supplier_id ( business_name, contact_name )`)
+        .select('id, name, description, status, price_total, created_at, supplier_id')
         .order('created_at', { ascending: false });
       if (error) {
-        // 42P01 = undefined_table. Return empty so the admin view shows its empty state.
         if (error.code === '42P01' || /does not exist/i.test(error.message || '')) {
           return res.json([]);
         }
         throw error;
       }
-      res.json(data || []);
+      // Second query: gather all distinct supplier_ids and look up names
+      const supplierIds = Array.from(new Set(
+        (data || []).map((b: any) => b.supplier_id).filter((x: any): x is string => typeof x === 'string' && x.length > 0)
+      ));
+      let supplierMap: Record<string, { business_name: string; contact_name: string }> = {};
+      if (supplierIds.length > 0) {
+        const { data: sRows } = await supabase
+          .from('suppliers')
+          .select('id, business_name, contact_name')
+          .in('id', supplierIds);
+        supplierMap = Object.fromEntries((sRows || []).map((s: any) => [s.id, { business_name: s.business_name, contact_name: s.contact_name }]));
+      }
+      // Merge supplier info into the response
+      const enriched = (data || []).map((b: any) => ({
+        ...b,
+        business_name: supplierMap[b.supplier_id]?.business_name ?? null,
+        contact_name: supplierMap[b.supplier_id]?.contact_name ?? null,
+      }));
+      res.json(enriched);
     } catch (e: any) {
       res.status(500).json({ error: e?.message || 'bundles list failed' });
     }
@@ -3124,7 +3158,16 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
 
       if (/yacht|yate|iate|boat|bote|barco/.test(msgLower)) {
         servicesNeeded.push('yacht');
-        dna.push({ pillar: 'yacht', type: /sail|vela/.test(msgLower) ? 'sailing' : 'motor', details: {} });
+        // Yachts are always priced per day (full day or half day), never per hour.
+        // If the user explicitly says "by the hour" or "hourly", we still book by day
+        // and explain in the reply.
+        const isSailing = /sail|vela/.test(msgLower);
+        const isMega = /mega|super\s*yacht/.test(msgLower);
+        dna.push({
+          pillar: 'yacht',
+          type: isMega ? 'mega' : isSailing ? 'sailing' : 'motor',
+          details: { pricingUnit: 'day', pricingNote: 'Yachts are priced per day (full day) or half day. No hourly rate.' },
+        });
       }
       if (/mega|super\s*yacht/.test(msgLower) && dna.some((d) => d.pillar === 'yacht')) {
         const y = dna.find((d) => d.pillar === 'yacht');
@@ -3446,6 +3489,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         if (item.pillar === 'yacht') {
           if (!item.details?.travel_date && !result.travelDates) missingForQuote.push('yacht:date');
           if (!result.passengers) missingForQuote.push('yacht:passengers');
+          if (!item.details?.days && !item.details?.nights) missingForQuote.push('yacht:days');
           if (isInternational && !item.details?.nationality) missingForQuote.push('yacht:nationality');
         }
         if (item.pillar === 'villa') {
@@ -3581,6 +3625,11 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       const hasPrice = result.priceEstimate && result.priceEstimate.high > 0;
       const hasMissing = (result.missingForQuote || []).length > 0;
 
+      // Yacht-only correction: if user asked for hourly rental, Maria explains
+      // that yachts are priced per day (or half day), never per hour.
+      const userAskedYachtByHour = /yacht|yate|iate|boat|bote|barco/.test(msgLower) &&
+        /\b(por\s*hora|by\s*the\s*hour|hourly|per\s*hour|hour\s*rate|hourly\s*rate)\b/i.test(message);
+
       // Pre-compute grouped missing keys (used by elegant reply branches)
       const groupedByPillar: Record<string, string[]> = {};
       for (const key of (result.missingForQuote || [])) {
@@ -3630,6 +3679,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           'aviation:nationality': 'nacionalidad de los pasajeros (para plan de vuelo, antinarcóticos, migración)',
           'yacht:date': 'fecha',
           'yacht:passengers': '# pasajeros',
+          'yacht:days': '# días del charter',
           'yacht:nationality': 'nacionalidad (para clearance)',
           'villa:nights': '# noches',
           'villa:guests': '# huéspedes',
@@ -3682,6 +3732,15 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         const otherPillars = Object.keys(groupedByPillar).slice(1);
         const primaryPhrase = phraseByPillar[primaryPillar]?.[lang] || 'su solicitud';
 
+        // Special case: if user asked yacht by the hour, gently correct them
+        // (yachts are priced per day or half day, not per hour).
+        const yachtHourlyNote = userAskedYachtByHour ? (lang === 'ES'
+          ? 'Pequeño detalle: los yates se cotizan por día completo o medio día, no por hora. '
+          : lang === 'PT'
+            ? 'Pequeno detalhe: os iates são cotizados por dia completo ou meio dia, não por hora. '
+            : 'Quick note: yachts are priced per full day or half day, not per hour. '
+        ) : '';
+
         // One natural sentence per pillar, tailored to what was already captured
         const sentencesES: string[] = [];
         const sentencesEN: string[] = [];
@@ -3721,17 +3780,17 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
             ? `Excelente. Para coordinar ${pe_(servicesNeeded, lang)}, me confirma algunos detalles.`
             : `Perfecto. Para ${primaryPhrase},`;
           const outro = hasContact ? '' : ' Y, ¿cómo prefiere que le contactemos — correo o WhatsApp?';
-          result.reply = `${intro} ${sentencesES.join(' ')}${outro}`.trim();
+          result.reply = `${intro}${yachtHourlyNote} ${sentencesES.join(' ')}${outro}`.trim();
         } else if (lang === 'EN') {
           const intro = servicesNeeded.length > 1
             ? `Excellent. To coordinate ${pe_(servicesNeeded, lang)}, just a few details.`
             : `Great. For ${primaryPhrase},`;
           const outro = hasContact ? '' : ' And how would you prefer to be contacted — email or WhatsApp?';
-          result.reply = `${intro} ${sentencesEN.join(' ')}${outro}`.trim();
+          result.reply = `${intro}${yachtHourlyNote} ${sentencesEN.join(' ')}${outro}`.trim();
         } else {
           const intro = `Perfeito. Para ${primaryPhrase},`;
           const outro = hasContact ? '' : ' E, como prefere que entremos em contato — e-mail ou WhatsApp?';
-          result.reply = `${intro} ${sentencesPT.join(' ')}${outro}`.trim();
+          result.reply = `${intro}${yachtHourlyNote} ${sentencesPT.join(' ')}${outro}`.trim();
         }
       } else if (result.qualified && !hasContact) {
         // UHNW with budget but no contact — ask for it
