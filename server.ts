@@ -3642,6 +3642,286 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
     }
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // POST /api/experiences/build-from-lead
+  // Step 23: Experience Builder Engine.
+  // Takes a leadId, reads the lead's experience_dna, queries the assets table
+  // for real matching inventory, and produces 3 draft experience options
+  // (Standard / Premium / Bespoke) that the broker can review and publish.
+  //
+  // Returns: { lead, options: [{ tier, items, priceFrom, priceTo, summary }] }
+  // ─────────────────────────────────────────────────────────────────────────
+  app.post("/api/experiences/build-from-lead", async (req, res) => {
+    const { leadId } = req.body || {};
+    if (!leadId) return res.status(400).json({ error: 'leadId is required' });
+
+    try {
+      const sb = getSupabase();
+      if (!sb) return res.status(503).json({ error: 'supabase not configured' });
+
+      // 1. Fetch the lead
+      const { data: lead, error: leadErr } = await sb
+        .from('leads')
+        .select('*')
+        .eq('id', leadId)
+        .maybeSingle();
+      if (leadErr) return res.status(500).json({ error: leadErr.message });
+      if (!lead) return res.status(404).json({ error: 'lead not found' });
+
+      // experience_dna may be null (migration not run yet) — default to empty
+      const dna: any[] = Array.isArray(lead.experience_dna) ? lead.experience_dna : [];
+      if (dna.length === 0) {
+        return res.status(400).json({
+          error: 'lead has no experience_dna — Maria must capture the minimums first',
+          lead,
+        });
+      }
+
+      // 2. For each DNA item, query matching assets
+      // Map DNA types to assets.type / assets.pillar
+      const pillarToTypeMap: Record<string, string[]> = {
+        aviation: ['private_jet', 'helicopter', 'jet', 'aircraft'],
+        yacht: ['yacht', 'boat', 'sailing', 'motor_yacht', 'mega_yacht'],
+        villa: ['villa', 'house', 'estate', 'residence', 'penthouse', 'mansion'],
+        transport: ['armored_suv', 'luxury_sedan', 'sprinter', 'limousine', 'vehicle', 'transport'],
+        staff: ['chef', 'butler', 'security', 'concierge', 'staff'],
+        events: ['venue', 'event', 'wedding_venue', 'private_dining'],
+      };
+
+      // Per-pillar type normalization (DNA "heavy_jet" → assets "private_jet", etc.)
+      const typeToAssetsType: Record<string, string[]> = {
+        // aviation
+        'aviation:heavy_jet': ['private_jet'],
+        'aviation:midsize_jet': ['private_jet'],
+        'aviation:light_jet': ['private_jet'],
+        'aviation:helicopter': ['helicopter'],
+        // yacht
+        'yacht:motor': ['yacht', 'motor_yacht'],
+        'yacht:mega': ['mega_yacht'],
+        'yacht:sailing': ['sailing'],
+        // villa
+        'villa:beachfront': ['villa'],
+        'villa:old_town': ['villa', 'mansion'],
+        'villa:private_villa': ['villa', 'estate'],
+        'villa:private_island': ['villa', 'estate'],
+        'villa:penthouse': ['penthouse'],
+        // transport
+        'transport:armored_suv': ['armored_suv', 'vehicle'],
+        'transport:luxury_sedan': ['luxury_sedan', 'vehicle'],
+        'transport:sprinter': ['sprinter', 'vehicle'],
+        // staff (these are services, not assets — we synthesize a line item)
+        'staff:private_chef': [],
+        'staff:butler': [],
+        'staff:security': [],
+        'staff:concierge': [],
+        // events
+        'events:wedding': ['venue'],
+        'events:private_dining': ['venue'],
+      };
+
+      const matched: Array<{ dna: any; assets: any[] }> = [];
+      for (const item of dna) {
+        const key = `${item.pillar}:${item.type}`;
+        const targetTypes = typeToAssetsType[key] || pillarToTypeMap[item.pillar] || [];
+        if (targetTypes.length === 0) {
+          // Staff / events without asset mapping — still include but flag as synthesized
+          matched.push({ dna: item, assets: [] });
+          continue;
+        }
+        // Try each type — Supabase .in() works well for OR matching
+        const { data: assets, error: assetsErr } = await sb
+          .from('assets')
+          .select('id, name, type, location, capacity, price_per_unit, price_type, pillar, supplier_id, description, hero_image, images')
+          .in('type', targetTypes)
+          .eq('status', 'ACTIVE')
+          .limit(10);
+        if (assetsErr) {
+          console.warn('[builder] assets query failed for', key, assetsErr.message);
+        }
+        matched.push({ dna: item, assets: assets || [] });
+      }
+
+      // 3. Build 3 tiers (Standard / Premium / Bespoke)
+      //   - Standard: pick the cheapest matching asset (or first if no price)
+      //   - Premium:  pick the asset with highest capacity (or last)
+      //   - Bespoke:  include all matching assets (broker picks)
+      const options: any[] = [];
+      const tierSpecs = [
+        { key: 'standard', label: 'Standard', count: 1 },
+        { key: 'premium',  label: 'Premium',  count: 2 },
+        { key: 'bespoke',  label: 'Bespoke',  count: 5 },
+      ];
+
+      for (const tier of tierSpecs) {
+        const items: any[] = [];
+        let totalLow = 0, totalHigh = 0;
+        for (const m of matched) {
+          const item = m.dna;
+          if (m.assets.length === 0) {
+            // Synthesize a line for staff/events/services with no direct asset
+            const synth = synthesizeLineItem(item, lead);
+            items.push(synth);
+            totalLow += synth.priceLow || 0;
+            totalHigh += synth.priceHigh || 0;
+            continue;
+          }
+          // Pick the best N assets for this tier
+          const picks = pickAssets(m.assets, tier.count, tier.key);
+          for (const asset of picks) {
+            const line = buildLineItem(item, asset, lead);
+            items.push(line);
+            totalLow += line.priceLow || 0;
+            totalHigh += line.priceHigh || 0;
+          }
+        }
+        // 20% KLO orchestration buffer
+        const buffer = 1.20;
+        const priceFrom = Math.round((totalLow * buffer) / 100) * 100;
+        const priceTo = Math.round((totalHigh * buffer) / 100) * 100;
+        // Build a trilingual title based on the lead's preferred_language
+        const lang = lead.preferred_language || 'ES';
+        const title = buildExperienceTitle(lead, items, lang);
+        options.push({
+          tier: tier.key,
+          tierLabel: tier.label,
+          title,
+          items,
+          priceFrom,
+          priceTo,
+          currency: 'USD',
+          itemCount: items.length,
+          missing: matched.filter((m) => m.assets.length === 0).map((m) => `${m.dna.pillar}:${m.dna.type}`),
+        });
+      }
+
+      return res.json({
+        success: true,
+        lead,
+        options,
+        meta: {
+          leadName: lead.name || 'Lead',
+          leadEmail: lead.email,
+          preferredLanguage: lead.preferred_language || 'ES',
+          experienceCount: dna.length,
+        },
+      });
+    } catch (e: any) {
+      console.error('[builder] build-from-lead exception:', e?.message || e);
+      return res.status(500).json({ error: e?.message || 'internal error' });
+    }
+  });
+
+  // Helpers for /api/experiences/build-from-lead
+
+  function pickAssets(assets: any[], count: number, tier: 'standard' | 'premium' | 'bespoke'): any[] {
+    if (assets.length === 0) return [];
+    if (tier === 'standard') {
+      // Standard = cheapest, OR first if no price
+      const withPrice = assets.filter((a) => a.price_per_unit);
+      if (withPrice.length > 0) {
+        return [withPrice.sort((a, b) => parseFloat(a.price_per_unit) - parseFloat(b.price_per_unit))[0]];
+      }
+      return [assets[0]];
+    }
+    if (tier === 'premium') {
+      // Premium = highest capacity, OR first 2
+      const withCap = assets.filter((a) => a.capacity);
+      if (withCap.length > 0) {
+        return [withCap.sort((a, b) => (b.capacity || 0) - (a.capacity || 0))[0]];
+      }
+      return assets.slice(0, Math.min(2, assets.length));
+    }
+    // Bespoke = up to N most expensive
+    return assets
+      .filter((a) => a.price_per_unit)
+      .sort((a, b) => parseFloat(b.price_per_unit) - parseFloat(a.price_per_unit))
+      .slice(0, count);
+  }
+
+  function parsePrice(priceStr: string | null | undefined): number {
+    if (!priceStr) return 0;
+    const m = String(priceStr).match(/(\d+(?:[,.\d]*))/);
+    if (!m) return 0;
+    return parseFloat(m[1].replace(/,/g, '')) || 0;
+  }
+
+  function buildLineItem(dnaItem: any, asset: any, lead: any): any {
+    const basePrice = parsePrice(asset.price_per_unit);
+    const nights = dnaItem.details?.nights || lead.travelers || 1;
+    // Estimate low/high as base ± 20%
+    const low = Math.round(basePrice * 0.85);
+    const high = Math.round(basePrice * 1.15);
+    return {
+      pillar: dnaItem.pillar,
+      type: dnaItem.type,
+      assetId: asset.id,
+      assetName: asset.name,
+      assetType: asset.type,
+      assetLocation: asset.location,
+      supplierId: asset.supplier_id,
+      pricePerUnit: asset.price_per_unit,
+      priceLow: low,
+      priceHigh: high,
+      details: dnaItem.details || {},
+      capacity: asset.capacity,
+      nights,
+    };
+  }
+
+  function synthesizeLineItem(dnaItem: any, lead: any): any {
+    // Used for staff / events where no direct asset exists.
+    // Pull the price range from the same calibration table Maria uses.
+    const priceTable: Record<string, [number, number]> = {
+      'staff:private_chef_eight_hour': [1200, 2500],
+      'staff:private_chef_half_day': [600, 1300],
+      'staff:private_chef_full_day': [1800, 3700],
+      'staff:butler_eight_hour': [900, 1800],
+      'staff:butler_half_day': [450, 900],
+      'staff:butler_full_day': [1300, 2700],
+      'staff:security_eight_hour': [1500, 3500],
+      'staff:security_half_day': [800, 1800],
+      'staff:security_full_day': [2200, 5000],
+      'staff:concierge_eight_hour': [800, 1500],
+      'staff:concierge_half_day': [400, 800],
+      'staff:concierge_full_day': [1200, 2200],
+      'events:wedding': [25000, 80000],
+      'events:private_dining': [5000, 15000],
+    };
+    const sched = dnaItem.details?.schedule || 'eight_hour';
+    const key = `${dnaItem.pillar}:${dnaItem.type}_${dnaItem.pillar === 'events' ? '' : sched}`.replace('_$', '');
+    const range = priceTable[key] || [1000, 2500];
+    const days = dnaItem.details?.days || dnaItem.details?.nights || lead.travelers || 1;
+    return {
+      pillar: dnaItem.pillar,
+      type: dnaItem.type,
+      assetId: null,
+      assetName: `${dnaItem.type.replace('_', ' ')} (synthesized — broker to source)`,
+      pricePerUnit: null,
+      priceLow: range[0] * days,
+      priceHigh: range[1] * days,
+      details: dnaItem.details || {},
+      synthesized: true,
+      days,
+    };
+  }
+
+  function buildExperienceTitle(lead: any, items: any[], lang: 'EN' | 'ES' | 'PT'): string {
+    const pillars = Array.from(new Set(items.map((i) => i.pillar)));
+    const origin = lead.origin || '';
+    const destination = lead.destination || 'Cartagena';
+    const nights = lead.travelers || items.find((i) => i.details?.nights)?.details?.nights || '';
+    const labelByLang: Record<string, Record<string, string>> = {
+      ES: { multi: 'Experiencia Multi-Pilar', aviation: 'Aviación Privada', yacht: 'Yate', villa: 'Villa', transport: 'Transporte', staff: 'Staff', events: 'Evento' },
+      EN: { multi: 'Multi-Pillar Experience', aviation: 'Private Aviation', yacht: 'Yacht', villa: 'Villa', transport: 'Transport', staff: 'Staff', events: 'Event' },
+      PT: { multi: 'Experiência Multi-Pilar', aviation: 'Aviação Privada', yacht: 'Iate', villa: 'Villa', transport: 'Transporte', staff: 'Staff', events: 'Evento' },
+    };
+    const labels = labelByLang[lang] || labelByLang.ES;
+    const parts = pillars.map((p) => labels[p] || p).join(' + ');
+    const route = origin && destination ? ` ${origin} → ${destination}` : ` ${destination}`;
+    const dur = nights ? ` — ${nights} ${lang === 'EN' ? 'nights' : lang === 'PT' ? 'noites' : 'noches'}` : '';
+    return `${labels.multi}: ${parts}${route}${dur}`;
+  }
+
   app.post("/api/calendar/disconnect/:supplier_id", async (req, res) => {
     const { supplier_id } = req.params;
     try {
