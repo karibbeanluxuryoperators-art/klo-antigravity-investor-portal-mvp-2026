@@ -2936,7 +2936,39 @@ ${assetContext}`;
         documentationReady: { type: "BOOLEAN", description: "True if user confirms passports/visas ready, else null" },
         preferredLanguage: { type: "STRING", description: "'EN' | 'ES' | 'PT' based on user's language" },
         pillarInterest: { type: "STRING", description: "Primary pillar: 'aviation' | 'yacht' | 'villa' | 'transport' | 'staff' | 'mixed'" },
-        qualified: { type: "BOOLEAN", description: "True if budget >= 10000 USD OR user is a clear UHNW (executive, family office, founder); else false" }
+        qualified: { type: "BOOLEAN", description: "True if budget >= 10000 USD OR user is a clear UHNW (executive, family office, founder); else false" },
+        // ── Experience DNA (Step 22) ──
+        // Structured detail of what each lead needs so a broker can re-contact
+        // with a pre-priced proposal. Maria extracts automatically — no extra questions.
+        experienceDna: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {
+              pillar: { type: "STRING", description: "aviation | yacht | villa | transport | staff | events" },
+              type: {
+                type: "STRING",
+                description: "Specific sub-type. Aviation: 'light_jet' | 'midsize_jet' | 'heavy_jet' | 'helicopter'. Yacht: 'sailing' | 'motor' | 'mega' | 'catamaran'. Villa: 'beachfront' | 'old_town' | 'private_island' | 'penthouse'. Transport: 'armored_suv' | 'luxury_sedan' | 'sprinter' | 'limousine'. Staff: 'private_chef' | 'butler' | 'security' | 'concierge'. Events: 'wedding' | 'birthday' | 'corporate' | 'private_dining'."
+              },
+              details: {
+                type: "OBJECT",
+                description: "Any specifics: passengers, route, bedrooms, nights, dietary, flexibility, etc. Free-form key/value."
+              }
+            }
+          },
+          description: "Structured DNA of what the lead needs. Extract automatically from what the user mentioned, do not ask extra questions. Empty array if nothing mentioned yet."
+        },
+        priceEstimate: {
+          type: "OBJECT",
+          description: "USD price range Maria is comfortable quoting. Compute as: services-needed sum + 20% KLO management. Confidence: 'low' = only services known, 'medium' = services+passengers, 'high' = services+passengers+dates+duration.",
+          properties: {
+            low: { type: "INTEGER", description: "Lower bound in USD" },
+            high: { type: "INTEGER", description: "Upper bound in USD" },
+            currency: { type: "STRING", description: "'USD' always" },
+            confidence: { type: "STRING", description: "'low' | 'medium' | 'high'" },
+            reasoning: { type: "STRING", description: "One-line explanation in the user's language. E.g. 'Heavy jet MIA-CTG + 5 nights beachfront villa in Barú + private chef'." }
+          }
+        }
       },
       required: ["reply"]
     };
@@ -2951,8 +2983,22 @@ KLO is Cartagena's most exclusive ultra-luxury travel platform, in its founding 
 - LAND: armored VIP ground transport
 - STAFF: private chefs, security, concierges
 
-PRICING:
-Our bespoke orchestrations start at $10,000 USD total. We never quote a fee — the price we give is all-inclusive.
+PRICING (for your own calibration — never quote to the user as a list):
+- Light jet intra-Colombia (BOG-CTG, MDE-CTG): $4,500-$9,000 per leg
+- Midsize jet regional (MIA-CTG, JFK-CTG): $18,000-$32,000 per leg
+- Heavy jet / long-range: $45,000-$120,000 per leg
+- Helicopter (CTG-Bok, CTG-Isla Barú, CTG-Isla Rosario): $1,800-$4,500 per flight
+- Motor yacht day charter (40-60ft, 8-12 pax): $3,500-$7,500 / day
+- Mega yacht day charter (80ft+, 12+ pax): $12,000-$25,000 / day
+- Sailing yacht day: $2,500-$5,000 / day
+- Private villa nightly (3-5BR, beachfront): $2,500-$6,000 / night
+- Private villa nightly (5-8BR, ultra-luxe): $6,000-$18,000 / night
+- Private chef daily: $1,200-$2,500 / day
+- Butler daily: $900-$1,800 / day
+- Armored SUV daily with driver: $1,200-$2,200 / day
+- Wedding / private event: from $25,000 all-in
+
+Your bespoke orchestrations start at $10,000 USD total. We never quote a fee — the price we give is all-inclusive. When the user asks for an estimate, give a range (low–high) rounded to the nearest $500, and always include 20% buffer for KLO's orchestration.
 
 YOUR PERSONALITY:
 - Warm, discreet, effortlessly knowledgeable (think Aman, Belmond, NetJets)
@@ -2960,20 +3006,36 @@ YOUR PERSONALITY:
 - Speak in the user's language (Spanish, English, or Portuguese)
 - One question at a time — never interrogate
 - If something is outside scope, offer a human concierge follow-up
+- **MIN-INTERACTION PHILOSOPHY**: respect the user's time. Once you have an email/phone AND enough detail to estimate, propose a price range and offer to connect with a broker. Don't drag out the conversation.
 
-YOUR GOAL:
-Conversational qualification. Over the course of the dialogue, gather:
-1. Full name + (email OR phone) so a broker can follow up
-2. Budget (threshold: $10,000+ USD = "Gold Tier", high-priority routing)
-3. Travel dates / season
-4. Number of VIP guests
-5. Services needed (1+ of: aviation, yacht, villa, transport, staff, events)
-6. Origin / destination (helps with logistics)
-7. Passport/visa readiness
+YOUR GOAL — in this priority order:
+1. Capture contact: full name + (email OR phone) — this is the priority.
+2. As soon as contact is captured, PROPOSE A PRICE RANGE based on what they've mentioned. Don't wait for full qualification.
+3. Offer to connect with a dedicated broker for the bespoke proposal.
 
 QUALIFICATION RULE:
 - Set "qualified": true if budget >= 10000 USD, OR if the user clearly identifies as UHNW (mentions being a CEO/founder/family office, names a 6-figure+ budget, asks for multi-asset orchestration).
 - Otherwise "qualified": false.
+
+EXPERIENCE DNA (auto-extract — do not ask extra questions for these):
+- Build an "experienceDna" array of { pillar, type, details } for every service the user mentioned.
+- Examples of type detection:
+  - "private jet" with no size → type: "private_jet" (default heavy_jet if it's a long route, light_jet if intra-Colombia)
+  - "yate" / "yacht" → type: "motor" by default
+  - "villa en la playa" → pillar: "villa", type: "beachfront"
+  - "casa en el centro histórico" → pillar: "villa", type: "old_town"
+  - "chef privado" → pillar: "staff", type: "private_chef"
+  - "helicóptero" → pillar: "aviation", type: "helicopter"
+  - Always capture details: { passengers, route, bedrooms, nights, dietary, dates } if mentioned.
+
+PRICE ESTIMATE (auto-compute once services are clear):
+- Sum the per-service price range from the calibration table.
+- Apply ±20% buffer for orchestration.
+- Set confidence:
+  - "low" — only services mentioned, no passengers/dates
+  - "medium" — services + passengers known
+  - "high" — services + passengers + dates + duration
+- Provide a one-line "reasoning" in the user's language.
 
 LANGUAGE:
 Respond in the user's language. Mirror their tone. Always reply in JSON matching the specified schema.`;
@@ -2984,26 +3046,96 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       const msgLower = message.toLowerCase();
       const result: any = {
         reply: lang === 'ES'
-          ? 'Buenas tardes. Soy María, su asesora en KLO. Para preparar su itinerario perfecto en Cartagena, ¿podría indicarme qué tipo de servicios necesita? Ofrecemos jets privados, yates, villas exclusivas y transporte VIP.'
+          ? 'Buenas tardes. Soy María, su asesora en KLO. ¿En qué puedo ayudarle? Ofrecemos jets privados, yates, villas exclusivas, transporte VIP y personal.'
           : lang === 'PT'
-            ? 'Boa tarde. Sou María, sua consultora na KLO. Para preparar seu itinerário perfeito em Cartagena, poderia me dizer quais serviços precisa? Oferecemos jatos privados, iates, villas exclusivas e transporte VIP.'
-            : 'Good afternoon. I am María, your KLO concierge. To prepare your perfect Cartagena itinerary, may I ask which services you require? We offer private jets, mega-yachts, exclusive villas, and VIP ground transport.',
+            ? 'Boa tarde. Sou María, sua consultora na KLO. Como posso ajudar? Oferecemos jatos privados, iates, villas exclusivas, transporte VIP e staff.'
+            : 'Good afternoon. I am María, your KLO concierge. How may I help? We offer private jets, mega-yachts, exclusive villas, VIP ground transport, and staff.',
         fullName: null, email: null, phone: null,
         servicesNeeded: [],
         travelDates: null, origin: null, destination: null,
         passengers: null, budget: null,
         documentationReady: null, preferredLanguage: lang, pillarInterest: null, qualified: false,
+        experienceDna: [],
+        priceEstimate: null,
       };
-      if (/jet|fly|aviation|vuelo|voo|plane|aircraft|helicopter/.test(msgLower)) result.servicesNeeded.push('aviation');
-      if (/yacht|yate|iate|boat|bote|barco/.test(msgLower)) result.servicesNeeded.push('yacht');
-      if (/villa|casa|mansion|estate|resort/.test(msgLower)) result.servicesNeeded.push('villa');
-      if (/transport|car|driver|suburban|sprinter|carro|camioneta/.test(msgLower)) result.servicesNeeded.push('transport');
-      if (/chef|security|staff|concierge|guard/.test(msgLower)) result.servicesNeeded.push('staff');
-      if (/event|wedding|birthday|evento|boda|casamiento/.test(msgLower)) result.servicesNeeded.push('events');
+
+      // ── Services detection + DNA extraction ──
+      const dna: any[] = [];
+      const servicesNeeded: string[] = [];
+
+      // Aviation sub-type detection
+      if (/helicopter|helicóptero|helicoptero/.test(msgLower)) {
+        servicesNeeded.push('aviation');
+        dna.push({ pillar: 'aviation', type: 'helicopter', details: {} });
+      } else if (/jet|fly|aviation|vuelo|voo|plane|aircraft/.test(msgLower)) {
+        servicesNeeded.push('aviation');
+        // Heuristic: if long route (MIA, JFK, NYC, LAX, etc) → heavy, otherwise light
+        const isLong = /\b(mia|jfk|nyc|lax|mex|sao|gru|eze|mco|ord|yyz|lhr)\b/i.test(msgLower);
+        dna.push({ pillar: 'aviation', type: isLong ? 'heavy_jet' : 'light_jet', details: {} });
+      }
+
+      if (/yacht|yate|iate|boat|bote|barco/.test(msgLower)) {
+        servicesNeeded.push('yacht');
+        dna.push({ pillar: 'yacht', type: /sail|vela/.test(msgLower) ? 'sailing' : 'motor', details: {} });
+      }
+      if (/mega|super\s*yacht/.test(msgLower) && dna.some((d) => d.pillar === 'yacht')) {
+        const y = dna.find((d) => d.pillar === 'yacht');
+        if (y) y.type = 'mega';
+      }
+
+      if (/villa|casa|mansion|estate|resort/.test(msgLower)) {
+        servicesNeeded.push('villa');
+        const isOldTown = /centro|old town|histórico|historico|ciudad amurallada/.test(msgLower);
+        const isBeach = /playa|beach|baru|baru|bocagrande/.test(msgLower);
+        dna.push({ pillar: 'villa', type: isOldTown ? 'old_town' : isBeach ? 'beachfront' : 'private_villa', details: {} });
+      }
+
+      if (/transport|car|driver|suburban|sprinter|carro|camioneta/.test(msgLower)) {
+        servicesNeeded.push('transport');
+        const isArmored = /armor|blindado|blindada/.test(msgLower);
+        dna.push({ pillar: 'transport', type: isArmored ? 'armored_suv' : 'luxury_sedan', details: {} });
+      }
+
+      if (/chef|security|staff|concierge|guard/.test(msgLower)) {
+        servicesNeeded.push('staff');
+        if (/chef/.test(msgLower)) dna.push({ pillar: 'staff', type: 'private_chef', details: {} });
+        if (/security|guard|seguridad/.test(msgLower)) dna.push({ pillar: 'staff', type: 'security', details: {} });
+        if (!dna.some((d) => d.pillar === 'staff')) dna.push({ pillar: 'staff', type: 'concierge', details: {} });
+      }
+
+      if (/event|wedding|birthday|evento|boda|casamiento/.test(msgLower)) {
+        servicesNeeded.push('events');
+        dna.push({ pillar: 'events', type: /wedding|boda|casamiento/.test(msgLower) ? 'wedding' : 'private_dining', details: {} });
+      }
+
+      result.servicesNeeded = servicesNeeded;
+      result.experienceDna = dna;
+      if (servicesNeeded.length > 0) result.pillarInterest = servicesNeeded[0];
+
+      // ── Contact extraction ──
       const emailMatch = message.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
       if (emailMatch) result.email = emailMatch[0];
       const phoneMatch = message.match(/(\+?\d[\d\s\-()]{7,}\d)/);
       if (phoneMatch) result.phone = phoneMatch[0].trim();
+
+      // ── Passengers / dates / budget extraction ──
+      const paxMatch = message.match(/(\d+)\s*(personas|guests|pax|huespedes|hóspedes|people)/i);
+      if (paxMatch) result.passengers = parseInt(paxMatch[1], 10);
+
+      const nightsMatch = message.match(/(\d+)\s*(noches|nights|noite)/i);
+      if (nightsMatch) {
+        const n = parseInt(nightsMatch[1], 10);
+        const v = dna.find((d) => d.pillar === 'villa');
+        if (v) v.details = { ...v.details, nights: n };
+      }
+
+      const dateMatch = message.match(/(\d{4}-\d{2}-\d{2})/);
+      if (dateMatch) {
+        result.travelDates = dateMatch[1];
+        const v = dna[0];
+        if (v) v.details = { ...v.details, travel_date: dateMatch[1] };
+      }
+
       const numMatches = message.match(/\b(\d{4,7})\b/g);
       if (numMatches) {
         for (const n of numMatches) {
@@ -3011,29 +3143,117 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           if (v >= 10000) { result.budget = v; result.qualified = true; break; }
         }
       }
-      if (result.servicesNeeded.length > 0) {
-        result.pillarInterest = result.servicesNeeded[0];
+
+      // ── Price estimate (uses the same calibration as the Gemini prompt) ──
+      if (dna.length > 0) {
+        const priceTable: Record<string, [number, number]> = {
+          'aviation:light_jet': [4500, 9000],
+          'aviation:midsize_jet': [18000, 32000],
+          'aviation:heavy_jet': [45000, 120000],
+          'aviation:helicopter': [1800, 4500],
+          'yacht:motor': [3500, 7500],
+          'yacht:mega': [12000, 25000],
+          'yacht:sailing': [2500, 5000],
+          'villa:beachfront': [2500, 6000],
+          'villa:old_town': [2000, 4500],
+          'villa:private_villa': [6000, 18000],
+          'villa:private_island': [15000, 40000],
+          'villa:penthouse': [3000, 8000],
+          'transport:armored_suv': [1200, 2200],
+          'transport:luxury_sedan': [800, 1500],
+          'transport:sprinter': [1500, 2800],
+          'staff:private_chef': [1200, 2500],
+          'staff:butler': [900, 1800],
+          'staff:security': [1500, 3500],
+          'staff:concierge': [800, 1500],
+          'events:wedding': [25000, 80000],
+          'events:private_dining': [5000, 15000],
+        };
+        let low = 0, high = 0;
+        for (const item of dna) {
+          const key = `${item.pillar}:${item.type}`;
+          const range = priceTable[key];
+          if (range) { low += range[0]; high += range[1]; }
+        }
+        // Apply nights multiplier for villa
+        const v = dna.find((d) => d.pillar === 'villa');
+        if (v?.details?.nights) {
+          const n = v.details.nights;
+          low = low - (priceTable[`villa:${v.type}`]?.[0] || 0) + (priceTable[`villa:${v.type}`]?.[0] || 0) * n;
+          high = high - (priceTable[`villa:${v.type}`]?.[1] || 0) + (priceTable[`villa:${v.type}`]?.[1] || 0) * n;
+        }
+        // 20% KLO orchestration buffer
+        low = Math.round(low * 1.2 / 500) * 500;
+        high = Math.round(high * 1.2 / 500) * 500;
+        // Confidence
+        const hasPax = !!result.passengers;
+        const hasDates = !!result.travelDates || !!v?.details?.nights;
+        const confidence = hasPax && hasDates ? 'high' : hasPax ? 'medium' : 'low';
+        const reasoning = dna.map((d) => {
+          if (d.pillar === 'aviation') return d.type === 'helicopter' ? 'helicopter transfer' : `${d.type.replace('_', ' ')} charter`;
+          if (d.pillar === 'yacht') return `${d.type} yacht day`;
+          if (d.pillar === 'villa') return `${d.details?.nights || '?'} night ${d.type.replace('_', ' ')} villa`;
+          if (d.pillar === 'transport') return `${d.type.replace('_', ' ')} daily`;
+          if (d.pillar === 'staff') return `${d.type.replace('_', ' ')}`;
+          if (d.pillar === 'events') return `${d.type.replace('_', ' ')}`;
+          return d.pillar;
+        }).join(' + ');
+        result.priceEstimate = { low, high, currency: 'USD', confidence, reasoning };
       }
-      // Compose progression reply
-      if (result.qualified) {
+
+      // ── Min-interaction reply logic ──
+      // PRIORITY 1: Once we have contact + services, propose a price range
+      const hasContact = !!(result.email || result.phone);
+      const hasServices = servicesNeeded.length > 0;
+      const hasPrice = result.priceEstimate && result.priceEstimate.high > 0;
+
+      if (hasContact && hasServices && hasPrice) {
+        // MIN-INTERACTION FLOW: we have enough — propose + offer broker
+        const pe = result.priceEstimate;
+        const priceStr = `$${pe.low.toLocaleString()}-$${pe.high.toLocaleString()} USD`;
         result.reply = lang === 'ES'
-          ? `Excelente. Un presupuesto de $${result.budget?.toLocaleString()} USD nos permite activar nuestro nivel elite. Para asignar un broker dedicado, ¿podría compartir su nombre completo y un correo o WhatsApp de contacto?`
+          ? `Perfecto. Para ${pe.reasoning}, nuestra orquestación estimada está en ${priceStr} (todo incluido, sin sorpresas). Un broker dedicado le contactará a ${result.email || result.phone} en las próximas 2 horas con una propuesta personalizada. ¿Prefiere WhatsApp, email o llamada?`
           : lang === 'PT'
-            ? `Excelente. Um orçamento de $${result.budget?.toLocaleString()} USD nos permite ativar nosso nível elite. Para atribuir um broker dedicado, poderia compartilhar seu nome completo e um e-mail ou WhatsApp?`
+            ? `Perfeito. Para ${pe.reasoning}, nossa orquestração estimada está em ${priceStr} (tudo incluso, sem surpresas). Um broker dedicado entrará em contato via ${result.email || result.phone} nas próximas 2 horas com uma proposta personalizada. Prefere WhatsApp, e-mail ou chamada?`
+            : `Perfect. For ${pe.reasoning}, our estimated orchestration is ${priceStr} (all-inclusive, no surprises). A dedicated broker will reach out to ${result.email || result.phone} within 2 hours with a bespoke proposal. WhatsApp, email, or call?`;
+      } else if (result.qualified && !hasContact) {
+        // UHNW with budget but no contact — ask for it (priority #1)
+        result.reply = lang === 'ES'
+          ? `Excelente. Con un presupuesto de $${result.budget?.toLocaleString()} USD podemos activar nuestro nivel elite. Para asignar un broker dedicado, ¿podría compartir su nombre completo y un correo o WhatsApp?`
+          : lang === 'PT'
+            ? `Excelente. Com orçamento de $${result.budget?.toLocaleString()} USD podemos ativar nosso nível elite. Para atribuir um broker dedicado, poderia compartilhar seu nome completo e um e-mail ou WhatsApp?`
             : `Excellent. A budget of $${result.budget?.toLocaleString()} USD unlocks our elite tier. To assign a dedicated broker, may I have your full name and an email or WhatsApp contact?`;
-      } else if (result.email || result.phone) {
+      } else if (hasContact && !hasServices) {
+        // Have contact but no services — ask what they need
         result.reply = lang === 'ES'
-          ? 'Gracias. He registrado sus datos de contacto. Un broker dedicado se pondrá en contacto en breve. ¿Podría indicarme fechas tentativas de viaje y número de huéspedes?'
+          ? `Gracias. He registrado sus datos. ¿Qué tipo de experiencia le interesa? Jets privados, yates, villas, transporte o eventos?`
           : lang === 'PT'
-            ? 'Obrigado. Registrei seus dados de contato. Um broker dedicado entrará em contato em breve. Poderia indicar datas de viagem e número de hóspedes?'
-            : 'Thank you. I have noted your contact details. A dedicated broker will reach out shortly. Could you share tentative travel dates and party size?';
-      } else if (result.servicesNeeded.length > 0) {
-        const svc = result.servicesNeeded.join(', ');
+            ? `Obrigado. Registrei seus dados. Que tipo de experiência lhe interessa? Jatos, iates, villas, transporte ou eventos?`
+            : `Thank you. I have noted your contact. What type of experience interests you? Private jets, mega-yachts, exclusive villas, transport, or events?`;
+      } else if (hasServices && !hasContact) {
+        // Have services but no contact — propose a rough estimate + ask for contact
+        if (hasPrice) {
+          const pe = result.priceEstimate;
+          const priceStr = `$${pe.low.toLocaleString()}-$${pe.high.toLocaleString()} USD`;
+          result.reply = lang === 'ES'
+            ? `${pe.reasoning.charAt(0).toUpperCase() + pe.reasoning.slice(1)} — estimación inicial ${priceStr} (todo incluido). Para enviarle una propuesta personalizada, ¿me comparte su correo o WhatsApp?`
+            : lang === 'PT'
+              ? `${pe.reasoning.charAt(0).toUpperCase() + pe.reasoning.slice(1)} — estimativa inicial ${priceStr} (tudo incluso). Para enviar uma proposta personalizada, poderia compartilhar seu e-mail ou WhatsApp?`
+              : `${pe.reasoning.charAt(0).toUpperCase() + pe.reasoning.slice(1)} — initial estimate ${priceStr} (all-inclusive). To send you a bespoke proposal, may I have your email or WhatsApp?`;
+        } else {
+          result.reply = lang === 'ES'
+            ? `Entendido. ¿Para cuántos huéspedes? Y, ¿cómo prefiere que le contactemos — correo o WhatsApp?`
+            : lang === 'PT'
+              ? `Entendido. Para quantos hóspedes? E, como prefere que entremos em contato — e-mail ou WhatsApp?`
+              : `Noted. For how many guests? And how would you prefer to be contacted — email or WhatsApp?`;
+        }
+      } else if (hasContact) {
+        // Just contact, nothing else — confirm
         result.reply = lang === 'ES'
-          ? `Perfecto, ${svc}. Cartagena es excepcional para eso. Para dimensionar la logística, ¿cuántos huéspedes viajarán y cuál es el rango de presupuesto que tiene en mente? Nuestras orquestaciones начинаются en $10,000 USD.`
+          ? `Gracias, registrado. Un broker le contactará a ${result.email || result.phone} en breve. Mientras tanto, ¿hay algo específico que quisiera agregar a su solicitud?`
           : lang === 'PT'
-            ? `Perfeito, ${svc}. Cartagena é excepcional para isso. Para dimensionar a logística, quantos hóspedes viajarão e qual é a faixa de orçamento? Nossas orquestrações начинаются em $10.000 USD.`
-            : `Perfect, ${svc}. Cartagena is exceptional for that. To size the logistics, how many guests will travel and what is the budget range you have in mind? Our orchestrations start at $10,000 USD.`;
+            ? `Obrigado, registrado. Um broker entrará em contato via ${result.email || result.phone} em breve. Enquanto isso, há algo específico que gostaria de adicionar?`
+            : `Thank you, noted. A broker will reach out to ${result.email || result.phone} shortly. In the meantime, is there anything specific you'd like to add?`;
       }
 
       // Persist to Supabase
@@ -3072,6 +3292,8 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       if (!result.pillarInterest && Array.isArray(result.servicesNeeded) && result.servicesNeeded.length > 0) {
         result.pillarInterest = result.servicesNeeded[0];
       }
+      // Default experienceDna to empty array if Gemini didn't return it
+      if (!Array.isArray(result.experienceDna)) result.experienceDna = [];
 
       // Persist to Supabase
       const lead = await persistMariaLead(result, existingLeadId);
@@ -3132,7 +3354,16 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         { budget_min: result.budget ? Math.round(result.budget * 0.85) : null, budget_max: result.budget || null },
         { pillar_interest: result.pillarInterest || null, trip_type: 'LEISURE', accommodation: 'PRIVATE_VILLA' },
         { tags: result.qualified ? ['maria-chat', 'auto-qualified'] : ['maria-chat'] },
+        // Step 22: Experience DNA + price estimate
+        { experience_dna: Array.isArray(result.experienceDna) ? result.experienceDna : [] },
       ];
+      // Price estimate — if Maria computed one, store it (single number = low end)
+      if (result.priceEstimate && typeof result.priceEstimate === 'object' && result.priceEstimate.low) {
+        extendedBlocks.push({
+          price_estimate_usd: Number(result.priceEstimate.low) || null,
+          estimate_confidence: result.priceEstimate.confidence || null,
+        });
+      }
       if (result.travelDates) {
         const m = String(result.travelDates).match(/(\d{4}-\d{2}-\d{2})/);
         if (m) extendedBlocks[1].travel_date = m[1];
