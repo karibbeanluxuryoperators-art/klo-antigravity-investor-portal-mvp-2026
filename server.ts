@@ -3396,8 +3396,6 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       const hasServices = servicesNeeded.length > 0;
       const hasPrice = result.priceEstimate && result.priceEstimate.high > 0;
       const hasMissing = (result.missingForQuote || []).length > 0;
-      const hasServices = servicesNeeded.length > 0;
-      const hasPrice = result.priceEstimate && result.priceEstimate.high > 0;
 
       // Helper: format the list of missing fields in the user's language
       const labelByKey: Record<string, Record<string, string>> = {
