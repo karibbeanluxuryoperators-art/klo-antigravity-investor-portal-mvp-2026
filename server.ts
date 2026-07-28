@@ -3469,11 +3469,16 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           staff:     { EN: 'staff',           ES: 'personal',          PT: 'equipe' },
           events:    { EN: 'an event',        ES: 'un evento',          PT: 'um evento' },
         };
+        const connector: Record<string, { join: string; last: string }> = {
+          EN: { join: ', ', last: ' and ' },
+          ES: { join: ', ', last: ' y ' },
+          PT: { join: ', ', last: ' e ' },
+        };
         const labels = svcs.map((s) => dict[s]?.[lng] || s);
         if (labels.length === 0) return '';
         if (labels.length === 1) return labels[0];
-        if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
-        return labels.slice(0, -1).join(', ') + ' and ' + labels[labels.length - 1];
+        if (labels.length === 2) return `${labels[0]}${connector[lng].last}${labels[1]}`;
+        return labels.slice(0, -1).join(connector[lng].join) + connector[lng].last + labels[labels.length - 1];
       }
 
       // Helper: format the list of missing fields in the user's language
