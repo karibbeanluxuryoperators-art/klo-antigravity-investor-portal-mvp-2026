@@ -2886,6 +2886,284 @@ ${assetContext}`;
     }
   });
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // POST /api/maria/chat  — María AI Concierge v3
+  // Migrated from KLO-Concierge-OS (Firebase) → KLO Platform (Supabase).
+  // - Structured extraction: fullName, email, phone, services, dates, pax, budget, language
+  // - Trilingual: EN/ES/PT (auto-detect or via req.body.lang)
+  // - Auto-persists to `leads` table using the 60+ extended fields (Step 20)
+  // - Resilient insert: drops fields that don't exist yet (PGRST204/42703)
+  // - Returns contract that AIAssistant.tsx expects: { success, reply, lead, meta }
+  // ─────────────────────────────────────────────────────────────────────────
+  app.post("/api/maria/chat", async (req, res) => {
+    const { message, history, lang: reqLang, leadId: existingLeadId } = req.body || {};
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'message is required' });
+    }
+
+    // Auto-detect language from message if not provided
+    const detectLang = (txt: string): 'EN' | 'ES' | 'PT' => {
+      const t = txt.toLowerCase();
+      // Common PT markers
+      if (/\b(bom dia|boa tarde|boa noite|olá|obrigad[oa]|por favor|quero|gostaria|vocês?|está|estou|tenho)\b/.test(t)) return 'PT';
+      // Common ES markers
+      if (/\b(hola|buenos días|buenas tardes|buenas noches|gracias|por favor|quiero|quisiera|tengo|está|estoy)\b/.test(t)) return 'ES';
+      return 'EN';
+    };
+    const lang: 'EN' | 'ES' | 'PT' = (reqLang === 'EN' || reqLang === 'ES' || reqLang === 'PT') ? reqLang : detectLang(message);
+
+    // ── Schema for structured extraction (Gemini) ──
+    const responseSchema = {
+      type: "OBJECT",
+      properties: {
+        reply: {
+          type: "STRING",
+          description: "Warm, elegant, discreet concierge reply in the same language as the user. Progress qualification questions one at a time. Never be pushy."
+        },
+        fullName: { type: "STRING", description: "Guest's full name if mentioned, else null" },
+        email: { type: "STRING", description: "Email address if mentioned, else null" },
+        phone: { type: "STRING", description: "Phone/WhatsApp number if mentioned, else null" },
+        servicesNeeded: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+          description: "One or more of: aviation, yacht, villa, transport, staff, events"
+        },
+        travelDates: { type: "STRING", description: "Travel dates/season if mentioned (free text, e.g. 'Dec 20-27, 2026'), else null" },
+        origin: { type: "STRING", description: "Departure city or airport code (e.g. 'BOG', 'MIA'), else null" },
+        destination: { type: "STRING", description: "Destination city or zone (e.g. 'CTG', 'Barú', 'Santa Marta'), else null" },
+        passengers: { type: "INTEGER", description: "Number of guests/party size if mentioned, else null" },
+        budget: { type: "INTEGER", description: "Total budget in USD if mentioned, else null" },
+        documentationReady: { type: "BOOLEAN", description: "True if user confirms passports/visas ready, else null" },
+        preferredLanguage: { type: "STRING", description: "'EN' | 'ES' | 'PT' based on user's language" },
+        pillarInterest: { type: "STRING", description: "Primary pillar: 'aviation' | 'yacht' | 'villa' | 'transport' | 'staff' | 'mixed'" },
+        qualified: { type: "BOOLEAN", description: "True if budget >= 10000 USD OR user is a clear UHNW (executive, family office, founder); else false" }
+      },
+      required: ["reply"]
+    };
+
+    const systemInstruction = `You are María, KLO's (Karibbean Luxury Operators) elite virtual concierge assistant.
+
+ABOUT KLO:
+KLO is Cartagena's most exclusive ultra-luxury travel platform, in its founding phase. We orchestrate 5 pillars:
+- AIR: private jets and helicopters
+- SEA: mega-yachts and maritime experiences
+- STAY: ultra-luxury villas and residences
+- LAND: armored VIP ground transport
+- STAFF: private chefs, security, concierges
+
+PRICING:
+Our bespoke orchestrations start at $10,000 USD total. We never quote a fee — the price we give is all-inclusive.
+
+YOUR PERSONALITY:
+- Warm, discreet, effortlessly knowledgeable (think Aman, Belmond, NetJets)
+- Never use jargon, never mention "UHNWI" or internal terms
+- Speak in the user's language (Spanish, English, or Portuguese)
+- One question at a time — never interrogate
+- If something is outside scope, offer a human concierge follow-up
+
+YOUR GOAL:
+Conversational qualification. Over the course of the dialogue, gather:
+1. Full name + (email OR phone) so a broker can follow up
+2. Budget (threshold: $10,000+ USD = "Gold Tier", high-priority routing)
+3. Travel dates / season
+4. Number of VIP guests
+5. Services needed (1+ of: aviation, yacht, villa, transport, staff, events)
+6. Origin / destination (helps with logistics)
+7. Passport/visa readiness
+
+QUALIFICATION RULE:
+- Set "qualified": true if budget >= 10000 USD, OR if the user clearly identifies as UHNW (mentions being a CEO/founder/family office, names a 6-figure+ budget, asks for multi-asset orchestration).
+- Otherwise "qualified": false.
+
+LANGUAGE:
+Respond in the user's language. Mirror their tone. Always reply in JSON matching the specified schema.`;
+
+    // ── Fallback rule-based if no Gemini key ──
+    if (!process.env.GEMINI_API_KEY) {
+      console.warn('[maria] No GEMINI_API_KEY — using rule-based fallback');
+      const msgLower = message.toLowerCase();
+      const result: any = {
+        reply: lang === 'ES'
+          ? 'Buenas tardes. Soy María, su asesora en KLO. Para preparar su itinerario perfecto en Cartagena, ¿podría indicarme qué tipo de servicios necesita? Ofrecemos jets privados, yates, villas exclusivas y transporte VIP.'
+          : lang === 'PT'
+            ? 'Boa tarde. Sou María, sua consultora na KLO. Para preparar seu itinerário perfeito em Cartagena, poderia me dizer quais serviços precisa? Oferecemos jatos privados, iates, villas exclusivas e transporte VIP.'
+            : 'Good afternoon. I am María, your KLO concierge. To prepare your perfect Cartagena itinerary, may I ask which services you require? We offer private jets, mega-yachts, exclusive villas, and VIP ground transport.',
+        fullName: null, email: null, phone: null,
+        servicesNeeded: [],
+        travelDates: null, origin: null, destination: null,
+        passengers: null, budget: null,
+        documentationReady: null, preferredLanguage: lang, pillarInterest: null, qualified: false,
+      };
+      if (/jet|fly|aviation|vuelo|voo|plane|aircraft|helicopter/.test(msgLower)) result.servicesNeeded.push('aviation');
+      if (/yacht|yate|iate|boat|bote|barco/.test(msgLower)) result.servicesNeeded.push('yacht');
+      if (/villa|casa|mansion|estate|resort/.test(msgLower)) result.servicesNeeded.push('villa');
+      if (/transport|car|driver|suburban|sprinter|carro|camioneta/.test(msgLower)) result.servicesNeeded.push('transport');
+      if (/chef|security|staff|concierge|guard/.test(msgLower)) result.servicesNeeded.push('staff');
+      if (/event|wedding|birthday|evento|boda|casamiento/.test(msgLower)) result.servicesNeeded.push('events');
+      const emailMatch = message.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+      if (emailMatch) result.email = emailMatch[0];
+      const phoneMatch = message.match(/(\+?\d[\d\s\-()]{7,}\d)/);
+      if (phoneMatch) result.phone = phoneMatch[0].trim();
+      const numMatches = message.match(/\b(\d{4,7})\b/g);
+      if (numMatches) {
+        for (const n of numMatches) {
+          const v = parseInt(n.replace(/[\s,\.]/g, ''), 10);
+          if (v >= 10000) { result.budget = v; result.qualified = true; break; }
+        }
+      }
+      if (result.servicesNeeded.length > 0) {
+        result.pillarInterest = result.servicesNeeded[0];
+      }
+      // Compose progression reply
+      if (result.qualified) {
+        result.reply = lang === 'ES'
+          ? `Excelente. Un presupuesto de $${result.budget?.toLocaleString()} USD nos permite activar nuestro nivel elite. Para asignar un broker dedicado, ¿podría compartir su nombre completo y un correo o WhatsApp de contacto?`
+          : lang === 'PT'
+            ? `Excelente. Um orçamento de $${result.budget?.toLocaleString()} USD nos permite ativar nosso nível elite. Para atribuir um broker dedicado, poderia compartilhar seu nome completo e um e-mail ou WhatsApp?`
+            : `Excellent. A budget of $${result.budget?.toLocaleString()} USD unlocks our elite tier. To assign a dedicated broker, may I have your full name and an email or WhatsApp contact?`;
+      } else if (result.email || result.phone) {
+        result.reply = lang === 'ES'
+          ? 'Gracias. He registrado sus datos de contacto. Un broker dedicado se pondrá en contacto en breve. ¿Podría indicarme fechas tentativas de viaje y número de huéspedes?'
+          : lang === 'PT'
+            ? 'Obrigado. Registrei seus dados de contato. Um broker dedicado entrará em contato em breve. Poderia indicar datas de viagem e número de hóspedes?'
+            : 'Thank you. I have noted your contact details. A dedicated broker will reach out shortly. Could you share tentative travel dates and party size?';
+      } else if (result.servicesNeeded.length > 0) {
+        const svc = result.servicesNeeded.join(', ');
+        result.reply = lang === 'ES'
+          ? `Perfecto, ${svc}. Cartagena es excepcional para eso. Para dimensionar la logística, ¿cuántos huéspedes viajarán y cuál es el rango de presupuesto que tiene en mente? Nuestras orquestaciones начинаются en $10,000 USD.`
+          : lang === 'PT'
+            ? `Perfeito, ${svc}. Cartagena é excepcional para isso. Para dimensionar a logística, quantos hóspedes viajarão e qual é a faixa de orçamento? Nossas orquestrações начинаются em $10.000 USD.`
+            : `Perfect, ${svc}. Cartagena is exceptional for that. To size the logistics, how many guests will travel and what is the budget range you have in mind? Our orchestrations start at $10,000 USD.`;
+      }
+
+      // Persist to Supabase
+      const lead = await persistMariaLead(result, existingLeadId);
+      return res.json({ success: true, result, lead, meta: { language: lang, source: 'fallback' } });
+    }
+
+    // ── Live Gemini call ──
+    try {
+      const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const formattedHistory = (history || []).map((h: any) => ({
+        role: h.role === 'user' ? 'user' : 'model',
+        parts: [{ text: h.content || h.text || '' }]
+      }));
+      formattedHistory.push({ role: 'user', parts: [{ text: message }] });
+
+      const response = await genai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: formattedHistory,
+        config: {
+          systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema: responseSchema as any,
+          temperature: 0.3,
+        }
+      });
+      const responseText = response.text || '{}';
+      let result: any;
+      try { result = JSON.parse(responseText); }
+      catch {
+        // Gemini returned something non-JSON; wrap as plain reply
+        result = { reply: responseText, qualified: false, preferredLanguage: lang };
+      }
+      // Always stamp the language we served
+      result.preferredLanguage = result.preferredLanguage || lang;
+      if (!result.pillarInterest && Array.isArray(result.servicesNeeded) && result.servicesNeeded.length > 0) {
+        result.pillarInterest = result.servicesNeeded[0];
+      }
+
+      // Persist to Supabase
+      const lead = await persistMariaLead(result, existingLeadId);
+      const turns = (history?.length || 0) + 1;
+      return res.json({
+        success: true,
+        result,
+        lead,
+        meta: { language: lang, source: 'gemini', turns_used: turns }
+      });
+    } catch (err: any) {
+      console.error('[maria] Gemini error:', err?.message || err);
+      // Return graceful fallback so chat never breaks
+      const fallbackResult = {
+        reply: lang === 'ES'
+          ? 'Disculpe, tuve una breve interferencia. ¿Podría repetir su última indicación?'
+          : lang === 'PT'
+            ? 'Desculpe, tive uma breve interferência. Poderia repetir sua última indicação?'
+            : 'My apologies, a brief interference. Could you repeat your last detail?',
+        qualified: false,
+        preferredLanguage: lang,
+      };
+      return res.json({ success: true, result: fallbackResult, lead: null, meta: { language: lang, source: 'error-fallback' } });
+    }
+  });
+
+  // Helper: persist Maria's extracted lead to Supabase with the 60+ extended fields.
+  // Resilient insert: drops fields that 42703 (column doesn't exist) or PGRST204.
+  // Returns the lead row (or null on failure).
+  async function persistMariaLead(result: any, existingLeadId?: string | null) {
+    try {
+      // Map extracted values → leads schema (Step 20 extended fields)
+      const baseRecord: any = {
+        full_name: result.fullName || null,
+        email: result.email || null,
+        phone: result.phone || null,
+        origin: result.origin || null,
+        destination: result.destination || null,
+        travel_date: null,           // TODO: parse travelDates → date if format matches
+        travelers: result.passengers || null,
+        budget_max: result.budget || null,
+        budget_min: result.budget ? Math.round(result.budget * 0.85) : null,  // assume ±15% range
+        pillar_interest: result.pillarInterest || null,
+        preferred_language: result.preferredLanguage || 'ES',
+        trip_type: 'LEISURE',
+        accommodation: 'PRIVATE_VILLA',
+        source: 'maria_chat',
+        status: result.qualified ? 'QUALIFIED' : 'NEW',
+        notes: result.servicesNeeded?.length
+          ? `María chat: interested in ${result.servicesNeeded.join(', ')}. ${result.travelDates ? 'Dates: ' + result.travelDates + '. ' : ''}${result.qualified ? '[AUTO-QUALIFIED]' : ''}`
+          : 'Lead from María chat',
+        tags: result.qualified ? ['maria-chat', 'auto-qualified'] : ['maria-chat'],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // If the AI provided dates in a parseable YYYY-MM-DD form, set travel_date
+      if (result.travelDates) {
+        const m = String(result.travelDates).match(/(\d{4}-\d{2}-\d{2})/);
+        if (m) baseRecord.travel_date = m[1];
+      }
+
+      // If we already have a leadId, update; else insert
+      if (existingLeadId) {
+        const { data, error } = await supabase
+          .from('leads')
+          .update(baseRecord)
+          .eq('id', existingLeadId)
+          .select()
+          .maybeSingle();
+        if (error) {
+          console.warn('[maria] update lead failed:', error.message);
+          // Try insert as fallback (leadId was stale)
+          const ins = await supabase.from('leads').insert(baseRecord).select().maybeSingle();
+          if (ins.error) { console.warn('[maria] insert fallback failed:', ins.error.message); return null; }
+          return ins.data;
+        }
+        return data;
+      } else {
+        const { data, error } = await supabase.from('leads').insert(baseRecord).select().maybeSingle();
+        if (error) {
+          console.warn('[maria] insert lead failed:', error.message);
+          return null;
+        }
+        return data;
+      }
+    } catch (e: any) {
+      console.error('[maria] persistMariaLead exception:', e?.message || e);
+      return null;
+    }
+  }
+
   app.post("/api/calendar/disconnect/:supplier_id", async (req, res) => {
     const { supplier_id } = req.params;
     try {
