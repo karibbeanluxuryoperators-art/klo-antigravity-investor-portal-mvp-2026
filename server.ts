@@ -3054,9 +3054,17 @@ Per-service minimums (these are operationally required, not negotiable):
   - **You CANNOT quote an international flight without this info. The broker physically cannot file the flight plan.**
 - Yacht DOMESTIC: date + passengers (captain briefing, catering, fuel)
 - Yacht INTERNATIONAL: + nationality for customs clearance
-- Villa: nights + guests
-- Transport: days + passengers (driver assignment, vehicle matching)
-- Staff: days + guests (chef menus, butler briefings, security protocols)
+- Villa: nights + guests (and zone if not obvious)
+- Transport terrestre: date + passengers + route type (airport_transfer / city_tour / inter_city)
+  - airport_transfer: hotel-airport or airport-hotel (single trip)
+  - city_tour: tours within CTG or surrounding area (Bocagrande, Getsemaní, Manga)
+  - inter_city: long-distance (CTG-BOG, CTG-Medellín, CTG-Santa Marta, etc.)
+  - Route type determines vehicle class and pricing
+- Personal especializado: days + guests + schedule (half_day / eight_hour / full_day)
+  - **schedule is critical for pricing** — half day is ~50% of full day, 8h standard, full day covers 3 meals + overnight standby
+  - If user says "chef for tonight's dinner", assume half_day (one service, ~4h)
+  - If user says "private chef during my stay", assume eight_hour per day
+  - If user says "24/7 butler", assume full_day
 - Events: type + guests + date (venue, vendors, permits, security)
 
 INTERNATIONAL DETECTION:
@@ -3169,6 +3177,19 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         if (v) v.details = { ...v.details, nights: n };
       }
 
+      // Staff schedule detection: medio día / día completo / 8h jornada
+      const scheduleHint = (msgLower: string): 'half_day' | 'full_day' | 'eight_hour' | null => {
+        if (/\b(medio\s*d[ií]a|half\s*day|meia\s*tar(é|e)de)\b/.test(msgLower)) return 'half_day';
+        if (/\b(d[ií]a\s*completo|full\s*day|dia\s*inteiro|24\s*h\b)/.test(msgLower)) return 'full_day';
+        if (/\b(8\s*h|ocho\s*horas|oito\s*horas|jornada|8-hour|shift)\b/.test(msgLower)) return 'eight_hour';
+        return null;
+      };
+      const staffSchedule = scheduleHint(msgLower);
+      if (staffSchedule) {
+        const s = dna.find((d) => d.pillar === 'staff');
+        if (s) s.details = { ...s.details, schedule: staffSchedule };
+      }
+
       const dateMatch = message.match(/(\d{4}-\d{2}-\d{2})/);
       if (dateMatch) {
         result.travelDates = dateMatch[1];
@@ -3195,8 +3216,10 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       //   - yacht international → need pax + nationality for: customs clearance, coast guard.
       //   - yacht domestic → need pax + date for: captain briefing, catering, fuel.
       //   - villa → nights + guests for: inventory check, staff scheduling, concierge planning.
-      //   - transport → days + pax for: driver assignment, vehicle matching, route planning.
-      //   - staff → days + guests for: chef menus, butler briefings, security protocols.
+      //   - transport → date + pax + route type (airport/city/intercity) for: driver + vehicle.
+      //   - staff → days + guests + schedule (half_day/8h/full_day) for: chef menus, butler
+      //     briefings, security shift planning. Schedule is critical because pricing
+      //     varies significantly (4h lunch vs 8h standard vs 12h full day).
       //   - events → type + guests + date for: venue, vendors, permits, security plan.
       const missingForQuote: string[] = [];
       const labelByKey: Record<string, string> = {
@@ -3212,10 +3235,12 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         'villa:nights': '# noches',
         'villa:guests': '# huéspedes',
         'villa:zone': 'zona (Bocagrande / Old Town / Barú)',
-        'transport:days': '# días de transporte',
+        'transport:date': 'fecha del servicio',
         'transport:passengers': '# pasajeros',
-        'staff:days': '# días del staff',
+        'transport:route': 'tipo de ruta (airport transfer / city tour / inter-city)',
+        'staff:days': '# días',
         'staff:guests': '# huéspedes',
+        'staff:schedule': 'jornada (medio día / 8h / día completo)',
         'events:type': 'tipo de evento',
         'events:guests': '# invitados',
         'events:date': 'fecha del evento',
@@ -3230,10 +3255,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           const codeMatches = (message.match(/\b([A-Z]{3})\b/g) || []);
           if (codeMatches.length < 2) missingForQuote.push('aviation:origin', 'aviation:destination');
           if (!item.details?.travel_date && !result.travelDates) missingForQuote.push('aviation:date');
-          // Passengers is ALWAYS required — even domestic, because slot + manifest + FBO
-          // handling depend on it. The user cannot skip this.
           if (!result.passengers) missingForQuote.push('aviation:passengers');
-          // International flights require additional ops info
           if (isInternational) {
             if (!item.details?.nationality && !item.details?.passenger_nationality) missingForQuote.push('aviation:nationality');
             if (result.documentationReady === null || result.documentationReady === undefined) missingForQuote.push('aviation:passports');
@@ -3242,7 +3264,6 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         if (item.pillar === 'yacht') {
           if (!item.details?.travel_date && !result.travelDates) missingForQuote.push('yacht:date');
           if (!result.passengers) missingForQuote.push('yacht:passengers');
-          // Yacht international (e.g. to San Andrés, or foreign-flag yacht) needs nationality
           if (isInternational && !item.details?.nationality) missingForQuote.push('yacht:nationality');
         }
         if (item.pillar === 'villa') {
@@ -3250,14 +3271,21 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           if (!result.passengers) missingForQuote.push('villa:guests');
         }
         if (item.pillar === 'transport') {
-          const days = item.details?.days || item.details?.nights || (result.travelDates ? 1 : null);
-          if (!days) missingForQuote.push('transport:days');
+          if (!item.details?.travel_date && !result.travelDates) missingForQuote.push('transport:date');
           if (!result.passengers) missingForQuote.push('transport:passengers');
+          // Route type: airport transfer, city tour, inter-city. Detect heuristically.
+          if (!item.details?.route_type) {
+            if (/airport|aeropuerto|llegada|arrival|transfer/.test(msgLower)) item.details = { ...item.details, route_type: 'airport_transfer' };
+            else if (/inter\s*-?\s*city|otra\s*ciudad|bogot|medell|santa\s*marta/.test(msgLower)) item.details = { ...item.details, route_type: 'inter_city' };
+            else if (/city|tour|recorrido|recorr/.test(msgLower)) item.details = { ...item.details, route_type: 'city_tour' };
+            else missingForQuote.push('transport:route');
+          }
         }
         if (item.pillar === 'staff') {
-          const days = item.details?.days || item.details?.nights || (result.travelDates ? 1 : null);
-          if (!days) missingForQuote.push('staff:days');
+          if (!item.details?.days && !item.details?.nights && !result.travelDates) missingForQuote.push('staff:days');
           if (!result.passengers) missingForQuote.push('staff:guests');
+          // Schedule (medio día / 8h / día completo) is required — pricing varies 2-3x
+          if (!item.details?.schedule) missingForQuote.push('staff:schedule');
         }
         if (item.pillar === 'events') {
           if (!item.details?.event_type && !item.type) missingForQuote.push('events:type');
@@ -3271,6 +3299,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
 
       if (result.missingForQuote.length === 0 && dna.length > 0) {
         // All minimums present → compute price
+        // Base table (per service) — single day / single occurrence.
         const priceTable: Record<string, [number, number]> = {
           'aviation:light_jet': [4500, 9000],
           'aviation:midsize_jet': [18000, 32000],
@@ -3283,43 +3312,77 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           'villa:old_town': [2000, 4500],
           'villa:private_villa': [6000, 18000],
           'villa:private_island': [15000, 40000],
-          'villa:peninsula': [3000, 8000],
+          'villa:penthouse': [3000, 8000],
           'transport:armored_suv': [1200, 2200],
           'transport:luxury_sedan': [800, 1500],
           'transport:sprinter': [1500, 2800],
-          'staff:private_chef': [1200, 2500],
-          'staff:butler': [900, 1800],
-          'staff:security': [1500, 3500],
-          'staff:concierge': [800, 1500],
+          // Staff pricing depends on schedule:
+          //   half_day  ≈ 50% of full_day
+          //   eight_hour = baseline
+          //   full_day  ≈ 1.5x baseline (covers 3 meals + overnight standby)
+          'staff:private_chef_eight_hour': [1200, 2500],
+          'staff:private_chef_half_day': [600, 1300],
+          'staff:private_chef_full_day': [1800, 3700],
+          'staff:butler_eight_hour': [900, 1800],
+          'staff:butler_half_day': [450, 900],
+          'staff:butler_full_day': [1300, 2700],
+          'staff:security_eight_hour': [1500, 3500],
+          'staff:security_half_day': [800, 1800],
+          'staff:security_full_day': [2200, 5000],
+          'staff:concierge_eight_hour': [800, 1500],
+          'staff:concierge_half_day': [400, 800],
+          'staff:concierge_full_day': [1200, 2200],
           'events:wedding': [25000, 80000],
           'events:private_dining': [5000, 15000],
         };
         let low = 0, high = 0;
         for (const item of dna) {
-          const key = `${item.pillar}:${item.type}`;
-          const range = priceTable[key];
+          // Staff: include schedule in the lookup key
+          const scheduleKey = item.pillar === 'staff' && item.details?.schedule
+            ? `${item.pillar}:${item.type}_${item.details.schedule}`
+            : `${item.pillar}:${item.type}`;
+          const range = priceTable[scheduleKey] || priceTable[`${item.pillar}:${item.type}`];
           if (range) { low += range[0]; high += range[1]; }
         }
         // Apply nights multiplier for villa
         const v = dna.find((d) => d.pillar === 'villa');
         if (v?.details?.nights) {
           const n = v.details.nights;
-          low = low - (priceTable[`villa:${v.type}`]?.[0] || 0) + (priceTable[`villa:${v.type}`]?.[0] || 0) * n;
-          high = high - (priceTable[`villa:${v.type}`]?.[1] || 0) + (priceTable[`villa:${v.type}`]?.[1] || 0) * n;
+          const key = `villa:${v.type}`;
+          low = low - (priceTable[key]?.[0] || 0) + (priceTable[key]?.[0] || 0) * n;
+          high = high - (priceTable[key]?.[1] || 0) + (priceTable[key]?.[1] || 0) * n;
+        }
+        // Apply days multiplier for transport + staff
+        const transportItem = dna.find((d) => d.pillar === 'transport');
+        if (transportItem?.details?.days) {
+          const n = transportItem.details.days;
+          const key = `transport:${transportItem.type}`;
+          low = (low - (priceTable[key]?.[0] || 0)) + (priceTable[key]?.[0] || 0) * n;
+          high = (high - (priceTable[key]?.[1] || 0)) + (priceTable[key]?.[1] || 0) * n;
+        }
+        const staffItem = dna.find((d) => d.pillar === 'staff');
+        if (staffItem?.details?.days) {
+          const n = staffItem.details.days;
+          const skey = `${staffItem.pillar}:${staffItem.type}_${staffItem.details.schedule}`;
+          low = (low - (priceTable[skey]?.[0] || 0)) + (priceTable[skey]?.[0] || 0) * n;
+          high = (high - (priceTable[skey]?.[1] || 0)) + (priceTable[skey]?.[1] || 0) * n;
         }
         // 20% KLO orchestration buffer
         low = Math.round(low * 1.2 / 500) * 500;
         high = Math.round(high * 1.2 / 500) * 500;
         // Confidence
         const hasPax = !!result.passengers;
-        const hasDates = !!result.travelDates || !!v?.details?.nights;
+        const hasDates = !!result.travelDates || !!v?.details?.nights || !!staffItem?.details?.days;
         const confidence = hasPax && hasDates ? 'high' : hasPax ? 'medium' : 'low';
         const reasoning = dna.map((d) => {
           if (d.pillar === 'aviation') return d.type === 'helicopter' ? 'helicopter transfer' : `${d.type.replace('_', ' ')} charter`;
           if (d.pillar === 'yacht') return `${d.type} yacht day`;
           if (d.pillar === 'villa') return `${d.details?.nights || '?'} night ${d.type.replace('_', ' ')} villa`;
-          if (d.pillar === 'transport') return `${d.type.replace('_', ' ')} daily`;
-          if (d.pillar === 'staff') return `${d.type.replace('_', ' ')}`;
+          if (d.pillar === 'transport') return `${d.type.replace('_', ' ')} ${d.details?.route_type ? d.details.route_type.replace('_', ' ') : 'transfer'}`;
+          if (d.pillar === 'staff') {
+            const sched = d.details?.schedule ? d.details.schedule.replace('_', ' ') : '';
+            return `${d.type.replace('_', ' ')} (${sched})`;
+          }
           if (d.pillar === 'events') return `${d.type.replace('_', ' ')}`;
           return d.pillar;
         }).join(' + ');
@@ -3351,10 +3414,12 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           'villa:nights': '# noches',
           'villa:guests': '# huéspedes',
           'villa:zone': 'zona (Bocagrande / Old Town / Barú)',
-          'transport:days': '# días',
+          'transport:date': 'fecha del servicio',
           'transport:passengers': '# pasajeros',
+          'transport:route': 'tipo de ruta (airport transfer / city tour / inter-city)',
           'staff:days': '# días',
           'staff:guests': '# huéspedes',
+          'staff:schedule': 'jornada (medio día / 8h / día completo)',
           'events:type': 'tipo de evento',
           'events:guests': '# invitados',
           'events:date': 'fecha',
@@ -3364,8 +3429,8 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           'aviation:nationality': 'passenger nationality', 'aviation:passports': 'passports ready (yes/no)',
           'yacht:date': 'date', 'yacht:passengers': '# passengers', 'yacht:nationality': 'nationality (for clearance)',
           'villa:nights': '# nights', 'villa:guests': '# guests', 'villa:zone': 'zone (Bocagrande / Old Town / Barú)',
-          'transport:days': '# days', 'transport:passengers': '# passengers',
-          'staff:days': '# days', 'staff:guests': '# guests',
+          'transport:date': 'service date', 'transport:passengers': '# passengers', 'transport:route': 'route type (airport transfer / city tour / inter-city)',
+          'staff:days': '# days', 'staff:guests': '# guests', 'staff:schedule': 'shift (half day / 8h / full day)',
           'events:type': 'event type', 'events:guests': '# guests', 'events:date': 'date',
         },
         PT: {
@@ -3373,8 +3438,8 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           'aviation:nationality': 'nacionalidade dos passageiros', 'aviation:passports': 'passaportes prontos (sim/não)',
           'yacht:date': 'data', 'yacht:passengers': '# passageiros', 'yacht:nationality': 'nacionalidade (para desembaraço)',
           'villa:nights': '# noites', 'villa:guests': '# hóspedes', 'villa:zone': 'zona (Bocagrande / Old Town / Barú)',
-          'transport:days': '# dias', 'transport:passengers': '# passageiros',
-          'staff:days': '# dias', 'staff:guests': '# hóspedes',
+          'transport:date': 'data do serviço', 'transport:passengers': '# passageiros', 'transport:route': 'tipo de rota (airport transfer / city tour / inter-city)',
+          'staff:days': '# dias', 'staff:guests': '# hóspedes', 'staff:schedule': 'jornada (meio período / 8h / integral)',
           'events:type': 'tipo de evento', 'events:guests': '# convidados', 'events:date': 'data',
         },
       };
