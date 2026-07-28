@@ -3100,64 +3100,79 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
 
   // Helper: persist Maria's extracted lead to Supabase with the 60+ extended fields.
   // Resilient insert: drops fields that 42703 (column doesn't exist) or PGRST204.
-  // Returns the lead row (or null on failure).
+  // Uses the same block-by-block pattern as POST /api/clients (Step 20) so the
+  // endpoint works whether or not the user has run the migration.
   async function persistMariaLead(result: any, existingLeadId?: string | null) {
     try {
-      // Map extracted values → leads schema (Step 20 extended fields)
-      const baseRecord: any = {
-        full_name: result.fullName || null,
+      const sb = getSupabase();
+      if (!sb) { console.warn('[maria] supabase not configured'); return null; }
+
+      // Core fields (always present in leads table)
+      const core: any = {
+        full_name: result.fullName || 'Anonymous (María Chat)',
         email: result.email || null,
         phone: result.phone || null,
-        origin: result.origin || null,
-        destination: result.destination || null,
-        travel_date: null,           // TODO: parse travelDates → date if format matches
-        travelers: result.passengers || null,
-        budget_max: result.budget || null,
-        budget_min: result.budget ? Math.round(result.budget * 0.85) : null,  // assume ±15% range
-        pillar_interest: result.pillarInterest || null,
-        preferred_language: result.preferredLanguage || 'ES',
-        trip_type: 'LEISURE',
-        accommodation: 'PRIVATE_VILLA',
         source: 'maria_chat',
         status: result.qualified ? 'QUALIFIED' : 'NEW',
         notes: result.servicesNeeded?.length
           ? `María chat: interested in ${result.servicesNeeded.join(', ')}. ${result.travelDates ? 'Dates: ' + result.travelDates + '. ' : ''}${result.qualified ? '[AUTO-QUALIFIED]' : ''}`
           : 'Lead from María chat',
         tags: result.qualified ? ['maria-chat', 'auto-qualified'] : ['maria-chat'],
-        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
 
-      // If the AI provided dates in a parseable YYYY-MM-DD form, set travel_date
+      // Step 20 extended fields (resilient — drop block on 42703)
+      const extended: any = {
+        preferred_language: result.preferredLanguage || 'ES',
+        origin: result.origin || null,
+        destination: result.destination || null,
+        travelers: result.passengers || null,
+        budget_max: result.budget || null,
+        budget_min: result.budget ? Math.round(result.budget * 0.85) : null,
+        pillar_interest: result.pillarInterest || null,
+        trip_type: 'LEISURE',
+        accommodation: 'PRIVATE_VILLA',
+      };
       if (result.travelDates) {
         const m = String(result.travelDates).match(/(\d{4}-\d{2}-\d{2})/);
-        if (m) baseRecord.travel_date = m[1];
+        if (m) extended.travel_date = m[1];
       }
 
-      // If we already have a leadId, update; else insert
-      if (existingLeadId) {
-        const { data, error } = await supabase
-          .from('leads')
-          .update(baseRecord)
-          .eq('id', existingLeadId)
-          .select()
-          .maybeSingle();
-        if (error) {
-          console.warn('[maria] update lead failed:', error.message);
-          // Try insert as fallback (leadId was stale)
-          const ins = await supabase.from('leads').insert(baseRecord).select().maybeSingle();
-          if (ins.error) { console.warn('[maria] insert fallback failed:', ins.error.message); return null; }
-          return ins.data;
-        }
-        return data;
-      } else {
-        const { data, error } = await supabase.from('leads').insert(baseRecord).select().maybeSingle();
-        if (error) {
-          console.warn('[maria] insert lead failed:', error.message);
-          return null;
-        }
-        return data;
+      // Helper: try insert, drop the extended block on 42703
+      async function tryInsert(record: any): Promise<{ data: any; error: any }> {
+        return await sb.from('leads').insert(record).select().maybeSingle();
       }
+      async function tryUpdate(id: string, record: any): Promise<{ data: any; error: any }> {
+        return await sb.from('leads').update(record).eq('id', id).select().maybeSingle();
+      }
+
+      const op = existingLeadId ? (rec: any) => tryUpdate(existingLeadId, rec) : tryInsert;
+
+      // 1) Core only
+      let r = await op(core);
+      if (r.error && /column.*not exist|42703|PGRST204/i.test(String(r.error.message || r.error.code || ''))) {
+        // Even core failed — abort
+        console.warn('[maria] core insert failed:', r.error.message);
+        return null;
+      }
+      let lead = r.data;
+      if (!lead) {
+        // Insert succeeded but returned no data — fetch the latest maria_chat row
+        const { data: last } = await sb.from('leads').select('*').eq('source', 'maria_chat').order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (last) lead = last;
+      }
+
+      // 2) Extended block (best-effort)
+      if (lead) {
+        const upd = await sb.from('leads').update(extended).eq('id', lead.id);
+        if (upd.error && /42703|PGRST204/i.test(String(upd.error.message || upd.error.code || ''))) {
+          console.info('[maria] extended fields not yet migrated — skipping (run db/migrations/2026-07-28_crm_extended_fields.sql)');
+        } else if (upd.error) {
+          console.warn('[maria] extended update failed:', upd.error.message);
+        }
+      }
+
+      return lead;
     } catch (e: any) {
       console.error('[maria] persistMariaLead exception:', e?.message || e);
       return null;
