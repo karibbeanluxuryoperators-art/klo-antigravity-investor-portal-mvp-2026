@@ -2960,7 +2960,7 @@ ${assetContext}`;
         },
         priceEstimate: {
           type: "OBJECT",
-          description: "USD price range Maria is comfortable quoting. CRITICAL: only set this when MINIMUM INFO is present for EVERY service requested. If ANY required detail is missing, return null. Per-service minimums: aviation = origin + destination + day + passengers. yacht = day + passengers (+ duration if multi-day). villa = nights + guests (+ zone). transport = days + passengers. staff = days + guests. events = type + guests + day. Compute as: services-needed sum + 20% KLO management. Confidence: 'low' = only services known, 'medium' = services+passengers, 'high' = services+passengers+dates+duration. If you cannot quote a price, return null for priceEstimate and ask for the missing required fields in the reply.",
+          description: "USD price range Maria is comfortable quoting. CRITICAL: only set this when MINIMUM INFO is present for EVERY service requested. If ANY required detail is missing, return null. Per-service minimums — these are NOT negotiable: aviation (any route) = origin + destination + day + passengers. aviation (INTERNATIONAL, route outside Colombia e.g. MIA/JFK/SAO/PTY) = ALSO nationality + passport readiness. yacht = day + passengers. yacht (INTERNATIONAL) = ALSO nationality. villa = nights + guests. transport = days + passengers. staff = days + guests. events = type + guests + day. INTERNATIONAL DETECTION: if origin or destination is a non-CO airport code, mark isInternational=true and require the international minimums. Compute as: services-needed sum + 20% KLO management buffer. Confidence: 'low' = services only, 'medium' = + passengers, 'high' = + passengers + dates + duration. If ANY minimum is missing, return null for priceEstimate, fill missingForQuote[] with the missing keys (e.g. ['aviation:nationality','aviation:passports']) and explain in the reply WHY each is needed (flight plan, migration, antinarcotics coordination). NEVER quote a price without the minimums — a wrong quote is worse than no quote.",
           properties: {
             low: { type: "INTEGER", description: "Lower bound in USD" },
             high: { type: "INTEGER", description: "Upper bound in USD" },
@@ -2969,10 +2969,19 @@ ${assetContext}`;
             reasoning: { type: "STRING", description: "One-line explanation in the user's language. E.g. 'Heavy jet MIA-CTG + 5 nights beachfront villa in Barú + private chef'." }
           }
         },
+        isInternational: {
+          type: "BOOLEAN",
+          description: "True if any requested aviation/yacht route crosses a Colombian border (e.g. MIA-CTG, CTG-SAO, BOG-PTY). Triggers the stricter international minimums."
+        },
+        operationalNotes: {
+          type: "ARRAY",
+          items: { type: "STRING" },
+          description: "Operational items the broker will have to coordinate. E.g. ['flight plan filing MIA-CTG (international)', 'customs manifest for 6 pax', 'antinarcotics coordination CTG', 'migration coordination 6 pax']. Empty if domestic only."
+        },
         missingForQuote: {
           type: "ARRAY",
           items: { type: "STRING" },
-          description: "List of missing required fields that prevent quoting. Empty array if everything is present. Examples: ['aviation:origin', 'aviation:date', 'yacht:passengers', 'villa:nights']. Maria should ask for these in the reply to enable pricing."
+          description: "List of missing required fields that prevent quoting. Empty array if everything is present. Examples: ['aviation:nationality', 'aviation:passports', 'villa:nights', 'yacht:passengers']. Maria should ask for these in the reply to enable pricing, and may briefly explain WHY each is operationally required."
         }
       },
       required: ["reply"]
@@ -3034,26 +3043,39 @@ EXPERIENCE DNA (auto-extract — do not ask extra questions for these):
   - Always capture details: { passengers, route, bedrooms, nights, dietary, dates } if mentioned.
 
 PRICE ESTIMATE — STRICT RULE: NO QUOTE WITHOUT MINIMUM INFO.
-We cannot quote without the required minimums per service. Maria must respect this — her credibility depends on it.
-- Aviation: needs origin, destination, date, passengers
-- Yacht: needs date, passengers (and duration if multi-day)
-- Villa: needs nights, guests (and zone)
-- Transport: needs days, passengers
-- Staff: needs days, guests
-- Events: needs type, guests, date
+We cannot quote without the required minimums per service. Maria must respect this — her credibility AND the broker's operational planning depend on it.
+
+Per-service minimums (these are operationally required, not negotiable):
+- Aviation DOMESTIC (BOG-CTG, CTG-MDE, etc.): origin + destination + date + passengers
+  - # passengers is critical for: slot request, ATC, FBO handling, manifest, weight & balance
+- Aviation INTERNATIONAL (MIA-CTG, JFK-CTG, CTG-SAO, BOG-PTY, etc.): ALL of the above PLUS
+  - passenger nationality (required for: flight plan filing, customs manifest, immigration, antinarcotics coordination)
+  - passport readiness yes/no (required for: visa checks, customs clearance at destination)
+  - **You CANNOT quote an international flight without this info. The broker physically cannot file the flight plan.**
+- Yacht DOMESTIC: date + passengers (captain briefing, catering, fuel)
+- Yacht INTERNATIONAL: + nationality for customs clearance
+- Villa: nights + guests
+- Transport: days + passengers (driver assignment, vehicle matching)
+- Staff: days + guests (chef menus, butler briefings, security protocols)
+- Events: type + guests + date (venue, vendors, permits, security)
+
+INTERNATIONAL DETECTION:
+- If the origin or destination is a non-CO airport code (MIA, JFK, NYC, LAX, MEX, SAO, GRU, EZE, MCO, ORD, YYZ, LHR, CDG, BCN, MAD, LIS, PTY, SJO, GUA, LIM, CLO, UPS, AQP), set isInternational=true and require international minimums.
 
 Process:
 1. Extract everything you can from the user's message.
-2. If EVERY required field is present for EVERY service requested → compute priceEstimate, apply 20% KLO buffer, set confidence, give reasoning.
-3. If ANY required field is missing → set priceEstimate = null AND fill "missingForQuote" with the missing fields (e.g. ['aviation:origin', 'villa:nights']). In the reply, ask ONLY for those missing fields — one short sentence.
+2. Build "operationalNotes" listing what the broker will have to coordinate. E.g. for MIA-CTG with 6 pax: ['flight plan filing MIA-CTG (international)', 'customs manifest for 6 passengers', 'antinarcotics coordination CTG', 'migration coordination 6 pax'].
+3. If EVERY required field is present for EVERY service → compute priceEstimate, apply 20% KLO buffer, set confidence, give reasoning.
+4. If ANY required field is missing → set priceEstimate = null AND fill "missingForQuote" with the missing keys. In the reply, ask ONLY for the missing fields in ONE line, briefly explaining WHY each matters (e.g. "to file the flight plan" / "for immigration manifest" / "for antinarcotics coordination").
 
 MIN-INTERACTION PHILOSOPHY (revised):
-- Be fast, but be ACCURATE. A wrong quote is worse than no quote.
+- Be fast, but be ACCURATE. A wrong or premature quote is worse than no quote — and on international flights, impossible to execute without the right info.
 - Once you have contact AND the minimums for a price, propose it immediately and offer broker handoff.
-- If minimums are missing, ask for them in ONE single line — don't interrogate.
+- If minimums are missing, ask for them in ONE single line. Don't interrogate. Don't apologize. Just ask.
 - Examples:
-  - "Got it. To quote your jet, may I have origin, destination, date, and party size?" (one line, 4 items)
-  - "Perfect. To finalize pricing on the villa, I need the number of nights and zone (Bocagrande, Old Town, Barú)?" (one line)
+  - "Got it. To quote your international jet, may I have origin, destination, date, party size, and passenger nationality?" (one line, all 5)
+  - "Perfect. For the villa, I need number of nights and party size to finalize pricing." (one line)
+  - "To coordinate your international flight plan, I'll need the date and passenger nationality — the rest we have." (one line, focused)
 
 LANGUAGE:
 Respond in the user's language. Mirror their tone. Always reply in JSON matching the specified schema.`;
@@ -3165,14 +3187,28 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       // ── Price estimate — STRICT MINIMUM VALIDATION ──
       // Per-service minimums required to quote. If ANY required field is missing,
       // do NOT compute a price — return null and ask only for what's missing.
+      //
+      // OPERATIONAL REASONING (so Maria can explain to the user why each field matters):
+      //   - aviation international → need passengers + nationality for: flight plan filing,
+      //     customs/immigration manifest, antinarcotics coordination, slot requests.
+      //   - aviation domestic → need passengers + date for: slot request, ATC, FBO handling.
+      //   - yacht international → need pax + nationality for: customs clearance, coast guard.
+      //   - yacht domestic → need pax + date for: captain briefing, catering, fuel.
+      //   - villa → nights + guests for: inventory check, staff scheduling, concierge planning.
+      //   - transport → days + pax for: driver assignment, vehicle matching, route planning.
+      //   - staff → days + guests for: chef menus, butler briefings, security protocols.
+      //   - events → type + guests + date for: venue, vendors, permits, security plan.
       const missingForQuote: string[] = [];
       const labelByKey: Record<string, string> = {
         'aviation:origin': 'origen del vuelo',
         'aviation:destination': 'destino del vuelo',
         'aviation:date': 'fecha del vuelo',
         'aviation:passengers': '# pasajeros',
+        'aviation:nationality': 'nacionalidad de los pasajeros (para plan de vuelo, migración, antinarcóticos)',
+        'aviation:passports': 'pasaportes listos (sí/no)',
         'yacht:date': 'fecha del yate',
         'yacht:passengers': '# pasajeros en el yate',
+        'yacht:nationality': 'nacionalidad (para clearance internacional)',
         'villa:nights': '# noches',
         'villa:guests': '# huéspedes',
         'villa:zone': 'zona (Bocagrande / Old Town / Barú)',
@@ -3185,25 +3221,35 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
         'events:date': 'fecha del evento',
       };
 
+      // Detect if aviation is international (origin/destination are non-CO airports)
+      const intlAirports = /\b(mia|jfk|nyc|lax|mex|sao|gru|eze|mco|ord|yyz|lhr|cdg|frankfurt|munich|bcn|mad|lis|panama|sjo|gua|lim|clo|ups|aqp)\b/i;
+      const isInternational = dna.some((d) => d.pillar === 'aviation') && intlAirports.test(message);
+
       for (const item of dna) {
         if (item.pillar === 'aviation') {
-          // Multi-leg → origin/destination per leg. Use a simple heuristic:
-          // origin = first 3-letter airport code or city, destination = last one.
           const codeMatches = (message.match(/\b([A-Z]{3})\b/g) || []);
           if (codeMatches.length < 2) missingForQuote.push('aviation:origin', 'aviation:destination');
           if (!item.details?.travel_date && !result.travelDates) missingForQuote.push('aviation:date');
+          // Passengers is ALWAYS required — even domestic, because slot + manifest + FBO
+          // handling depend on it. The user cannot skip this.
           if (!result.passengers) missingForQuote.push('aviation:passengers');
+          // International flights require additional ops info
+          if (isInternational) {
+            if (!item.details?.nationality && !item.details?.passenger_nationality) missingForQuote.push('aviation:nationality');
+            if (result.documentationReady === null || result.documentationReady === undefined) missingForQuote.push('aviation:passports');
+          }
         }
         if (item.pillar === 'yacht') {
           if (!item.details?.travel_date && !result.travelDates) missingForQuote.push('yacht:date');
           if (!result.passengers) missingForQuote.push('yacht:passengers');
+          // Yacht international (e.g. to San Andrés, or foreign-flag yacht) needs nationality
+          if (isInternational && !item.details?.nationality) missingForQuote.push('yacht:nationality');
         }
         if (item.pillar === 'villa') {
           if (!item.details?.nights) missingForQuote.push('villa:nights');
           if (!result.passengers) missingForQuote.push('villa:guests');
         }
         if (item.pillar === 'transport') {
-          // Transport: needs at least days + pax. Use travel_dates as day proxy or nights from villa.
           const days = item.details?.days || item.details?.nights || (result.travelDates ? 1 : null);
           if (!days) missingForQuote.push('transport:days');
           if (!result.passengers) missingForQuote.push('transport:passengers');
@@ -3221,6 +3267,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       }
 
       result.missingForQuote = Array.from(new Set(missingForQuote));
+      result.isInternational = isInternational;
 
       if (result.missingForQuote.length === 0 && dna.length > 0) {
         // All minimums present → compute price
@@ -3236,7 +3283,7 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           'villa:old_town': [2000, 4500],
           'villa:private_villa': [6000, 18000],
           'villa:private_island': [15000, 40000],
-          'villa:penthouse': [3000, 8000],
+          'villa:peninsula': [3000, 8000],
           'transport:armored_suv': [1200, 2200],
           'transport:luxury_sedan': [800, 1500],
           'transport:sprinter': [1500, 2800],
@@ -3299,9 +3346,12 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           'aviation:origin': 'origen',
           'aviation:destination': 'destino',
           'aviation:date': 'fecha',
-          'aviation:passengers': '# pasajeros',
+          'aviation:passengers': '# pasajeros (necesario para plan de vuelo y manifiesto)',
+          'aviation:nationality': 'nacionalidad de los pasajeros',
+          'aviation:passports': 'pasaportes listos (sí/no)',
           'yacht:date': 'fecha',
           'yacht:passengers': '# pasajeros',
+          'yacht:nationality': 'nacionalidad (para clearance)',
           'villa:nights': '# noches',
           'villa:guests': '# huéspedes',
           'villa:zone': 'zona (Bocagrande / Old Town / Barú)',
@@ -3314,16 +3364,18 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           'events:date': 'fecha',
         },
         EN: {
-          'aviation:origin': 'origin', 'aviation:destination': 'destination', 'aviation:date': 'date', 'aviation:passengers': '# passengers',
-          'yacht:date': 'date', 'yacht:passengers': '# passengers',
+          'aviation:origin': 'origin', 'aviation:destination': 'destination', 'aviation:date': 'date', 'aviation:passengers': '# passengers (required for flight plan + manifest)',
+          'aviation:nationality': 'passenger nationality', 'aviation:passports': 'passports ready (yes/no)',
+          'yacht:date': 'date', 'yacht:passengers': '# passengers', 'yacht:nationality': 'nationality (for clearance)',
           'villa:nights': '# nights', 'villa:guests': '# guests', 'villa:zone': 'zone (Bocagrande / Old Town / Barú)',
           'transport:days': '# days', 'transport:passengers': '# passengers',
           'staff:days': '# days', 'staff:guests': '# guests',
           'events:type': 'event type', 'events:guests': '# guests', 'events:date': 'date',
         },
         PT: {
-          'aviation:origin': 'origem', 'aviation:destination': 'destino', 'aviation:date': 'data', 'aviation:passengers': '# passageiros',
-          'yacht:date': 'data', 'yacht:passengers': '# passageiros',
+          'aviation:origin': 'origem', 'aviation:destination': 'destino', 'aviation:date': 'data', 'aviation:passengers': '# passageiros (necessário para plano de voo e manifesto)',
+          'aviation:nationality': 'nacionalidade dos passageiros', 'aviation:passports': 'passaportes prontos (sim/não)',
+          'yacht:date': 'data', 'yacht:passengers': '# passageiros', 'yacht:nationality': 'nacionalidade (para desembaraço)',
           'villa:nights': '# noites', 'villa:guests': '# hóspedes', 'villa:zone': 'zona (Bocagrande / Old Town / Barú)',
           'transport:days': '# dias', 'transport:passengers': '# passageiros',
           'staff:days': '# dias', 'staff:guests': '# hóspedes',
