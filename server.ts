@@ -3442,6 +3442,40 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
       const hasPrice = result.priceEstimate && result.priceEstimate.high > 0;
       const hasMissing = (result.missingForQuote || []).length > 0;
 
+      // Pre-compute grouped missing keys (used by elegant reply branches)
+      const groupedByPillar: Record<string, string[]> = {};
+      for (const key of (result.missingForQuote || [])) {
+        const [pillar, ...rest] = key.split(':');
+        if (!groupedByPillar[pillar]) groupedByPillar[pillar] = [];
+        groupedByPillar[pillar].push(rest.join(':'));
+      }
+      const phraseByPillar: Record<string, Record<string, string>> = {
+        aviation:  { ES: 'el jet',       EN: 'the jet',       PT: 'o jato' },
+        yacht:     { ES: 'el yate',      EN: 'the yacht',     PT: 'o iate' },
+        villa:     { ES: 'la villa',     EN: 'the villa',     PT: 'a villa' },
+        transport: { ES: 'el transporte', EN: 'the transport', PT: 'o transporte' },
+        staff:     { ES: 'el staff',     EN: 'the staff',     PT: 'a equipe' },
+        events:    { ES: 'el evento',    EN: 'the event',     PT: 'o evento' },
+      };
+
+      // Helper: list the detected services in natural language
+      // (used when there are multiple pillars so the reply feels conversational)
+      function pe_(svcs: string[], lng: 'EN' | 'ES' | 'PT'): string {
+        const dict: Record<string, Record<string, string>> = {
+          aviation:  { EN: 'a private jet',   ES: 'un jet privado',     PT: 'um jato privado' },
+          yacht:     { EN: 'a yacht',         ES: 'un yate',            PT: 'um iate' },
+          villa:     { EN: 'a villa',         ES: 'una villa',          PT: 'uma villa' },
+          transport: { EN: 'ground transport', ES: 'transporte',       PT: 'transporte' },
+          staff:     { EN: 'staff',           ES: 'personal',          PT: 'equipe' },
+          events:    { EN: 'an event',        ES: 'un evento',          PT: 'um evento' },
+        };
+        const labels = svcs.map((s) => dict[s]?.[lng] || s);
+        if (labels.length === 0) return '';
+        if (labels.length === 1) return labels[0];
+        if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+        return labels.slice(0, -1).join(', ') + ' and ' + labels[labels.length - 1];
+      }
+
       // Helper: format the list of missing fields in the user's language
       const labelByKey: Record<string, Record<string, string>> = {
         ES: {
@@ -3496,14 +3530,65 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
           : lang === 'PT'
             ? `Perfeito. Para ${pe.reasoning}, nossa orquestração estimada está em ${priceStr} (tudo incluso, sem surpresas). Um broker dedicado entrará em contato via ${result.email || result.phone} nas próximas 2 horas com uma proposta personalizada. Prefere WhatsApp, e-mail ou chamada?`
             : `Perfect. For ${pe.reasoning}, our estimated orchestration is ${priceStr} (all-inclusive, no surprises). A dedicated broker will reach out to ${result.email || result.phone} within 2 hours with a bespoke proposal. WhatsApp, email, or call?`;
-      } else if (hasContact && hasServices && hasMissing) {
-        // Have contact + services but missing fields — ask ONLY for missing
-        const listStr = missingLabels.join(', ');
-        result.reply = lang === 'ES'
-          ? `Entendido. Para cotizar ${result.experienceDna?.[0]?.type || 'su solicitud'}, necesito: ${listStr}.`
-          : lang === 'PT'
-            ? `Entendido. Para cotizar ${result.experienceDna?.[0]?.type || 'sua solicitação'}, preciso de: ${listStr}.`
-            : `Noted. To quote your ${result.experienceDna?.[0]?.type || 'request'}, I need: ${listStr}.`;
+      } else if (hasServices && hasMissing && (hasContact || result.budget)) {
+        // ── ELEGANT REPLY: group missing fields by pillar, single natural question ──
+        // Use the first service (primary pillar) for the lead question. The rest
+        // surface as a natural follow-up.
+        const primaryPillar = Object.keys(groupedByPillar)[0];
+        const otherPillars = Object.keys(groupedByPillar).slice(1);
+        const primaryPhrase = phraseByPillar[primaryPillar]?.[lang] || 'su solicitud';
+
+        // One natural sentence per pillar, tailored to what was already captured
+        const sentencesES: string[] = [];
+        const sentencesEN: string[] = [];
+        const sentencesPT: string[] = [];
+        // Primary question — usually the lead asks about people/dates
+        for (const p of [primaryPillar, ...otherPillars]) {
+          const missing = groupedByPillar[p];
+          if (lang === 'ES') {
+            if (p === 'aviation' && missing.includes('passengers')) sentencesES.push('¿Cuántas personas viajan y qué fecha tienen en mente?');
+            else if (p === 'aviation' && missing.includes('origin')) sentencesES.push('¿Desde qué ciudad salen y cuál es el destino?');
+            else if (p === 'aviation' && missing.includes('nationality')) sentencesES.push('¿Qué nacionalidad tienen los pasajeros? (Para antinarcóticos y migración.)');
+            else if (p === 'yacht' && missing.includes('passengers')) sentencesES.push('Para el yate, ¿cuántas personas y qué día?');
+            else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) sentencesES.push('Para la villa, ¿cuántas noches y huéspedes?');
+            else if (p === 'transport' && missing.includes('route')) sentencesES.push('Para el transporte, ¿es airport transfer, city tour o inter-city?');
+            else if (p === 'transport' && missing.includes('passengers')) sentencesES.push('Para el transporte, ¿cuántas personas?');
+            else if (p === 'staff' && missing.includes('schedule')) sentencesES.push('Para el staff, ¿medio día, jornada de 8h o día completo?');
+          } else if (lang === 'EN') {
+            if (p === 'aviation' && missing.includes('passengers')) sentencesEN.push('How many people will be traveling, and what dates?');
+            else if (p === 'aviation' && missing.includes('origin')) sentencesEN.push('Where are you flying from and to?');
+            else if (p === 'aviation' && missing.includes('nationality')) sentencesEN.push('What nationality are the passengers? (For antinarcotics and migration.)');
+            else if (p === 'yacht' && missing.includes('passengers')) sentencesEN.push('For the yacht, how many guests and on what date?');
+            else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) sentencesEN.push('For the villa, how many nights and guests?');
+            else if (p === 'transport' && missing.includes('route')) sentencesEN.push('For ground transport, will it be airport transfer, city tour, or inter-city?');
+            else if (p === 'staff' && missing.includes('schedule')) sentencesEN.push('For staff, would that be half day, 8-hour shift, or full day?');
+          } else {
+            if (p === 'aviation' && missing.includes('passengers')) sentencesPT.push('Quantas pessoas viajam e quais datas?');
+            else if (p === 'aviation' && missing.includes('origin')) sentencesPT.push('De qual cidade partem e qual é o destino?');
+            else if (p === 'aviation' && missing.includes('nationality')) sentencesPT.push('Qual a nacionalidade dos passageiros? (Para antinarcóticos e migração.)');
+            else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) sentencesPT.push('Para a villa, quantas noites e hóspedes?');
+            else if (p === 'staff' && missing.includes('schedule')) sentencesPT.push('Para o staff, meio período, 8h ou integral?');
+          }
+        }
+
+        // Build the final reply
+        if (lang === 'ES') {
+          const intro = servicesNeeded.length > 1
+            ? `Excelente. Para coordinar ${pe_(servicesNeeded, lang)}, me confirma algunos detalles.`
+            : `Perfecto. Para ${primaryPhrase},`;
+          const outro = hasContact ? '' : ' Y, ¿cómo prefiere que le contactemos — correo o WhatsApp?';
+          result.reply = `${intro} ${sentencesES.join(' ')}${outro}`.trim();
+        } else if (lang === 'EN') {
+          const intro = servicesNeeded.length > 1
+            ? `Excellent. To coordinate ${pe_(servicesNeeded, lang)}, just a few details.`
+            : `Great. For ${primaryPhrase},`;
+          const outro = hasContact ? '' : ' And how would you prefer to be contacted — email or WhatsApp?';
+          result.reply = `${intro} ${sentencesEN.join(' ')}${outro}`.trim();
+        } else {
+          const intro = `Perfeito. Para ${primaryPhrase},`;
+          const outro = hasContact ? '' : ' E, como prefere que entremos em contato — e-mail ou WhatsApp?';
+          result.reply = `${intro} ${sentencesPT.join(' ')}${outro}`.trim();
+        }
       } else if (result.qualified && !hasContact) {
         // UHNW with budget but no contact — ask for it
         result.reply = lang === 'ES'
@@ -3512,27 +3597,43 @@ Respond in the user's language. Mirror their tone. Always reply in JSON matching
             ? `Excelente. Com orçamento de $${result.budget?.toLocaleString()} USD podemos ativar nosso nível elite. Para atribuir um broker dedicado, poderia compartilhar seu nome completo e um e-mail ou WhatsApp?`
             : `Excellent. A budget of $${result.budget?.toLocaleString()} USD unlocks our elite tier. To assign a dedicated broker, may I have your full name and an email or WhatsApp contact?`;
       } else if (hasContact && !hasServices) {
-        // Have contact but no services — ask what they need
+        // Have contact but no services — ask what they need (one natural question)
         result.reply = lang === 'ES'
-          ? `Gracias. He registrado sus datos. ¿Qué tipo de experiencia le interesa? Jets privados, yates, villas, transporte o eventos?`
+          ? `Gracias. He registrado sus datos. ¿Qué le gustaría coordinar — jets privados, yates, villas, transporte o eventos?`
           : lang === 'PT'
-            ? `Obrigado. Registrei seus dados. Que tipo de experiência lhe interessa? Jatos, iates, villas, transporte ou eventos?`
-            : `Thank you. I have noted your contact. What type of experience interests you? Private jets, mega-yachts, exclusive villas, transport, or events?`;
+            ? `Obrigado. Registrei seus dados. O que gostaria de coordenar — jatos, iates, villas, transporte ou eventos?`
+            : `Thank you. I have noted your contact. What would you like to coordinate — private jets, mega-yachts, exclusive villas, ground transport, or events?`;
       } else if (hasServices && !hasContact) {
-        // Have services but no contact — ask for contact + minimums
+        // Have services but no contact — propose the elegant follow-up
         if (hasMissing) {
-          const listStr = missingLabels.join(', ');
-          result.reply = lang === 'ES'
-            ? `Entendido. Para preparar su cotización de ${result.experienceDna?.[0]?.type || 'servicios'}, necesito: ${listStr}. Y, ¿cómo prefiere que le contactemos — correo o WhatsApp?`
-            : lang === 'PT'
-              ? `Entendido. Para preparar a cotação de ${result.experienceDna?.[0]?.type || 'serviços'}, preciso de: ${listStr}. E, como prefere que entremos em contato — e-mail ou WhatsApp?`
-              : `Noted. To prepare your quote for ${result.experienceDna?.[0]?.type || 'services'}, I need: ${listStr}. And how would you prefer to be contacted — email or WhatsApp?`;
+          // Build a single conversational sentence for the primary pillar
+          const primaryPillar = (result.missingForQuote || [])
+            .map((k: string) => k.split(':')[0])
+            .find((p: string) => groupedByPillar[p] || true) || Object.keys(groupedByPillar)[0];
+          const phrase = phraseByPillar[primaryPillar]?.[lang] || 'su solicitud';
+          if (lang === 'ES') {
+            const sentence = (groupedByPillar.aviation?.includes('passengers'))
+              ? '¿Cuántas personas viajan y qué fecha tienen en mente? '
+              : (groupedByPillar.villa?.includes('nights') || groupedByPillar.villa?.includes('guests'))
+                ? '¿Cuántas noches y huéspedes? '
+                : `¿Podría confirmarme los detalles de ${phrase}? `;
+            result.reply = `Entendido. ${sentence}Y, ¿cómo prefiere que le contactemos — correo o WhatsApp?`;
+          } else if (lang === 'EN') {
+            const sentence = (groupedByPillar.aviation?.includes('passengers'))
+              ? 'How many people will be traveling, and what dates? '
+              : (groupedByPillar.villa?.includes('nights') || groupedByPillar.villa?.includes('guests'))
+                ? 'How many nights and guests? '
+                : `Could you share the details for ${phrase}? `;
+            result.reply = `Got it. ${sentence}And how would you prefer to be contacted — email or WhatsApp?`;
+          } else {
+            result.reply = `Entendido. Poderia confirmar os detalhes? E, como prefere que entremos em contato — e-mail ou WhatsApp?`;
+          }
         } else {
           result.reply = lang === 'ES'
-            ? `Entendido. Para enviarle la propuesta, ¿me comparte su correo o WhatsApp?`
+            ? `Entendido. Para enviarle la propuesta personalizada, ¿me comparte su correo o WhatsApp?`
             : lang === 'PT'
-              ? `Entendido. Para enviar a proposta, poderia compartilhar seu e-mail ou WhatsApp?`
-              : `Noted. To send you the proposal, may I have your email or WhatsApp?`;
+              ? `Entendido. Para enviar uma proposta personalizada, poderia compartilhar seu e-mail ou WhatsApp?`
+              : `Noted. To send you a bespoke proposal, may I have your email or WhatsApp?`;
         }
       } else if (hasContact) {
         // Just contact, nothing else — confirm
