@@ -363,10 +363,12 @@ async function startServer() {
   });
 
   // Register webhook with Telegram on startup
+  // The /api/maria/telegram-webhook endpoint handles full Maria conversation.
+  // The /api/telegram/webhook endpoint is the legacy helper for /start, /id.
   if (process.env.TELEGRAM_BOT_TOKEN) {
-    fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/setWebhook?url=${APP_URL}/api/telegram/webhook`)
+    fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/setWebhook?url=${APP_URL}/api/maria/telegram-webhook`)
       .then(r => r.json() as Promise<{ ok: boolean; description?: string }>)
-      .then(d => { if (d.ok) console.log('✅ Telegram webhook set'); else console.warn('⚠️ Telegram:', d.description); })
+      .then(d => { if (d.ok) console.log('✅ Telegram webhook set (Maria bot)'); else console.warn('⚠️ Telegram:', d.description); })
       .catch(() => {});
   }
 
