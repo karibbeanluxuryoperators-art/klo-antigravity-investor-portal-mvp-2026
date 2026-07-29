@@ -4065,7 +4065,6 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       // creates a fresh globals object per invocation). We look up the most
       // recent lead for this Telegram chat_id and pass its id + extracted
       // fields as `context` so María can continue the same conversation.
-      const sb = getSupabase();
       let previousLeadId: string | null = null;
       let previousContext: any = null;
       if (sb) {
