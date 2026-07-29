@@ -3474,9 +3474,12 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         /\(\d{3}\)[\s\-]?\d{3}[\s\-]?\d{4}/,
         // NNN-NNN-NNNN (US/CA)
         /\d{3}[\s\-]\d{3}[\s\-]\d{4}/,
-        // 10-15 consecutive digits with optional single spaces (latin american
-        // style: 311 123 4567 or 3111234567)
-        /(?<![\d\-])(\+?\d{1,3}[\s\-]?\d{2,4}[\s\-]?\d{2,4}[\s\-]?\d{2,4})(?![\d\-])/,
+        // 10 consecutive digits (no separator, common latin american mobile)
+        /(?<![\d\-])\d{10}(?![\d\-])/,
+        // NNN NNN NNNN (3-3-4 with spaces)
+        /(?<![\d\-])\d{3}\s\d{3}\s\d{4}(?![\d\-])/,
+        // NNN NNNNNNN (3-7 with space, latin american mobile w/ area code)
+        /(?<![\d\-])\d{3}\s\d{7}(?![\d\-])/,
       ];
       for (const re of phoneCandidates) {
         const m = message.match(re);
