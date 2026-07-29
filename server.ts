@@ -4354,7 +4354,7 @@ LANGUAGE: respond in the user's language (ES/EN/PT). Always reply in JSON matchi
       formattedHistory.push({ role: 'user', parts: [{ text: message }] });
 
       const response = await genai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-1.5-flash',
         contents: formattedHistory,
         config: {
           systemInstruction: geminiSystemInstruction,
