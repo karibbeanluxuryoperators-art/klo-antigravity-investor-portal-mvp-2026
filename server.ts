@@ -3282,7 +3282,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         dna.push({ pillar: 'villa', type: villaType, details: {} });
       }
 
-      if (/transport|car|driver|suburban|sprinter|carro|camioneta|sedan|suv|blindado|blindada/.test(msgLower)) {
+      if (/transport|airport|pickup|pick-up|transfer|car|driver|suburban|sprinter|carro|camioneta|sedan|suv|blindado|blindada|transporte|recogida/.test(msgLower)) {
         servicesNeeded.push('transport');
         // ── Luxury transport sub-types (KLO is exclusively HNW/UHNW) ──
         // Priority detection: armored > executive van > executive sedan > sprinter
