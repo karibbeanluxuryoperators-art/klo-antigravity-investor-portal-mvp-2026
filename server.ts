@@ -438,12 +438,14 @@ async function startServer() {
         // Block E: lead profile + attribution
         { job_title: body.job_title || null, tax_id: body.tax_id || null, tags: Array.isArray(body.tags) ? body.tags : [], utm_source: body.utm_source || null, utm_campaign: body.utm_campaign || null },
       ];
+      let savedLead: any = null;
       const row: any = { ...baseRow };
       for (const block of extendedBlocks) {
         const trial: any = { ...row, ...block };
         const trialRes = await supabase.from('leads').insert([trial]).select();
         if (!trialRes.error) {
-          return res.json({ success: true, lead: trialRes.data![0] });
+          savedLead = trialRes.data![0];
+          break;
         }
         if (trialRes.error.code === 'PGRST204' || /does not exist/i.test(trialRes.error.message || '')) {
           console.warn('POST /api/leads: extended block missing, retrying without it:', trialRes.error.message);
@@ -451,10 +453,38 @@ async function startServer() {
         }
         throw trialRes.error;
       }
-      // No block succeeded → base alone.
-      const finalRes = await supabase.from('leads').insert([baseRow]).select();
-      if (finalRes.error) throw finalRes.error;
-      res.json({ success: true, lead: finalRes.data![0] });
+      if (!savedLead) {
+        // No block succeeded → base alone.
+        const finalRes = await supabase.from('leads').insert([baseRow]).select();
+        if (finalRes.error) throw finalRes.error;
+        savedLead = finalRes.data![0];
+      }
+
+      // ── Telegram notification (fire-and-forget, must not block the response) ──
+      // Every lead from the public site form gets pinged to the admin's Telegram.
+      // Failures here never affect the Supabase save.
+      const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
+      const botToken = process.env.TELEGRAM_BOT_TOKEN;
+      if (adminChatId && botToken) {
+        const tgText = [
+          `🆕 Nuevo lead — ${savedLead.id}`,
+          `👤 ${savedLead.name || '(sin nombre)'}`,
+          `✉️ ${savedLead.email || '—'}`,
+          `📱 ${savedLead.phone || savedLead.whatsapp || '—'}`,
+          `🛬 ${savedLead.destination || savedLead.experience_type || '—'}`,
+          `📅 ${savedLead.travel_date || savedLead.travel_dates || '—'}`,
+          `💰 ${savedLead.budget || (savedLead.budget_max ? `hasta $${savedLead.budget_max} USD` : '—')}`,
+          `🌐 ${savedLead.source || '—'} · ${savedLead.preferred_language || 'ES'}`,
+          savedLead.message ? `💬 ${String(savedLead.message).slice(0, 200)}` : null,
+        ].filter(Boolean).join('\n');
+        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: adminChatId, text: tgText, parse_mode: 'HTML' }),
+        }).catch((e) => console.warn('[leads→telegram] send failed:', e?.message || e));
+      }
+
+      res.json({ success: true, lead: savedLead });
     } catch (error: any) {
       console.error('POST /api/leads failed', error?.message || error);
       res.status(500).json({ error: error.message });
@@ -3965,6 +3995,9 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
       // Persist to Supabase
       const lead = await persistMariaLead(result, existingLeadId);
+      // Notify admin via Telegram (fire-and-forget). Skip when updating an
+      // existing lead (already notified on first save).
+      if (lead && !existingLeadId) notifyAdminNewLead(lead, 'maria_chat');
       return res.json({ success: true, result, lead, meta: { language: lang, source: 'fallback' } });
     }
   });
@@ -4093,6 +4126,35 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
     }
   }
 
+  // Fire-and-forget notification to the admin's Telegram chat whenever a new
+  // lead lands in Supabase. Used by /api/leads, /api/maria/chat, and
+  // /api/maria/chat-gemini. Never blocks the response; never throws.
+  function notifyAdminNewLead(lead: any, source: string) {
+    const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!adminChatId || !botToken) return;
+    const price = lead.price_estimate_usd
+      ? `$${Number(lead.price_estimate_usd).toLocaleString()} USD`
+      : (lead.budget || (lead.budget_max ? `hasta $${lead.budget_max} USD` : '—'));
+    const tgText = [
+      `🆕 Nuevo lead — ${lead.id}`,
+      `Fuente: ${source}`,
+      `👤 ${lead.name || '(sin nombre)'}`,
+      `✉️ ${lead.email || '—'}`,
+      `📱 ${lead.phone || lead.whatsapp || '—'}`,
+      `🛬 ${lead.destination || lead.experience_type || lead.pillar_interest || '—'}`,
+      `📅 ${lead.travel_date || lead.travel_dates || '—'}`,
+      `💰 ${price}`,
+      `🌐 ${lead.preferred_language || 'ES'}`,
+      lead.message ? `💬 ${String(lead.message).slice(0, 200)}` : null,
+    ].filter(Boolean).join('\n');
+    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: adminChatId, text: tgText, parse_mode: 'HTML' }),
+    }).catch((e) => console.warn(`[${source}→telegram] send failed:`, e?.message || e));
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // POST /api/maria/chat-gemini
   // Standalone Gemini-powered version of /api/maria/chat. The main endpoint
@@ -4217,6 +4279,7 @@ LANGUAGE: respond in the user's language (ES/EN/PT). Always reply in JSON matchi
       }
 
       const lead = await persistMariaLead(result, existingLeadId);
+      if (lead && !existingLeadId) notifyAdminNewLead(lead, 'maria_chat_gemini');
       const turns = (history?.length || 0) + 1;
       return res.json({
         success: true,
