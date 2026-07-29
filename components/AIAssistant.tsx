@@ -123,6 +123,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
             servicesNeeded: qualification.servicesNeeded,
             hasContact: !!(qualification.email || qualification.phone),
             fullName: qualification.fullName,
+            email: qualification.email,
+            phone: qualification.phone,
             origin: qualification.origin,
             destination: qualification.destination,
             passengers: qualification.passengers,
