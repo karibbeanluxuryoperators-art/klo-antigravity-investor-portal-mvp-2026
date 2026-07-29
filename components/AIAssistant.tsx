@@ -185,7 +185,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
           : 'Tengo un problema de conexión. Por favor intente de nuevo, o escriba a hola@karibbeanluxuryoperators.lat.',
       }]);
     } finally { setIsLoading(false); }
-  }, [input, isLoading, messages, lang, leadId]);
+  }, [input, isLoading, messages, lang, leadId, qualification]);
 
   const suggestionList = t('assistant.suggestions') || [];
   const greeting = lang === 'en' ? 'Welcome. I am María, your concierge at KLO. How may I help you today?'
