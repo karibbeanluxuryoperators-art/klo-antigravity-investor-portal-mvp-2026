@@ -3446,9 +3446,12 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       const namePatterns = [
         /\b(?:i'?m|mi\s+nombre\s+es|me\s+llamo|soy|my\s+name\s+is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})/i,
         /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/m,
-        // First word in the message if it looks like a name (alpha, 3+ chars,
-        // not a number, not a service keyword, followed by a phone or email)
+        // First word 3+ chars followed by a digit (e.g. "mario 311...")
         /^([a-zA-ZÀ-ÿ]{3,})\s+[\d]/,
+        // First word 3+ chars followed by an email — strip the @ suffix to
+        // extract just the local part as the name
+        /^([a-zA-ZÀ-ÿ]{3,})@/,
+        // First word 3+ chars followed by an email with space: "maria maria@gmail.com"
         /^([a-zA-ZÀ-ÿ]{3,})\s+\S+@\S+/,
       ];
       for (const re of namePatterns) {
@@ -4480,28 +4483,29 @@ LANGUAGE: respond in the user's language (ES/EN/PT). Always reply in JSON matchi
         return data;
       }
 
-      // Insert: try each combination until one succeeds
-      const row: any = { ...baseRow };
-      for (const block of extendedBlocks) {
-        const trial: any = { ...row, ...block };
-        const trialRes = await sb.from('leads').insert([trial]).select();
-        if (!trialRes.error) {
-          return trialRes.data![0];
-        }
-        if (trialRes.error.code === 'PGRST204' || /does not exist/i.test(trialRes.error.message || '')) {
-          console.info('[maria] extended column missing, retrying without:', Object.keys(block).join(','));
-          continue;
-        }
-        console.warn('[maria] insert trial failed:', trialRes.error.message);
-        // Don't throw — try next block
-      }
-      // Last resort: just base row
-      const finalRes = await sb.from('leads').insert([baseRow]).select();
-      if (finalRes.error) {
-        console.warn('[maria] final insert failed:', finalRes.error.message);
+      // Insert: first write the base row (its columns are guaranteed to exist),
+      // then apply every extended block via UPDATE. This mirrors the update
+      // path so all extracted fields persist on the very first turn.
+      const insRes = await sb.from('leads').insert([baseRow]).select();
+      if (insRes.error) {
+        // If the base row itself failed (e.g. unique violation, RLS), bail
+        console.warn('[maria] insert base row failed:', insRes.error.message);
         return null;
       }
-      return finalRes.data![0];
+      const inserted = insRes.data![0];
+      for (const block of extendedBlocks) {
+        const trial = await sb.from('leads').update(block).eq('id', id);
+        if (!trial.error) continue;
+        if (trial.error.code === 'PGRST204' || /does not exist/i.test(trial.error.message || '')) {
+          console.info('[maria] extended column missing on first insert, skipping:', Object.keys(block).join(','));
+          continue;
+        }
+        console.warn('[maria] extended update after insert failed:', trial.error.message);
+        // Don't throw — keep trying other blocks
+      }
+      // Re-read the final state so the caller sees everything we managed to save
+      const { data: final } = await sb.from('leads').select('*').eq('id', id).maybeSingle();
+      return final || inserted;
     } catch (e: any) {
       console.error('[maria] persistMariaLead exception:', e?.message || e);
       return null;
