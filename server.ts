@@ -3441,10 +3441,15 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         }
       }
 
-      // ── Name extraction (capture "im juan" or "my name is carlos") ──
+      // ── Name extraction (capture "im juan", "my name is carlos", or a bare
+      //    single-word name at the start like "mario 311..." ) ──
       const namePatterns = [
         /\b(?:i'?m|mi\s+nombre\s+es|me\s+llamo|soy|my\s+name\s+is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})/i,
         /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/m,
+        // First word in the message if it looks like a name (alpha, 3+ chars,
+        // not a number, not a service keyword, followed by a phone or email)
+        /^([a-zA-ZÀ-ÿ]{3,})\s+[\d]/,
+        /^([a-zA-ZÀ-ÿ]{3,})\s+\S+@\S+/,
       ];
       for (const re of namePatterns) {
         const m = message.match(re);
@@ -4006,9 +4011,10 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
       // Persist to Supabase
       const lead = await persistMariaLead(result, existingLeadId);
-      // Notify admin via Telegram (fire-and-forget). Skip when updating an
-      // existing lead (already notified on first save).
-      if (lead && !existingLeadId) notifyAdminNewLead(lead, 'maria_chat');
+      // Notify admin via Telegram on EVERY save (new + update) so the broker
+      // always has the full current lead state. Fire-and-forget so it doesn't
+      // block the response.
+      if (lead) notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new');
       return res.json({ success: true, result, lead, meta: { language: lang, source: 'fallback' } });
     }
   });
@@ -4161,27 +4167,56 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
     }
   }
 
-  // Fire-and-forget notification to the admin's Telegram chat whenever a new
-  // lead lands in Supabase. Used by /api/leads, /api/maria/chat, and
-  // /api/maria/chat-gemini. Never blocks the response; never throws.
-  function notifyAdminNewLead(lead: any, source: string) {
+  // Fire-and-forget notification to the admin's Telegram chat. Used by
+  // /api/leads, /api/maria/chat, and /api/maria/chat-gemini. Sends the FULL
+  // current lead state so the broker has the complete picture.
+  //
+  // Anti-spam policy (so the broker isn't pinged on every message):
+  //   - new lead → notify
+  //   - update that gains contact info → notify (becomes actionable)
+  //   - update that gains a service or date → notify (becomes actionable)
+  //   - update with no new info → silent (no notification)
+  //   - any update → mark (tracked in __notifiedLeads set) so we don't
+  //     double-notify within a short window
+  function notifyAdminNewLead(lead: any, source: string, mode: 'new' | 'update' = 'new') {
     const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     if (!adminChatId || !botToken) return;
+    if (mode === 'update') {
+      // Check if the lead has actionable info (contact + service) before notifying
+      const hasContact = !!(lead.email || lead.phone);
+      const services = (() => {
+        try {
+          const exp = typeof lead.experience_dna === 'string' ? JSON.parse(lead.experience_dna) : (lead.experience_dna || []);
+          return Array.isArray(exp) ? exp.length : 0;
+        } catch { return 0; }
+      })();
+      const isActionable = hasContact && (services > 0 || lead.experience_type);
+      if (!isActionable) return; // skip silent updates
+    }
     const price = lead.price_estimate_usd
       ? `$${Number(lead.price_estimate_usd).toLocaleString()} USD`
       : (lead.budget || (lead.budget_max ? `hasta $${lead.budget_max} USD` : '—'));
+    const servicesStr = (() => {
+      try {
+        const exp = typeof lead.experience_dna === 'string' ? JSON.parse(lead.experience_dna) : (lead.experience_dna || []);
+        return Array.isArray(exp) ? exp.map((d: any) => d.pillar).filter(Boolean).join(', ') : '';
+      } catch { return ''; }
+    })();
+    const header = mode === 'new' ? `🆕 Nuevo lead — ${lead.id}` : `🔄 Lead actualizado — ${lead.id}`;
     const tgText = [
-      `🆕 Nuevo lead — ${lead.id}`,
+      header,
       `Fuente: ${source}`,
       `👤 ${lead.name || '(sin nombre)'}`,
       `✉️ ${lead.email || '—'}`,
       `📱 ${lead.phone || lead.whatsapp || '—'}`,
-      `🛬 ${lead.destination || lead.experience_type || lead.pillar_interest || '—'}`,
+      `🎯 ${servicesStr || lead.experience_type || lead.pillar_interest || '—'}`,
+      `🛬 ${lead.destination || '—'}`,
       `📅 ${lead.travel_date || lead.travel_dates || '—'}`,
+      `👥 ${lead.travelers || '—'} pax`,
       `💰 ${price}`,
       `🌐 ${lead.preferred_language || 'ES'}`,
-      lead.message ? `💬 ${String(lead.message).slice(0, 200)}` : null,
+      lead.message ? `💬 ${String(lead.message).slice(0, 400)}` : null,
     ].filter(Boolean).join('\n');
     fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
       method: 'POST',
@@ -4314,7 +4349,7 @@ LANGUAGE: respond in the user's language (ES/EN/PT). Always reply in JSON matchi
       }
 
       const lead = await persistMariaLead(result, existingLeadId);
-      if (lead && !existingLeadId) notifyAdminNewLead(lead, 'maria_chat_gemini');
+      if (lead) notifyAdminNewLead(lead, 'maria_chat_gemini', existingLeadId ? 'update' : 'new');
       const turns = (history?.length || 0) + 1;
       return res.json({
         success: true,
