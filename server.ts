@@ -3462,7 +3462,29 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       // ── Contact extraction ──
       const emailMatch = message.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
       if (emailMatch) result.email = emailMatch[0];
-      const phoneMatch = message.match(/(\+?\d[\d\s\-()]{7,}\d)/);
+      // Phone: must be 7-15 digits, optionally with + and separators. The
+      // number must be a contiguous-ish run (not "543 4357666 30" which the
+      // old regex caught). Try strict patterns first, fall back to a
+      // count-based match.
+      let phoneMatch: RegExpMatchArray | null = null;
+      const phoneCandidates = [
+        // +CC NNN NNN NNNN (international with +)
+        /\+\d{1,3}[\s\-]?\d{2,4}[\s\-]?\d{2,4}[\s\-]?\d{0,4}/,
+        // (NNN) NNN-NNNN (US)
+        /\(\d{3}\)[\s\-]?\d{3}[\s\-]?\d{4}/,
+        // NNN-NNN-NNNN (US/CA)
+        /\d{3}[\s\-]\d{3}[\s\-]\d{4}/,
+        // 10-15 consecutive digits with optional single spaces (latin american
+        // style: 311 123 4567 or 3111234567)
+        /(?<![\d\-])(\+?\d{1,3}[\s\-]?\d{2,4}[\s\-]?\d{2,4}[\s\-]?\d{2,4})(?![\d\-])/,
+      ];
+      for (const re of phoneCandidates) {
+        const m = message.match(re);
+        if (m && m[0].replace(/\D/g, '').length >= 7 && m[0].replace(/\D/g, '').length <= 15) {
+          phoneMatch = m;
+          break;
+        }
+      }
       if (phoneMatch) result.phone = phoneMatch[0].trim();
 
       // ── Passengers / dates / budget extraction ──
@@ -3515,11 +3537,27 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         if (v) v.details = { ...v.details, travel_date: dateMatch[1] };
       }
 
-      const numMatches = message.match(/\b(\d{4,7})\b/g);
-      if (numMatches) {
-        for (const n of numMatches) {
-          const v = parseInt(n.replace(/[\s,\.]/g, ''), 10);
-          if (v >= 10000) { result.budget = v; result.qualified = true; break; }
+      // Budget detection: only count numbers that appear NEAR explicit budget
+      // keywords (budget, presupuesto, USD, $, etc.) to avoid grabbing
+      // phone digits or night counts.
+      const budgetPatterns = [
+        /\b(?:budget|presupuesto|orcamento|orçamento)\s*[:\-]?\s*\$?\s*(\d[\d,\.kKmM\s]*\d|\d)\s*(?:k|K|mil|usd|USD)?/i,
+        /\$\s*(\d[\d,\.kKmM\s]*\d|\d)\s*(?:k|K|mil)?/,
+        /\b(\d[\d,\.kK]*)\s*(?:k|K)\b\s*(?:usd|USD)?/,
+        /\b(\d[\d,\.]*)\s*(?:usd|USD|dollars?|dolares|dólares)\b/i,
+        /\b(\d{4,7})\s*(?:usd|USD|dollars?)\b/i,
+      ];
+      for (const re of budgetPatterns) {
+        const m = message.match(re);
+        if (m) {
+          const raw = (m[1] || m[0]).replace(/[\s,\.]/g, '');
+          let v = parseInt(raw, 10);
+          if (/k/i.test(m[0]) && v < 100000) v = v * 1000;
+          if (v >= 1000 && v <= 100000000) {
+            result.budget = v;
+            result.qualified = true;
+            break;
+          }
         }
       }
 
