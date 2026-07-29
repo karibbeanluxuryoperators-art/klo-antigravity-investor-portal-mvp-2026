@@ -3189,6 +3189,24 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         priceEstimate: null,
       };
 
+      // ── Merge context from previous turns (frontend sends this so we don't
+      //    re-ask for info the user already gave in a prior message) ──
+      if (context && typeof context === 'object') {
+        if (context.fullName) result.fullName = context.fullName;
+        if (context.email) result.email = context.email;
+        if (context.phone) result.phone = context.phone;
+        if (context.origin) result.origin = context.origin;
+        if (context.destination) result.destination = context.destination;
+        if (context.passengers) result.passengers = context.passengers;
+        if (context.budget) result.budget = context.budget;
+        if (context.travelDates) result.travelDates = context.travelDates;
+        if (Array.isArray(context.servicesNeeded) && context.servicesNeeded.length > 0) {
+          for (const s of context.servicesNeeded) {
+            if (!result.servicesNeeded.includes(s)) result.servicesNeeded.push(s);
+          }
+        }
+      }
+
       // ── Services detection + DNA extraction ──
       const dna: any[] = [];
       const servicesNeeded: string[] = [];
@@ -4003,6 +4021,10 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       // Reuse the maria/chat endpoint's core logic by making an internal call
       // We extract the qualification inline here to avoid re-running the
       // webhook through the full request cycle.
+      // Pass the leadId from the previous turn (if any) so the backend can
+      // update the same lead instead of creating a new one each message.
+      const previousLeadId = (global as any).__telegramLeadIds?.get(chatId) || null;
+      const previousContext = (global as any).__telegramContexts?.get(chatId) || null;
       const internalRes = await fetch(
         `https://www.karibbeanluxuryoperators.lat/api/maria/chat`,
         {
@@ -4012,7 +4034,8 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             message: userText,
             history: chatHistoryForReply,
             lang,
-            leadId: null,
+            leadId: previousLeadId,
+            context: previousContext,
           }),
         }
       );
@@ -4023,6 +4046,28 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       }
       const data: any = await internalRes.json();
       const replyText = data?.result?.reply || 'Gracias por escribir. ¿En qué puedo ayudarle?';
+
+      // Remember the leadId + extracted context for this Telegram user so the
+      // next message continues the same lead instead of starting a new one.
+      const returnedLeadId = data?.lead?.id;
+      if (returnedLeadId) {
+        if (!(global as any).__telegramLeadIds) (global as any).__telegramLeadIds = new Map();
+        (global as any).__telegramLeadIds.set(chatId, returnedLeadId);
+      }
+      const r = data?.result || {};
+      const newContext = {
+        servicesNeeded: r.servicesNeeded || [],
+        fullName: r.fullName || null,
+        email: r.email || null,
+        phone: r.phone || null,
+        origin: r.origin || null,
+        destination: r.destination || null,
+        passengers: r.passengers || null,
+        budget: r.budget || null,
+        travelDates: r.travelDates || null,
+      };
+      if (!(global as any).__telegramContexts) (global as any).__telegramContexts = new Map();
+      (global as any).__telegramContexts.set(chatId, newContext);
       // Telegram has a 4096-char limit per message; truncate gracefully
       const truncated = replyText.length > 4000 ? replyText.slice(0, 4000) + '...' : replyText;
       await sendTelegramMessage(chatId, truncated);
