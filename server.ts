@@ -3562,13 +3562,22 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           if (!result.passengers) missingForQuote.push('villa:guests');
         }
         if (item.pillar === 'transport') {
-          if (!item.details?.travel_date && !result.travelDates) missingForQuote.push('transport:date');
+          // Date: required for a real booking, but if the user says
+          // "en Cartagena" / "for tomorrow" / "right now" without an explicit
+          // date, we can infer a same-day or next-day service and still
+          // produce an estimate (with a note in operationalNotes).
+          if (!item.details?.travel_date && !result.travelDates) {
+            const implicitDate = /\b(hoy|today|mañana|tomorrow|ahora|right\s*now|en\s+cartagena|para\s+el\s+mismo\s+d[ií]a|asap)\b/i.test(message);
+            if (implicitDate) {
+              // Use today as the implicit date
+              item.details = { ...item.details, travel_date: new Date().toISOString().slice(0, 10) };
+            } else {
+              missingForQuote.push('transport:date');
+            }
+          }
           if (!result.passengers) missingForQuote.push('transport:passengers');
           // Schedule (half_day / full_day) — required, pricing varies 2-3x
           if (!item.details?.schedule) missingForQuote.push('transport:schedule');
-          // Type: we set the default 'luxury_sedan' upfront, but the user can
-          // upgrade. Don't ask unless they want to change — but make the option
-          // visible in the reply.
         }
         if (item.pillar === 'staff') {
           if (!item.details?.days && !item.details?.nights && !result.travelDates) missingForQuote.push('staff:days');
@@ -3851,22 +3860,33 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         }
 
         // Build the final reply
+        // (Note: when sentencesES/EN/PT is empty, fall back to a generic follow-up
+        //  so the reply doesn't end mid-sentence with the intro dangling.)
         if (lang === 'ES') {
           const intro = servicesNeeded.length > 1
             ? `Excelente. Para coordinar ${pe_(servicesNeeded, lang)}, me confirma algunos detalles.`
             : `Perfecto. Para ${primaryPhrase},`;
+          const sentences = sentencesES.length > 0
+            ? sentencesES.join(' ')
+            : '¿podría confirmarme los detalles para que le prepare una propuesta personalizada?';
           const outro = hasContact ? '' : ' Y, ¿cómo prefiere que le contactemos — correo o WhatsApp?';
-          result.reply = `${intro}${yachtHourlyNote} ${sentencesES.join(' ')}${outro}`.trim();
+          result.reply = `${intro}${yachtHourlyNote} ${sentences}${outro}`.trim();
         } else if (lang === 'EN') {
           const intro = servicesNeeded.length > 1
             ? `Excellent. To coordinate ${pe_(servicesNeeded, lang)}, just a few details.`
             : `Great. For ${primaryPhrase},`;
+          const sentences = sentencesEN.length > 0
+            ? sentencesEN.join(' ')
+            : 'could you share the details so I can prepare a bespoke proposal?';
           const outro = hasContact ? '' : ' And how would you prefer to be contacted — email or WhatsApp?';
-          result.reply = `${intro}${yachtHourlyNote} ${sentencesEN.join(' ')}${outro}`.trim();
+          result.reply = `${intro}${yachtHourlyNote} ${sentences}${outro}`.trim();
         } else {
           const intro = `Perfeito. Para ${primaryPhrase},`;
+          const sentences = sentencesPT.length > 0
+            ? sentencesPT.join(' ')
+            : 'poderia confirmar os detalhes para que eu prepare uma proposta personalizada?';
           const outro = hasContact ? '' : ' E, como prefere que entremos em contato — e-mail ou WhatsApp?';
-          result.reply = `${intro}${yachtHourlyNote} ${sentencesPT.join(' ')}${outro}`.trim();
+          result.reply = `${intro}${yachtHourlyNote} ${sentences}${outro}`.trim();
         }
       } else if (result.qualified && !hasContact) {
         // UHNW with budget but no contact — ask for it
@@ -4025,6 +4045,147 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       return false;
     }
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // POST /api/maria/chat-gemini
+  // Standalone Gemini-powered version of /api/maria/chat. The main endpoint
+  // (maria/chat) uses a rule-based fallback so the chat works even without
+  // GEMINI_API_KEY. This endpoint is what the admin can call to get
+  // Gemini-quality responses when the key is configured in Vercel.
+  //
+  // Returns the same contract: { success, result, lead, meta }
+  // If GEMINI_API_KEY is not set, returns 503 with a clear message.
+  // ─────────────────────────────────────────────────────────────────────────
+  app.post("/api/maria/chat-gemini", async (req, res) => {
+    const { message, history, lang: reqLang, leadId: existingLeadId, context } = req.body || {};
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'message is required' });
+    }
+    if (!process.env.GEMINI_API_KEY) {
+      return res.status(503).json({
+        error: 'GEMINI_API_KEY is not configured on this server. Use /api/maria/chat (rule-based fallback) or set the env var in Vercel.',
+      });
+    }
+
+    // Same system prompt and schema as /api/maria/chat, but inlined here so
+    // this endpoint is self-contained (avoids coupling to the maria/chat
+    // handler's local scope).
+    const geminiSystemInstruction = `You are María, KLO's (Karibbean Luxury Operators) elite virtual concierge assistant.
+
+KLO is Cartagena's most exclusive ultra-luxury travel platform, in its founding phase. We orchestrate 5 pillars:
+- AIR: private jets and helicopters
+- SEA: mega-yachts and maritime experiences
+- STAY: ultra-luxury villas and residences
+- LAND: armored VIP ground transport
+- STAFF: private chefs, security, concierges
+
+PRICING: our bespoke orchestrations start at $10,000 USD total. We never quote a fee.
+
+PERSONALITY: warm, discreet, effortlessly knowledgeable (Aman, Belmond, NetJets). Never use jargon. One question at a time. Speak in the user's language.
+
+YOUR GOAL — in priority order:
+1. Capture contact: full name + (email OR phone)
+2. As soon as contact is captured, propose a price range
+3. Offer to connect with a dedicated broker
+
+ALWAYS: extract experienceDna (array of { pillar, type, details }) and priceEstimate automatically. NEVER quote a price without the operational minimums.
+
+SCOPE: only luxury travel coordination. Out of scope queries: redirect warmly to hola@karibbeanluxuryoperators.lat.
+
+LANGUAGE: respond in the user's language (ES/EN/PT). Always reply in JSON matching the specified schema.`;
+
+    const geminiResponseSchema = {
+      type: "OBJECT",
+      properties: {
+        reply: { type: "STRING" },
+        fullName: { type: "STRING" },
+        email: { type: "STRING" },
+        phone: { type: "STRING" },
+        servicesNeeded: { type: "ARRAY", items: { type: "STRING" } },
+        experienceDna: { type: "ARRAY", items: { type: "OBJECT" } },
+        priceEstimate: { type: "OBJECT" },
+        isInternational: { type: "BOOLEAN" },
+        missingForQuote: { type: "ARRAY", items: { type: "STRING" } },
+        preferredLanguage: { type: "STRING" },
+        pillarInterest: { type: "STRING" },
+        qualified: { type: "BOOLEAN" },
+      },
+      required: ["reply"],
+    };
+
+    // Auto-detect language
+    const detectLang = (txt: string): 'EN' | 'ES' | 'PT' => {
+      const t = txt.toLowerCase();
+      if (/\b(bom dia|boa tarde|boa noite|olá|obrigad[oa]|por favor|quero|gostaria|vocês?|está|estou|tenho)\b/.test(t)) return 'PT';
+      if (/\b(hola|buenos días|buenas tardes|buenas noches|gracias|por favor|quiero|quisiera|tengo|está|estoy)\b/.test(t)) return 'ES';
+      return 'EN';
+    };
+    const lang: 'EN' | 'ES' | 'PT' = (reqLang === 'EN' || reqLang === 'ES' || reqLang === 'PT') ? reqLang : detectLang(message);
+
+    try {
+      const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const formattedHistory = (history || []).map((h: any) => ({
+        role: h.role === 'user' ? 'user' : 'model',
+        parts: [{ text: h.content || h.text || '' }],
+      }));
+      formattedHistory.push({ role: 'user', parts: [{ text: message }] });
+
+      const response = await genai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: formattedHistory,
+        config: {
+          systemInstruction: geminiSystemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema: geminiResponseSchema as any,
+          temperature: 0.3,
+        },
+      });
+      const responseText = response.text || '{}';
+      let result: any;
+      try { result = JSON.parse(responseText); }
+      catch {
+        result = { reply: responseText, qualified: false, preferredLanguage: lang };
+      }
+      result.preferredLanguage = result.preferredLanguage || lang;
+      if (!result.pillarInterest && Array.isArray(result.servicesNeeded) && result.servicesNeeded.length > 0) {
+        result.pillarInterest = result.servicesNeeded[0];
+      }
+      if (!Array.isArray(result.experienceDna)) result.experienceDna = [];
+
+      // Apply accumulated context from previous turns (same logic as /maria/chat)
+      if (context && typeof context === 'object') {
+        if (Array.isArray(context.servicesNeeded) && context.servicesNeeded.length > 0) {
+          const existing = Array.isArray(result.servicesNeeded) ? result.servicesNeeded : [];
+          for (const svc of context.servicesNeeded) {
+            if (!existing.includes(svc)) existing.push(svc);
+          }
+          result.servicesNeeded = existing;
+        }
+        if (context.fullName && !result.fullName) result.fullName = context.fullName;
+        if (context.origin && !result.origin) result.origin = context.origin;
+        if (context.destination && !result.destination) result.destination = context.destination;
+        if (context.passengers && !result.passengers) result.passengers = context.passengers;
+        if (context.budget && !result.budget) result.budget = context.budget;
+        if (context.travelDates && !result.travelDates) result.travelDates = context.travelDates;
+      }
+
+      const lead = await persistMariaLead(result, existingLeadId);
+      const turns = (history?.length || 0) + 1;
+      return res.json({
+        success: true,
+        result,
+        lead,
+        meta: { language: lang, source: 'gemini', turns_used: turns },
+      });
+    } catch (err: any) {
+      console.error('[maria-gemini] error:', err?.message || err);
+      return res.status(500).json({
+        success: false,
+        error: err?.message || 'Gemini call failed',
+        meta: { language: lang, source: 'gemini-error' },
+      });
+    }
+  });
 
   // Helper: persist Maria's extracted lead to Supabase.
   // Mirrors the resilient block-by-block pattern that POST /api/leads uses
