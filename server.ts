@@ -4028,6 +4028,10 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
       // Ignore bot commands like /start, /help
       if (userText.startsWith('/')) {
+        if (userText === '/id' || userText === '/chatid') {
+          await sendTelegramMessage(chatId, `🆔 Your Telegram chat ID:\n\n${chatId}\n\nPaste this number as TELEGRAM_ADMIN_CHAT_ID in Vercel env vars.`);
+          return;
+        }
         const helpText = "Welcome to KLO. I am María, your private concierge for ultra-luxury experiences in Cartagena. How may I help? You can tell me about:\n\n• Private jets (MIA, BOG, JFK, etc.)\n• Mega-yachts and sailing\n• Exclusive villas in Bocagrande, Old Town, Barú\n• VIP ground transport (armored SUV, sedans, sprinter)\n• Private chefs, butlers, security\n• Events, weddings, private dining\n\nWhat kind of experience are you looking for?";
         await sendTelegramMessage(chatId, helpText);
         return;
@@ -4056,8 +4060,40 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       // webhook through the full request cycle.
       // Pass the leadId from the previous turn (if any) so the backend can
       // update the same lead instead of creating a new one each message.
-      const previousLeadId = (global as any).__telegramLeadIds?.get(chatId) || null;
-      const previousContext = (global as any).__telegramContexts?.get(chatId) || null;
+      //
+      // Memory source: Supabase (NOT in-memory globals — Vercel serverless
+      // creates a fresh globals object per invocation). We look up the most
+      // recent lead for this Telegram chat_id and pass its id + extracted
+      // fields as `context` so María can continue the same conversation.
+      const sb = getSupabase();
+      let previousLeadId: string | null = null;
+      let previousContext: any = null;
+      if (sb) {
+        try {
+          const { data: lastLead } = await sb
+            .from('leads')
+            .select('id, name, email, phone, experience_type, pillar_interest, destination, travel_date, budget_max, preferred_language, notes')
+            .eq('telegram_chat_id', chatId)
+            .order('timestamp', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (lastLead) {
+            previousLeadId = lastLead.id;
+            previousContext = {
+              fullName: lastLead.name && lastLead.name !== 'Anonymous (María Chat)' ? lastLead.name : null,
+              email: lastLead.email,
+              phone: lastLead.phone,
+              servicesNeeded: lastLead.experience_type ? String(lastLead.experience_type).split(',').map((s: string) => s.trim()).filter(Boolean) : [],
+              destination: lastLead.destination,
+              hasContact: !!(lastLead.email || lastLead.phone),
+              travelDates: lastLead.travel_date,
+              budget: lastLead.budget_max,
+            };
+          }
+        } catch (e) {
+          console.warn('[maria-telegram] lead lookup failed:', (e as any)?.message || e);
+        }
+      }
       const internalRes = await fetch(
         `https://www.karibbeanluxuryoperators.lat/api/maria/chat`,
         {
@@ -4080,27 +4116,16 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       const data: any = await internalRes.json();
       const replyText = data?.result?.reply || 'Gracias por escribir. ¿En qué puedo ayudarle?';
 
-      // Remember the leadId + extracted context for this Telegram user so the
-      // next message continues the same lead instead of starting a new one.
+      // Persist the telegram_chat_id back to the lead so future messages
+      // can find the same lead via Supabase lookup (no in-memory globals).
       const returnedLeadId = data?.lead?.id;
-      if (returnedLeadId) {
-        if (!(global as any).__telegramLeadIds) (global as any).__telegramLeadIds = new Map();
-        (global as any).__telegramLeadIds.set(chatId, returnedLeadId);
+      if (returnedLeadId && sb) {
+        try {
+          await sb.from('leads').update({ telegram_chat_id: chatId }).eq('id', returnedLeadId);
+        } catch (e) {
+          console.warn('[maria-telegram] failed to set telegram_chat_id on lead:', (e as any)?.message || e);
+        }
       }
-      const r = data?.result || {};
-      const newContext = {
-        servicesNeeded: r.servicesNeeded || [],
-        fullName: r.fullName || null,
-        email: r.email || null,
-        phone: r.phone || null,
-        origin: r.origin || null,
-        destination: r.destination || null,
-        passengers: r.passengers || null,
-        budget: r.budget || null,
-        travelDates: r.travelDates || null,
-      };
-      if (!(global as any).__telegramContexts) (global as any).__telegramContexts = new Map();
-      (global as any).__telegramContexts.set(chatId, newContext);
       // Telegram has a 4096-char limit per message; truncate gracefully
       const truncated = replyText.length > 4000 ? replyText.slice(0, 4000) + '...' : replyText;
       await sendTelegramMessage(chatId, truncated);
@@ -4301,7 +4326,7 @@ LANGUAGE: respond in the user's language (ES/EN/PT). Always reply in JSON matchi
   // Mirrors the resilient block-by-block pattern that POST /api/leads uses
   // (proven to work in production). Each block is a separate insert trial;
   // on 42703/PGRST204 the block is dropped and the next trial is attempted.
-  async function persistMariaLead(result: any, existingLeadId?: string | null) {
+  async function persistMariaLead(result: any, existingLeadId?: string | null, opts: { telegramChatId?: number | null } = {}) {
     try {
       const sb = getSupabase();
       if (!sb) { console.warn('[maria] supabase not configured'); return null; }
