@@ -3986,11 +3986,22 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         }
       } else if (hasContact) {
         // Just contact, nothing else — confirm
-        result.reply = lang === 'ES'
-          ? `Gracias, registrado. Un broker le contactará a ${result.email || result.phone} en breve. Mientras tanto, ¿hay algo específico que quisiera agregar a su solicitud?`
-          : lang === 'PT'
-            ? `Obrigado, registrado. Um broker entrará em contato via ${result.email || result.phone} em breve. Enquanto isso, há algo específico que gostaria de adicionar?`
-            : `Thank you, noted. A broker will reach out to ${result.email || result.phone} shortly. In the meantime, is there anything specific you'd like to add?`;
+        // If user asked a question (ends with ? or contains question word),
+        // acknowledge it without re-asking the closing question.
+        const userAskedQuestion = /\?$|^[^.!?]*\b(where|when|how|why|what|which|cu[aá]ndo|d[oó]nde|c[oó]mo|por qu[eé]|qu[eé]|cu[aá]l)\b/i.test(message.trim());
+        if (userAskedQuestion) {
+          result.reply = lang === 'ES'
+            ? `Buena pregunta. El broker que le contactará a ${result.email || result.phone} en breve podrá darle los detalles exactos. ¿Hay algo más en lo que le pueda ayudar ahora?`
+            : lang === 'PT'
+              ? `Boa pergunta. O broker que entrará em contato via ${result.email || result.phone} em breve poderá lhe dar os detalhes exatos. Há algo mais em que eu possa ajudar agora?`
+              : `Good question. The broker reaching out to ${result.email || result.phone} shortly can give you the exact details. Is there anything else I can help with right now?`;
+        } else {
+          result.reply = lang === 'ES'
+            ? `Gracias, registrado. Un broker le contactará a ${result.email || result.phone} en breve. Mientras tanto, ¿hay algo específico que quisiera agregar a su solicitud?`
+            : lang === 'PT'
+              ? `Obrigado, registrado. Um broker entrará em contato via ${result.email || result.phone} em breve. Enquanto isso, há algo específico que gostaria de adicionar?`
+              : `Thank you, noted. A broker will reach out to ${result.email || result.phone} shortly. In the meantime, is there anything specific you'd like to add?`;
+        }
       }
 
       // Persist to Supabase
