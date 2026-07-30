@@ -3715,6 +3715,26 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       // (labelByKey is declared once below in the reply section, with the full
       // multilingual version. This validator just collects the raw missing keys.)
 
+      // ── Origin / destination extraction ──
+      // Extract from "MIA to CTG", "Bogota to Cartagena", "BOG → CTG" patterns.
+      // Also capture standalone 3-letter airport codes.
+      if (!result.origin || !result.destination) {
+        const routePatterns = [
+          // "MIA to CTG", "BOG -> CTG", "from BOG to CTG"
+          /(?:from\s+)?([A-Z]{3})\s*(?:to|→|-{1,2}|>|hasta|para|a)\s*([A-Z]{3})/i,
+          // "Cartagena to Bogota" (city names)
+          /(?:from\s+)?([A-Z][a-záéíóúñÀ-ÿ]+(?:\s+[A-Z][a-záéíóúñÀ-ÿ]+){0,2})\s+(?:to|hasta|para|a)\s+([A-Z][a-záéíóúñÀ-ÿ]+(?:\s+[A-Z][a-záéíóúñÀ-ÿ]+){0,2})/i,
+        ];
+        for (const re of routePatterns) {
+          const m = message.match(re);
+          if (m) {
+            if (!result.origin) result.origin = m[1].trim();
+            if (!result.destination) result.destination = m[2].trim();
+            break;
+          }
+        }
+      }
+
       // Detect if aviation is international (origin/destination are non-CO airports)
       const intlAirports = /\b(mia|jfk|nyc|lax|mex|sao|gru|eze|mco|ord|yyz|lhr|cdg|frankfurt|munich|bcn|mad|lis|panama|sjo|gua|lim|clo|ups|aqp)\b/i;
       const isInternational = dna.some((d) => d.pillar === 'aviation') && intlAirports.test(message);
