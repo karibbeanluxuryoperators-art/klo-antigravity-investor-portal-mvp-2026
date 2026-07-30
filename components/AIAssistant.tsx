@@ -24,6 +24,7 @@ interface QualificationState {
   email: string | null;
   phone: string | null;
   servicesNeeded: string[];
+  experienceDna: any[];
   travelDates: string | null;
   origin: string | null;
   destination: string | null;
@@ -64,14 +65,14 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_QUAL);
       return saved ? JSON.parse(saved) : {
-        fullName: null, email: null, phone: null, servicesNeeded: [],
+        fullName: null, email: null, phone: null, servicesNeeded: [], experienceDna: [],
         travelDates: null, origin: null, destination: null,
         passengers: null, budget: null, documentationReady: null,
         qualified: false, preferredLanguage: null,
       };
     } catch {
       return {
-        fullName: null, email: null, phone: null, servicesNeeded: [],
+        fullName: null, email: null, phone: null, servicesNeeded: [], experienceDna: [],
         travelDates: null, origin: null, destination: null,
         passengers: null, budget: null, documentationReady: null,
         qualified: false, preferredLanguage: null,
@@ -121,6 +122,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
           // doesn't lose context when a later message is just contact info
           context: {
             servicesNeeded: qualification.servicesNeeded,
+            experienceDna: qualification.experienceDna,
             hasContact: !!(qualification.email || qualification.phone),
             fullName: qualification.fullName,
             email: qualification.email,
@@ -147,6 +149,9 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
         servicesNeeded: Array.isArray(result.servicesNeeded) && result.servicesNeeded.length > 0
           ? Array.from(new Set([...prev.servicesNeeded, ...result.servicesNeeded]))
           : prev.servicesNeeded,
+        experienceDna: Array.isArray(result.experienceDna) && result.experienceDna.length > 0
+          ? result.experienceDna
+          : prev.experienceDna,
         travelDates: result.travelDates || prev.travelDates,
         origin: result.origin || prev.origin,
         destination: result.destination || prev.destination,
@@ -268,7 +273,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
                 try { localStorage.removeItem(STORAGE_KEY_EMAIL); } catch {}
                 setMessages([]);
                 setQualification({
-                  fullName: null, email: null, phone: null, servicesNeeded: [],
+                  fullName: null, email: null, phone: null, servicesNeeded: [], experienceDna: [],
                   travelDates: null, origin: null, destination: null,
                   passengers: null, budget: null, documentationReady: null,
                   qualified: false, preferredLanguage: null,

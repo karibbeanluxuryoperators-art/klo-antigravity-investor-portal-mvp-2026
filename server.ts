@@ -3213,7 +3213,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         }));
         formattedHistory.push({ role: 'user', parts: [{ text: message }] });
         const geminiCall = genai.models.generateContent({
-          model: 'gemini-1.5-flash',
+          model: 'gemini-2.0-flash',
           contents: formattedHistory,
           config: {
             systemInstruction: systemInstruction,
@@ -3246,6 +3246,8 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             geminiResult.servicesNeeded = existing;
           }
           if (context.fullName && !geminiResult.fullName) geminiResult.fullName = context.fullName;
+          if (context.email && !geminiResult.email) geminiResult.email = context.email;
+          if (context.phone && !geminiResult.phone) geminiResult.phone = context.phone;
           if (context.origin && !geminiResult.origin) geminiResult.origin = context.origin;
           if (context.destination && !geminiResult.destination) geminiResult.destination = context.destination;
           if (context.passengers && !geminiResult.passengers) geminiResult.passengers = context.passengers;
@@ -3390,6 +3392,23 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         if (Array.isArray(context.servicesNeeded) && context.servicesNeeded.length > 0) {
           for (const svc of context.servicesNeeded) {
             if (!servicesNeeded.includes(svc)) servicesNeeded.push(svc);
+          }
+        }
+        // Restore experienceDna from context so missingForQuote can compute
+        // correctly even when the current message is just contact info.
+        if (Array.isArray(context.experienceDna) && context.experienceDna.length > 0 && dna.length === 0) {
+          for (const d of context.experienceDna) {
+            dna.push({ ...d, details: { ...(d.details || {}) } });
+          }
+          // Re-apply context-level fields into restored DNA items so the
+          // missingForQuote validator sees them.
+          for (const item of dna) {
+            if (context.passengers && ['aviation', 'yacht', 'villa', 'transport', 'staff', 'events'].includes(item.pillar)) {
+              item.details = { ...item.details, passengers: context.passengers };
+            }
+            if (context.travelDates) {
+              item.details = { ...item.details, travel_date: context.travelDates };
+            }
           }
         }
         if (context.fullName && !result.fullName) result.fullName = context.fullName;
@@ -4064,42 +4083,106 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             ? `Obrigado. Registrei seus dados. O que gostaria de coordenar — jatos, iates, villas, transporte ou eventos?`
             : `Thank you. I have noted your contact. What would you like to coordinate — private jets, mega-yachts, exclusive villas, ground transport, or events?`;
       } else if (hasServices && !hasContact) {
-        // Have services but no contact — propose the elegant follow-up
+        // Have services but no contact — ask ALL missing per-pillar fields
+        // (same logic as the hasContact+hasMissing branch above) plus
+        // request contact info at the end.
         if (hasMissing) {
-          // Build a single conversational sentence for the primary pillar
-          const primaryPillar = (result.missingForQuote || [])
-            .map((k: string) => k.split(':')[0])
-            .find((p: string) => groupedByPillar[p] || true) || Object.keys(groupedByPillar)[0];
-          const phrase = phraseByPillar[primaryPillar]?.[lang] || 'su solicitud';
+          // Reuse the same grouped-by-pillar question builder
+          const ncSentencesES: string[] = [];
+          const ncSentencesEN: string[] = [];
+          const ncSentencesPT: string[] = [];
+          const ncPillars = Object.keys(groupedByPillar);
+          const ncPrimary = ncPillars[0];
+          const ncPhrase = phraseByPillar[ncPrimary]?.[lang] || 'su solicitud';
+
+          for (const p of ncPillars) {
+            const missing = groupedByPillar[p];
+            if (lang === 'ES') {
+              if (p === 'aviation' && missing.includes('passengers') && missing.includes('origin'))
+                ncSentencesES.push('¿Desde qué ciudad salen, cuántas personas viajan y qué fecha tienen en mente?');
+              else if (p === 'aviation' && missing.includes('origin'))
+                ncSentencesES.push('¿Desde qué ciudad salen y cuál es el destino?');
+              else if (p === 'aviation' && missing.includes('passengers'))
+                ncSentencesES.push('¿Cuántas personas viajan y qué fecha tienen en mente?');
+              else if (p === 'aviation' && missing.includes('nationality'))
+                ncSentencesES.push('¿Qué nacionalidad tienen los pasajeros? (Para antinarcóticos y migración.)');
+              else if (p === 'yacht' && (missing.includes('passengers') || missing.includes('date')))
+                ncSentencesES.push('Para el yate, ¿cuántas personas y qué día?');
+              else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests')))
+                ncSentencesES.push('Para la villa, ¿cuántas noches y huéspedes?');
+              else if (p === 'transport' && missing.includes('schedule'))
+                ncSentencesES.push('Para el transporte, ¿medio día o día completo?');
+              else if (p === 'transport' && missing.includes('passengers'))
+                ncSentencesES.push('Para el transporte, ¿cuántas personas?');
+              else if (p === 'staff' && missing.includes('schedule'))
+                ncSentencesES.push('Para el staff, ¿medio día, jornada de 8h o día completo?');
+              else if (missing.length > 0)
+                ncSentencesES.push(`¿Podría confirmarme los detalles de ${phraseByPillar[p]?.ES || p}?`);
+            } else if (lang === 'EN') {
+              if (p === 'aviation' && missing.includes('passengers') && missing.includes('origin'))
+                ncSentencesEN.push('Where are you flying from and to, how many passengers, and what dates?');
+              else if (p === 'aviation' && missing.includes('origin'))
+                ncSentencesEN.push('Where are you flying from and to?');
+              else if (p === 'aviation' && missing.includes('passengers'))
+                ncSentencesEN.push('How many people will be traveling, and what dates?');
+              else if (p === 'aviation' && missing.includes('nationality'))
+                ncSentencesEN.push('What nationality are the passengers? (For antinarcotics and migration.)');
+              else if (p === 'yacht' && (missing.includes('passengers') || missing.includes('date')))
+                ncSentencesEN.push('For the yacht, how many guests and on what date?');
+              else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests')))
+                ncSentencesEN.push('For the villa, how many nights and guests?');
+              else if (p === 'transport' && missing.includes('schedule'))
+                ncSentencesEN.push('For the transport, will that be half day or full day?');
+              else if (p === 'transport' && missing.includes('passengers'))
+                ncSentencesEN.push('For the transport, how many people?');
+              else if (p === 'staff' && missing.includes('schedule'))
+                ncSentencesEN.push('For staff, would that be half day, 8-hour shift, or full day?');
+              else if (missing.length > 0)
+                ncSentencesEN.push(`Could you share the details for ${phraseByPillar[p]?.EN || p}?`);
+            } else {
+              if (p === 'aviation' && (missing.includes('passengers') || missing.includes('origin')))
+                ncSentencesPT.push('De qual cidade partem, quantos passageiros e quais datas?');
+              else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests')))
+                ncSentencesPT.push('Para a villa, quantas noites e hóspedes?');
+              else if (missing.length > 0)
+                ncSentencesPT.push(`Poderia confirmar os detalhes de ${phraseByPillar[p]?.PT || p}?`);
+            }
+          }
+
           if (lang === 'ES') {
-            const sentence = (groupedByPillar.aviation?.includes('passengers'))
-              ? '¿Cuántas personas viajan y qué fecha tienen en mente? '
-              : (groupedByPillar.villa?.includes('nights') || groupedByPillar.villa?.includes('guests'))
-                ? '¿Cuántas noches y huéspedes? '
-                : `¿Podría confirmarme los detalles de ${phrase}? `;
-            result.reply = `Entendido. ${sentence}Y, ¿cómo prefiere que le contactemos — correo o WhatsApp?`;
+            const intro = ncPillars.length > 1
+              ? `Excelente. Para coordinar ${pe_(servicesNeeded, lang)}, me confirma algunos detalles.`
+              : `Perfecto. Para ${ncPhrase},`;
+            const sentences = ncSentencesES.length > 0
+              ? ncSentencesES.join(' ')
+              : '¿podría confirmarme los detalles para que le prepare una propuesta personalizada?';
+            result.reply = `${intro} ${sentences} Y, ¿cómo prefiere que le contactemos — correo o WhatsApp?`.trim();
           } else if (lang === 'EN') {
-            const sentence = (groupedByPillar.aviation?.includes('passengers'))
-              ? 'How many people will be traveling, and what dates? '
-              : (groupedByPillar.villa?.includes('nights') || groupedByPillar.villa?.includes('guests'))
-                ? 'How many nights and guests? '
-                : `Could you share the details for ${phrase}? `;
-            result.reply = `Got it. ${sentence}And how would you prefer to be contacted — email or WhatsApp?`;
+            const intro = ncPillars.length > 1
+              ? `Excellent. To coordinate ${pe_(servicesNeeded, lang)}, just a few details.`
+              : `Great. For ${ncPhrase},`;
+            const sentences = ncSentencesEN.length > 0
+              ? ncSentencesEN.join(' ')
+              : 'could you share the details so I can prepare a bespoke proposal?';
+            result.reply = `${intro} ${sentences} And how would you prefer to be contacted — email or WhatsApp?`.trim();
           } else {
-            result.reply = `Entendido. Poderia confirmar os detalhes? E, como prefere que entremos em contato — e-mail ou WhatsApp?`;
+            const intro = `Perfeito. Para ${ncPhrase},`;
+            const sentences = ncSentencesPT.length > 0
+              ? ncSentencesPT.join(' ')
+              : 'poderia confirmar os detalhes para que eu prepare uma proposta personalizada?';
+            result.reply = `${intro} ${sentences} E, como prefere que entremos em contato — e-mail ou WhatsApp?`.trim();
           }
         } else {
+          // All minimums met, just need contact → ask for it
           result.reply = lang === 'ES'
             ? `Entendido. Para enviarle la propuesta personalizada, ¿me comparte su correo o WhatsApp?`
             : lang === 'PT'
               ? `Entendido. Para enviar uma proposta personalizada, poderia compartilhar seu e-mail ou WhatsApp?`
               : `Noted. To send you a bespoke proposal, may I have your email or WhatsApp?`;
         }
-      } else if (hasContact) {
-        // Just contact, nothing else — confirm
-        // If user asked a question (ends with ? or contains question word),
-        // acknowledge it without re-asking the closing question.
-        const userAskedQuestion = /\?$|^[^.!?]*\b(where|when|how|why|what|which|cu[aá]ndo|d[oó]nde|c[oó]mo|por qu[eé]|qu[eé]|cu[aá]l)\b/i.test(message.trim());
+      } else if (hasContact && !hasMissing && !hasServices) {
+        // Just contact, no services, nothing missing — acknowledge
+        const userAskedQuestion = /\?$|^[^.!?]*(where|when|how|why|what|which|cu[aá]ndo|d[oó]nde|c[oó]mo|por qu[eé]|qu[eé]|cu[aá]l)/i.test(message.trim());
         if (userAskedQuestion) {
           result.reply = lang === 'ES'
             ? `Buena pregunta. El broker que le contactará a ${result.email || result.phone} en breve podrá darle los detalles exactos. ¿Hay algo más en lo que le pueda ayudar ahora?`
@@ -4111,7 +4194,74 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             ? `Gracias, registrado. Un broker le contactará a ${result.email || result.phone} en breve. Mientras tanto, ¿hay algo específico que quisiera agregar a su solicitud?`
             : lang === 'PT'
               ? `Obrigado, registrado. Um broker entrará em contato via ${result.email || result.phone} em breve. Enquanto isso, há algo específico que gostaria de adicionar?`
-              : `Thank you, noted. A broker will reach out to ${result.email || result.phone} shortly. In the meantime, is there anything specific you'd like to add?`;
+              : `Thank you, noted. A broker will reach out to ${result.email || result.phone} shortly. In the meantime, is there anything specific you’d like to add?`;
+        }
+      } else if (hasContact && hasServices && hasMissing) {
+        // Has contact + services but still missing fields — ask for them
+        // (Safety net: this catches turns where DNA was restored from
+        // context after the user provided contact info, and the standard
+        // branch 2 above was bypassed because (hasContact || budget) didn’t
+        // match the branch condition or the fields only became visible after
+        // DNA restoration.)
+        const caSentencesES: string[] = [];
+        const caSentencesEN: string[] = [];
+        const caSentencesPT: string[] = [];
+        for (const p of Object.keys(groupedByPillar)) {
+          const missing = groupedByPillar[p];
+          if (lang === 'ES') {
+            if (p === 'aviation' && missing.includes('passengers') && missing.includes('origin'))
+              caSentencesES.push('¿Desde qué ciudad salen, cuántas personas y qué fecha?');
+            else if (p === 'aviation' && missing.includes('origin'))
+              caSentencesES.push('¿Desde qué ciudad salen y cuál es el destino?');
+            else if (p === 'aviation' && missing.includes('passengers'))
+              caSentencesES.push('¿Cuántas personas viajan y qué fecha tienen en mente?');
+            else if (p === 'aviation' && missing.includes('nationality'))
+              caSentencesES.push('¿Qué nacionalidad tienen los pasajeros?');
+            else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests')))
+              caSentencesES.push('¿Cuántas noches y huéspedes?');
+            else if (p === 'yacht' && (missing.includes('passengers') || missing.includes('date')))
+              caSentencesES.push('Para el yate, ¿cuántas personas y qué día?');
+            else if (p === 'transport' && missing.includes('schedule'))
+              caSentencesES.push('¿Medio día o día completo?');
+            else if (missing.length > 0)
+              caSentencesES.push(`¿Podría confirmar los detalles de ${phraseByPillar[p]?.ES || p}?`);
+          } else if (lang === 'EN') {
+            if (p === 'aviation' && missing.includes('passengers') && missing.includes('origin'))
+              caSentencesEN.push('Where are you flying from and to, how many passengers, and what dates?');
+            else if (p === 'aviation' && missing.includes('origin'))
+              caSentencesEN.push('Where are you flying from and to?');
+            else if (p === 'aviation' && missing.includes('passengers'))
+              caSentencesEN.push('How many people and what dates?');
+            else if (p === 'aviation' && missing.includes('nationality'))
+              caSentencesEN.push('What nationality are the passengers?');
+            else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests')))
+              caSentencesEN.push('How many nights and guests?');
+            else if (p === 'yacht' && (missing.includes('passengers') || missing.includes('date')))
+              caSentencesEN.push('For the yacht, how many guests and on what date?');
+            else if (p === 'transport' && missing.includes('schedule'))
+              caSentencesEN.push('Half day or full day?');
+            else if (missing.length > 0)
+              caSentencesEN.push(`Could you confirm the details for ${phraseByPillar[p]?.EN || p}?`);
+          } else {
+            if (missing.length > 0)
+              caSentencesPT.push(`Poderia confirmar os detalhes de ${phraseByPillar[p]?.PT || p}?`);
+          }
+        }
+        if (lang === 'ES') {
+          const s = caSentencesES.length > 0
+            ? caSentencesES.join(' ')
+            : '¿podría confirmarme los detalles para que le prepare la propuesta?';
+          result.reply = `Para completar su solicitud, ${s}`;
+        } else if (lang === 'EN') {
+          const s = caSentencesEN.length > 0
+            ? caSentencesEN.join(' ')
+            : 'could you confirm the details so I can prepare the proposal?';
+          result.reply = `To finalize your request, ${s}`;
+        } else {
+          const s = caSentencesPT.length > 0
+            ? caSentencesPT.join(' ')
+            : 'poderia confirmar os detalhes para que eu prepare a proposta?';
+          result.reply = `Para finalizar sua solicitação, ${s}`;
         }
       }
 
@@ -4419,7 +4569,7 @@ LANGUAGE: respond in the user's language (ES/EN/PT). Always reply in JSON matchi
       // quota-blocked, or unreachable, fall through to the rule-based
       // path below so the user gets an answer instead of a hang.
       const geminiCall = genai.models.generateContent({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.0-flash',
         contents: formattedHistory,
         config: {
           systemInstruction: geminiSystemInstruction,
