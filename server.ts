@@ -3200,9 +3200,71 @@ ALWAYS:
 
 This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
-    // ── Fallback rule-based if no Gemini key ──
-    if (!process.env.GEMINI_API_KEY) {
-      console.warn('[maria] No GEMINI_API_KEY — using rule-based fallback');
+    // ── Try Gemini first (with 6s timeout). On failure or timeout, fall
+    //    through to the rule-based path so the user always gets an answer. ──
+    let usedGemini = false;
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const { GoogleGenAI } = require('@google/genai');
+        const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const formattedHistory = (history || []).map((h: any) => ({
+          role: h.role === 'user' ? 'user' : 'model',
+          parts: [{ text: h.content || h.text || '' }],
+        }));
+        formattedHistory.push({ role: 'user', parts: [{ text: message }] });
+        const geminiCall = genai.models.generateContent({
+          model: 'gemini-1.5-flash',
+          contents: formattedHistory,
+          config: {
+            systemInstruction: systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: responseSchema as any,
+            temperature: 0.3,
+          },
+        });
+        const timeoutMs = 6000;
+        const geminiResp = await Promise.race([
+          geminiCall,
+          new Promise<never>((_, rej) => setTimeout(() => rej(new Error('gemini_timeout')), timeoutMs)),
+        ]);
+        const responseText = geminiResp.text || '{}';
+        let geminiResult: any;
+        try { geminiResult = JSON.parse(responseText); }
+        catch { geminiResult = { reply: responseText, qualified: false, preferredLanguage: lang }; }
+        geminiResult.preferredLanguage = geminiResult.preferredLanguage || lang;
+        if (!geminiResult.pillarInterest && Array.isArray(geminiResult.servicesNeeded) && geminiResult.servicesNeeded.length > 0) {
+          geminiResult.pillarInterest = geminiResult.servicesNeeded[0];
+        }
+        if (!Array.isArray(geminiResult.experienceDna)) geminiResult.experienceDna = [];
+        // Apply accumulated context from previous turns
+        if (context && typeof context === 'object') {
+          if (Array.isArray(context.servicesNeeded) && context.servicesNeeded.length > 0) {
+            const existing = Array.isArray(geminiResult.servicesNeeded) ? geminiResult.servicesNeeded : [];
+            for (const svc of context.servicesNeeded) {
+              if (!existing.includes(svc)) existing.push(svc);
+            }
+            geminiResult.servicesNeeded = existing;
+          }
+          if (context.fullName && !geminiResult.fullName) geminiResult.fullName = context.fullName;
+          if (context.origin && !geminiResult.origin) geminiResult.origin = context.origin;
+          if (context.destination && !geminiResult.destination) geminiResult.destination = context.destination;
+          if (context.passengers && !geminiResult.passengers) geminiResult.passengers = context.passengers;
+          if (context.budget && !geminiResult.budget) geminiResult.budget = context.budget;
+          if (context.travelDates && !geminiResult.travelDates) geminiResult.travelDates = context.travelDates;
+        }
+        // Persist + notify
+        const lead = await persistMariaLead(geminiResult, existingLeadId);
+        if (lead) notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new');
+        usedGemini = true;
+        return res.json({ success: true, result: geminiResult, lead, meta: { language: lang, source: 'gemini' } });
+      } catch (geminiErr: any) {
+        console.warn('[maria] gemini failed, falling back to rule-based:', geminiErr?.message || geminiErr);
+        // Fall through to rule-based below
+      }
+    }
+
+    // ── Rule-based fallback ──
+    if (!usedGemini) {
       const msgLower = message.toLowerCase();
       const result: any = {
         reply: lang === 'ES'
@@ -4353,7 +4415,10 @@ LANGUAGE: respond in the user's language (ES/EN/PT). Always reply in JSON matchi
       }));
       formattedHistory.push({ role: 'user', parts: [{ text: message }] });
 
-      const response = await genai.models.generateContent({
+      // Race the Gemini call against an 8s timeout. If Gemini is slow,
+      // quota-blocked, or unreachable, fall through to the rule-based
+      // path below so the user gets an answer instead of a hang.
+      const geminiCall = genai.models.generateContent({
         model: 'gemini-1.5-flash',
         contents: formattedHistory,
         config: {
@@ -4363,6 +4428,9 @@ LANGUAGE: respond in the user's language (ES/EN/PT). Always reply in JSON matchi
           temperature: 0.3,
         },
       });
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('gemini_timeout')), 8000));
+      const response = await Promise.race([geminiCall, timeout]);
       const responseText = response.text || '{}';
       let result: any;
       try { result = JSON.parse(responseText); }
