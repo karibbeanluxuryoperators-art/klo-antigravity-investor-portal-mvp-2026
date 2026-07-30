@@ -3995,8 +3995,11 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         if (!groupedByPillar[pillar]) groupedByPillar[pillar] = [];
         groupedByPillar[pillar].push(rest.join(':'));
       }
+      // Resolve aviation subtype from DNA (helicopter vs jet)
+      const aviationType = dna.find(d => d.pillar === 'aviation')?.type || 'light_jet';
+      const isHeli = aviationType === 'helicopter';
       const phraseByPillar: Record<string, Record<string, string>> = {
-        aviation:  { ES: 'el jet',       EN: 'the jet',       PT: 'o jato' },
+        aviation:  { ES: isHeli ? 'el helicóptero' : 'el jet', EN: isHeli ? 'the helicopter' : 'the jet', PT: isHeli ? 'o helicóptero' : 'o jato' },
         yacht:     { ES: 'el yate',      EN: 'the yacht',     PT: 'o iate' },
         villa:     { ES: 'la villa',     EN: 'the villa',     PT: 'a villa' },
         transport: { ES: 'el transporte', EN: 'the transport', PT: 'o transporte' },
@@ -4007,8 +4010,11 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       // Helper: list the detected services in natural language
       // (used when there are multiple pillars so the reply feels conversational)
       function pe_(svcs: string[], lng: 'EN' | 'ES' | 'PT'): string {
+        const avLabel = isHeli
+          ? { EN: 'a helicopter',   ES: 'un helicóptero',     PT: 'um helicóptero' }
+          : { EN: 'a private jet',  ES: 'un jet privado',    PT: 'um jato privado' };
         const dict: Record<string, Record<string, string>> = {
-          aviation:  { EN: 'a private jet',   ES: 'un jet privado',     PT: 'um jato privado' },
+          aviation:  avLabel,
           yacht:     { EN: 'a yacht',         ES: 'un yate',            PT: 'um iate' },
           villa:     { EN: 'a villa',         ES: 'una villa',          PT: 'uma villa' },
           transport: { EN: 'ground transport', ES: 'transporte',       PT: 'transporte' },
