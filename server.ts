@@ -561,6 +561,627 @@ async function startServer() {
     }
   });
 
+  // ── Bundles (v1.8.0 Step 22.26 — Phase 4 Half 2) ─────────────────────────
+  // Multi-supplier bundle builder. 4 roles: client, partner, ops, admin.
+  // Commission model (locked in 2026-07-30):
+  //   partner_sourced: supplier receives = supplier_price * (1 - klo_commission_pct/100)
+  //   klo_addon:      supplier receives = $0, KLO keeps 100% of sale_price
+  //   cross-sell:     5% of supplier_price * klo_commission_pct/100
+  //                   on partner_sourced lines where supplier_id != assembler_partner_id
+  //   default_markup_pct (30%) is a SUGGESTION, not a ceiling. Admin/ops can set any markup.
+  //   Hard floor: sale_price >= supplier_price on partner_sourced lines.
+  //
+  // Resilient to missing columns: every endpoint tolerates PGRST204/42703 and
+  // drops the missing column. This way the API works whether or not the
+  // patch migration (db/migrations/2026-07-30_bundles_patch.sql) has run.
+
+  // Helper: validate a single line item.
+  // Throws an Error with a user-facing message if invalid.
+  function validateLineItem(line: any): void {
+    if (!line || typeof line !== 'object') throw new Error('line must be an object');
+    const t = line.line_type || 'partner_sourced';
+    if (t !== 'partner_sourced' && t !== 'klo_addon') {
+      throw new Error(`line_type must be 'partner_sourced' or 'klo_addon' (got ${t})`);
+    }
+    if (typeof line.sale_price !== 'number' || line.sale_price < 0) {
+      throw new Error('sale_price is required and must be >= 0');
+    }
+    if (t === 'partner_sourced') {
+      // supplier_price is the partner's base. sale_price can be marked up but
+      // never below the base. No ceiling (default_markup_pct is a suggestion only).
+      if (line.supplier_price == null || typeof line.supplier_price !== 'number') {
+        throw new Error('partner_sourced lines require supplier_price');
+      }
+      if (line.sale_price < line.supplier_price) {
+        throw new Error(`sale_price (${line.sale_price}) cannot be below supplier_price (${line.supplier_price})`);
+      }
+      if (line.klo_commission_pct != null) {
+        const pct = Number(line.klo_commission_pct);
+        if (isNaN(pct) || pct < 0 || pct > 100) {
+          throw new Error('klo_commission_pct must be between 0 and 100');
+        }
+      }
+    }
+  }
+
+  // Helper: compute the totals for a bundle's items.
+  // Returns { total_client_paid, total_supplier_payout, total_klo_revenue, cross_sell_payout, cross_sell_partner_email }
+  function computeBundlePayouts(items: any[], assemblerPartnerId: string | null): {
+    total_client_paid: number;
+    total_supplier_payout: number;
+    total_klo_revenue: number;
+    cross_sell_payout: number;
+    cross_sell_partner_email: string | null;
+  } {
+    let total_client_paid = 0;
+    let total_supplier_payout = 0;
+    let total_klo_revenue = 0;
+    let cross_sell_payout = 0;
+    let cross_sell_partner_email: string | null = null;
+
+    for (const item of items) {
+      const qty = Number(item.quantity || 1);
+      const sale = Number(item.sale_price || 0) * qty;
+      total_client_paid += sale;
+      if (item.line_type === 'klo_addon') {
+        // KLO keeps 100%, supplier receives 0.
+        total_klo_revenue += sale;
+      } else {
+        // partner_sourced
+        const supplierPrice = Number(item.supplier_price || 0);
+        const kloPct = Number(item.klo_commission_pct || 10);
+        const supplierPayout = supplierPrice * (1 - kloPct / 100) * qty;
+        const kloRev = sale - supplierPayout; // includes markup + 10% commission
+        total_supplier_payout += supplierPayout;
+        total_klo_revenue += kloRev;
+        // Cross-sell: 5% of supplier_price * klo_commission_pct/100
+        // ONLY if this line was sourced from a different partner than the assembler
+        if (assemblerPartnerId && item.supplier_id && item.supplier_id !== assemblerPartnerId) {
+          const lineCrossSell = supplierPrice * (kloPct / 100) * 0.05 * qty;
+          cross_sell_payout += lineCrossSell;
+        }
+      }
+    }
+    return {
+      total_client_paid: round2(total_client_paid),
+      total_supplier_payout: round2(total_supplier_payout),
+      total_klo_revenue: round2(total_klo_revenue),
+      cross_sell_payout: round2(cross_sell_payout),
+      cross_sell_partner_email,
+    };
+  }
+
+  function round2(n: number): number { return Math.round(n * 100) / 100; }
+
+  // Helper: try to insert a row, drop unknown columns on PGRST204/42703, retry.
+  // Returns { data, error, dropped }.
+  async function resilientInsert(
+    table: string,
+    row: Record<string, any>,
+    select: string = '*'
+  ): Promise<{ data: any; error: any; dropped: string[] }> {
+    const dropped: string[] = [];
+    let attempt = { ...row };
+    // Cap retries to avoid infinite loops on non-PGRST204 errors
+    for (let i = 0; i < 8; i++) {
+      const { data, error } = await supabase
+        .from(table)
+        .insert([attempt])
+        .select(select);
+      if (!error) return { data: Array.isArray(data) ? data[0] : data, error: null, dropped };
+      if (error.code === 'PGRST204' || /does not exist/i.test(error.message || '')) {
+        const m = (error.message || '').match(/column ['"]?([a-zA-Z0-9_]+)['"]? does not exist/i);
+        if (!m) return { data: null, error, dropped };
+        const col = m[1];
+        if (!(col in attempt)) return { data: null, error, dropped };
+        delete attempt[col];
+        dropped.push(col);
+        continue;
+      }
+      return { data: null, error, dropped };
+    }
+    return { data: null, error: new Error('too many retries'), dropped };
+  }
+
+  // GET /api/bundles — list bundles.
+  //   Auth: admin sees all; ops sees all; partner sees own (assembler_partner_id match);
+  //         sales/viewer see all (read-only via UI gating).
+  //   Filters: ?status=, ?visibility=, ?mine=1 (filter to caller's bundles)
+  app.get("/api/bundles", async (req, res) => {
+    try {
+      const { role, email } = await resolveAuthFromRequest(req);
+      if (!role) return res.status(401).json({ error: 'auth required' });
+
+      const { status, visibility, mine } = req.query as Record<string, string>;
+      let q = supabase.from('bundles').select('*').order('created_at', { ascending: false });
+
+      if (status) q = q.eq('status', status);
+      if (visibility) q = q.eq('visibility', visibility);
+      if (mine === '1' || role === 'partner') {
+        // Partners only see bundles they assembled. We don't have a perfect
+        // way to link email -> partner_id without a join, so we filter by
+        // assembled_by_email for now (admin/ops can still see all).
+        if (email) q = q.eq('assembled_by_email', email.toLowerCase());
+      }
+
+      const { data, error } = await q;
+      if (error) throw error;
+      res.json({ bundles: data || [] });
+    } catch (e: any) {
+      console.error('GET /api/bundles failed', e?.message || e);
+      res.status(500).json({ error: e?.message || 'list failed' });
+    }
+  });
+
+  // GET /api/bundles/:id — single bundle + its items.
+  app.get("/api/bundles/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const { role, email } = await resolveAuthFromRequest(req);
+      if (!role) return res.status(401).json({ error: 'auth required' });
+
+      const { data: bundle, error } = await supabase
+        .from('bundles')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (!bundle) return res.status(404).json({ error: 'bundle not found' });
+
+      // Partners can only see their own bundles.
+      if (role === 'partner' && bundle.assembled_by_email && email &&
+          bundle.assembled_by_email.toLowerCase() !== email.toLowerCase()) {
+        return res.status(403).json({ error: 'not your bundle' });
+      }
+
+      const { data: items, error: itemsErr } = await supabase
+        .from('bundle_items')
+        .select('*')
+        .eq('bundle_id', id)
+        .order('sort_order', { ascending: true });
+      if (itemsErr) {
+        // table missing → return bundle only, items empty
+        if (itemsErr.code === 'PGRST204' || /does not exist/i.test(itemsErr.message || '')) {
+          return res.json({ bundle, items: [], totals: computeBundlePayouts([], bundle.assembler_partner_id) });
+        }
+        throw itemsErr;
+      }
+
+      const totals = computeBundlePayouts(items || [], bundle.assembler_partner_id);
+      res.json({ bundle, items: items || [], totals });
+    } catch (e: any) {
+      console.error('GET /api/bundles/:id failed', e?.message || e);
+      res.status(500).json({ error: e?.message || 'get failed' });
+    }
+  });
+
+  // POST /api/bundles — create a new bundle (DRAFT).
+  // Body: { name, description?, assembled_by_email (defaults to caller), assembled_by_role, assembler_partner_id?, client_id?, visibility?, items: [] }
+  app.post("/api/bundles", async (req, res) => {
+    try {
+      const { role, email } = await resolveAuthFromRequest(req);
+      if (!role) return res.status(401).json({ error: 'auth required' });
+      if (!['admin', 'ops', 'partner'].includes(role)) {
+        return res.status(403).json({ error: 'role cannot create bundles' });
+      }
+
+      const body = req.body || {};
+      const name = (body.name || '').toString().trim();
+      if (!name) return res.status(400).json({ error: 'name is required' });
+
+      // Role normalization — partner can only assemble as 'partner'; ops/admin default to their role.
+      const assembled_by_role = body.assembled_by_role || role;
+      if (assembled_by_role === 'partner' && role !== 'partner' && role !== 'admin') {
+        return res.status(403).json({ error: 'only partners or admins can assemble as partner' });
+      }
+
+      const items: any[] = Array.isArray(body.items) ? body.items : [];
+      for (const it of items) validateLineItem(it);
+
+      const assemblerEmail = (body.assembled_by_email || email || '').toString().toLowerCase();
+      if (!assemblerEmail) return res.status(400).json({ error: 'assembled_by_email required' });
+
+      const row: Record<string, any> = {
+        id: body.id || `bundle_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        name,
+        description: body.description || null,
+        status: 'DRAFT',
+        visibility: body.visibility || 'private',
+        assembled_by_email: assemblerEmail,
+        assembled_by_role,
+        assembler_partner_id: body.assembler_partner_id || null,
+        client_id: body.client_id || null,
+        notes: body.notes || null,
+        // legacy column some schemas have
+        owner_supplier_id: body.assembler_partner_id || null,
+      };
+
+      const inserted = await resilientInsert('bundles', row);
+      if (inserted.error) {
+        if (inserted.error.code === '23505') return res.status(409).json({ error: 'bundle id already exists' });
+        throw inserted.error;
+      }
+      const newBundle = inserted.data;
+      if (inserted.dropped.length) {
+        console.warn('POST /api/bundles: dropped columns:', inserted.dropped.join(', '));
+      }
+
+      // Insert items if any.
+      const createdItems: any[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        validateLineItem(it);
+        const itemRow: Record<string, any> = {
+          id: it.id || `item_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+          bundle_id: newBundle.id,
+          line_type: it.line_type || 'partner_sourced',
+          service_id: it.service_id || null,
+          service_kind: it.service_kind || null,
+          service_name: it.service_name || null,
+          supplier_id: it.supplier_id || null,
+          supplier_price: it.line_type === 'klo_addon' ? null : (it.supplier_price ?? null),
+          sale_price: Number(it.sale_price) || 0,
+          klo_commission_pct: Number(it.klo_commission_pct ?? 10),
+          default_markup_pct: Number(it.default_markup_pct ?? 30),
+          quantity: Number(it.quantity || 1),
+          sort_order: Number(it.sort_order ?? i),
+          notes: it.notes || null,
+          // legacy
+          asset_id: it.service_id || it.asset_id || null,
+          qty: Number(it.quantity || 1),
+        };
+        const ir = await resilientInsert('bundle_items', itemRow);
+        if (ir.error) {
+          console.error('POST /api/bundles item insert failed', ir.error);
+          continue;
+        }
+        if (ir.data) createdItems.push(ir.data);
+      }
+
+      const totals = computeBundlePayouts(createdItems, newBundle.assembler_partner_id);
+      res.status(201).json({ bundle: newBundle, items: createdItems, totals });
+    } catch (e: any) {
+      console.error('POST /api/bundles failed', e?.message || e);
+      res.status(500).json({ error: e?.message || 'create failed' });
+    }
+  });
+
+  // PATCH /api/bundles/:id — update bundle metadata (NOT items — use /items endpoints).
+  app.patch("/api/bundles/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const { role, email } = await resolveAuthFromRequest(req);
+      if (!role) return res.status(401).json({ error: 'auth required' });
+
+      // Load existing to enforce ownership for partners.
+      const { data: existing, error: getErr } = await supabase
+        .from('bundles').select('*').eq('id', id).maybeSingle();
+      if (getErr) throw getErr;
+      if (!existing) return res.status(404).json({ error: 'bundle not found' });
+      if (role === 'partner' && existing.assembled_by_email &&
+          existing.assembled_by_email.toLowerCase() !== (email || '').toLowerCase()) {
+        return res.status(403).json({ error: 'not your bundle' });
+      }
+
+      const body = req.body || {};
+      const updates: Record<string, any> = {};
+      const editable = [
+        'name', 'description', 'visibility', 'client_id', 'assembler_partner_id',
+        'notes', 'status', 'name_en', 'name_es', 'name_pt',
+        'description_en', 'description_es', 'description_pt',
+      ];
+      for (const k of editable) {
+        if (k in body) updates[k] = body[k];
+      }
+      // Only admin can change status away from DRAFT (lifecycle transition).
+      if ('status' in updates && updates.status !== 'DRAFT' && role !== 'admin' && role !== 'ops') {
+        return res.status(403).json({ error: 'only admin/ops can change status from DRAFT' });
+      }
+      if (Object.keys(updates).length === 0) {
+        return res.json({ bundle: existing });
+      }
+
+      // Resilient update: drop missing columns on PGRST204/42703.
+      let attempt = { ...updates };
+      let result: any;
+      const dropped: string[] = [];
+      for (let i = 0; i < 8; i++) {
+        result = await supabase.from('bundles').update(attempt).eq('id', id).select().maybeSingle();
+        if (!result.error) break;
+        if (result.error.code === 'PGRST204' || /does not exist/i.test(result.error.message || '')) {
+          const m = (result.error.message || '').match(/column ['"]?([a-zA-Z0-9_]+)['"]? does not exist/i);
+          if (!m) throw result.error;
+          const col = m[1];
+          if (!(col in attempt)) throw result.error;
+          delete attempt[col];
+          dropped.push(col);
+          continue;
+        }
+        throw result.error;
+      }
+      if (result?.error) throw result.error;
+      if (dropped.length) console.warn('PATCH /api/bundles/:id dropped:', dropped.join(', '));
+      res.json({ bundle: result.data });
+    } catch (e: any) {
+      console.error('PATCH /api/bundles/:id failed', e?.message || e);
+      res.status(500).json({ error: e?.message || 'update failed' });
+    }
+  });
+
+  // DELETE /api/bundles/:id — soft archive (sets status='ARCHIVED').
+  // Admin/ops only.
+  app.delete("/api/bundles/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (!role) return res.status(401).json({ error: 'auth required' });
+      if (!['admin', 'ops'].includes(role)) {
+        return res.status(403).json({ error: 'only admin/ops can archive bundles' });
+      }
+      const { error } = await supabase
+        .from('bundles')
+        .update({ status: 'ARCHIVED' })
+        .eq('id', id);
+      if (error) throw error;
+      res.json({ ok: true, id, status: 'ARCHIVED' });
+    } catch (e: any) {
+      console.error('DELETE /api/bundles/:id failed', e?.message || e);
+      res.status(500).json({ error: e?.message || 'delete failed' });
+    }
+  });
+
+  // POST /api/bundles/:id/items — add a line item to a bundle.
+  // Body: same shape as items[0] above.
+  app.post("/api/bundles/:id/items", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const { role, email } = await resolveAuthFromRequest(req);
+      if (!role) return res.status(401).json({ error: 'auth required' });
+      if (!['admin', 'ops', 'partner'].includes(role)) {
+        return res.status(403).json({ error: 'role cannot add items' });
+      }
+      const body = req.body || {};
+      validateLineItem(body);
+
+      // Verify bundle exists and ownership for partners.
+      const { data: existing, error: getErr } = await supabase
+        .from('bundles').select('id, assembled_by_email').eq('id', id).maybeSingle();
+      if (getErr) throw getErr;
+      if (!existing) return res.status(404).json({ error: 'bundle not found' });
+      if (role === 'partner' && existing.assembled_by_email &&
+          existing.assembled_by_email.toLowerCase() !== (email || '').toLowerCase()) {
+        return res.status(403).json({ error: 'not your bundle' });
+      }
+
+      const row: Record<string, any> = {
+        id: body.id || `item_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        bundle_id: id,
+        line_type: body.line_type || 'partner_sourced',
+        service_id: body.service_id || null,
+        service_kind: body.service_kind || null,
+        service_name: body.service_name || null,
+        supplier_id: body.supplier_id || null,
+        supplier_price: body.line_type === 'klo_addon' ? null : (body.supplier_price ?? null),
+        sale_price: Number(body.sale_price) || 0,
+        klo_commission_pct: Number(body.klo_commission_pct ?? 10),
+        default_markup_pct: Number(body.default_markup_pct ?? 30),
+        quantity: Number(body.quantity || 1),
+        sort_order: Number(body.sort_order ?? 0),
+        notes: body.notes || null,
+        asset_id: body.service_id || body.asset_id || null,
+        qty: Number(body.quantity || 1),
+      };
+      const inserted = await resilientInsert('bundle_items', row);
+      if (inserted.error) throw inserted.error;
+      res.status(201).json({ item: inserted.data });
+    } catch (e: any) {
+      console.error('POST /api/bundles/:id/items failed', e?.message || e);
+      res.status(500).json({ error: e?.message || 'item create failed' });
+    }
+  });
+
+  // PATCH /api/bundles/:id/items/:itemId — update a single line item.
+  app.patch("/api/bundles/:id/items/:itemId", async (req, res) => {
+    const { id, itemId } = req.params;
+    try {
+      const { role, email } = await resolveAuthFromRequest(req);
+      if (!role) return res.status(401).json({ error: 'auth required' });
+      if (!['admin', 'ops', 'partner'].includes(role)) {
+        return res.status(403).json({ error: 'role cannot edit items' });
+      }
+      const body = req.body || {};
+      // Validate if line_type / prices are being changed
+      if (body.line_type || 'sale_price' in body || 'supplier_price' in body) {
+        validateLineItem({ ...body, line_type: body.line_type || 'partner_sourced' });
+      }
+      const editable = [
+        'line_type', 'service_id', 'service_kind', 'service_name', 'supplier_id',
+        'supplier_price', 'sale_price', 'klo_commission_pct', 'default_markup_pct',
+        'quantity', 'sort_order', 'notes',
+      ];
+      const updates: Record<string, any> = {};
+      for (const k of editable) if (k in body) updates[k] = body[k];
+      if (Object.keys(updates).length === 0) return res.json({ ok: true, noop: true });
+
+      let attempt = { ...updates };
+      let result: any;
+      for (let i = 0; i < 8; i++) {
+        result = await supabase.from('bundle_items').update(attempt)
+          .eq('id', itemId).eq('bundle_id', id).select().maybeSingle();
+        if (!result.error) break;
+        if (result.error.code === 'PGRST204' || /does not exist/i.test(result.error.message || '')) {
+          const m = (result.error.message || '').match(/column ['"]?([a-zA-Z0-9_]+)['"]? does not exist/i);
+          if (!m) throw result.error;
+          const col = m[1];
+          if (!(col in attempt)) throw result.error;
+          delete attempt[col];
+          continue;
+        }
+        throw result.error;
+      }
+      if (result?.error) throw result.error;
+      if (!result.data) return res.status(404).json({ error: 'item not found' });
+      res.json({ item: result.data });
+    } catch (e: any) {
+      console.error('PATCH /api/bundles/:id/items/:itemId failed', e?.message || e);
+      res.status(500).json({ error: e?.message || 'item update failed' });
+    }
+  });
+
+  // DELETE /api/bundles/:id/items/:itemId — remove a line item.
+  app.delete("/api/bundles/:id/items/:itemId", async (req, res) => {
+    const { id, itemId } = req.params;
+    try {
+      const { role, email } = await resolveAuthFromRequest(req);
+      if (!role) return res.status(401).json({ error: 'auth required' });
+      if (!['admin', 'ops', 'partner'].includes(role)) {
+        return res.status(403).json({ error: 'role cannot delete items' });
+      }
+      const { error } = await supabase.from('bundle_items')
+        .delete().eq('id', itemId).eq('bundle_id', id);
+      if (error) throw error;
+      res.json({ ok: true, id: itemId });
+    } catch (e: any) {
+      console.error('DELETE /api/bundles/:id/items/:itemId failed', e?.message || e);
+      res.status(500).json({ error: e?.message || 'item delete failed' });
+    }
+  });
+
+  // POST /api/bundles/:id/visibility-request — partner requests visibility upgrade.
+  // Body: { requested_visibility: 'partner_scoped' | 'public' }
+  app.post("/api/bundles/:id/visibility-request", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const { role, email } = await resolveAuthFromRequest(req);
+      if (!role) return res.status(401).json({ error: 'auth required' });
+      if (!email) return res.status(400).json({ error: 'email required' });
+      const body = req.body || {};
+      const requested = body.requested_visibility;
+      if (!['partner_scoped', 'public'].includes(requested)) {
+        return res.status(400).json({ error: 'requested_visibility must be partner_scoped or public' });
+      }
+      const row: Record<string, any> = {
+        bundle_id: id,
+        requested_visibility: requested,
+        requested_by_email: email.toLowerCase(),
+        status: 'PENDING',
+      };
+      const inserted = await resilientInsert('bundle_visibility_requests', row);
+      if (inserted.error) throw inserted.error;
+      res.status(201).json({ request: inserted.data });
+    } catch (e: any) {
+      console.error('POST /api/bundles/:id/visibility-request failed', e?.message || e);
+      res.status(500).json({ error: e?.message || 'request failed' });
+    }
+  });
+
+  // POST /api/bundles/visibility-requests/:reqId/review — admin approves/rejects.
+  // Body: { decision: 'APPROVED' | 'REJECTED', notes? }
+  // On APPROVE, also updates the bundle's visibility.
+  app.post("/api/bundles/visibility-requests/:reqId/review", async (req, res) => {
+    const { reqId } = req.params;
+    try {
+      const { role, email } = await resolveAuthFromRequest(req);
+      if (!role) return res.status(401).json({ error: 'auth required' });
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const body = req.body || {};
+      const decision = body.decision;
+      if (!['APPROVED', 'REJECTED'].includes(decision)) {
+        return res.status(400).json({ error: 'decision must be APPROVED or REJECTED' });
+      }
+      const updates: Record<string, any> = {
+        status: decision,
+        reviewed_by_email: (email || '').toLowerCase(),
+        reviewed_at: new Date().toISOString(),
+        review_notes: body.notes || null,
+      };
+      const { data: reqRow, error: updErr } = await supabase
+        .from('bundle_visibility_requests')
+        .update(updates).eq('id', reqId).select().maybeSingle();
+      if (updErr) throw updErr;
+      if (!reqRow) return res.status(404).json({ error: 'request not found' });
+      // On approval, also flip the bundle's visibility.
+      if (decision === 'APPROVED' && reqRow.bundle_id) {
+        await supabase.from('bundles')
+          .update({ visibility: reqRow.requested_visibility, status: 'APPROVED' })
+          .eq('id', reqRow.bundle_id);
+      }
+      res.json({ request: reqRow });
+    } catch (e: any) {
+      console.error('POST /api/bundles/visibility-requests/:reqId/review failed', e?.message || e);
+      res.status(500).json({ error: e?.message || 'review failed' });
+    }
+  });
+
+  // POST /api/bundles/:id/book — book a bundle (freezes payouts).
+  // Body: { lead_id?, client_id?, notes? }
+  // Computes the payouts from the current items and stores a snapshot.
+  app.post("/api/bundles/:id/book", async (req, res) => {
+    const { id } = req.params;
+    try {
+      const { role, email } = await resolveAuthFromRequest(req);
+      if (!role) return res.status(401).json({ error: 'auth required' });
+      if (!['admin', 'ops', 'partner'].includes(role)) {
+        return res.status(403).json({ error: 'role cannot book bundles' });
+      }
+      const body = req.body || {};
+
+      // Load bundle + items
+      const { data: bundle, error: bErr } = await supabase
+        .from('bundles').select('*').eq('id', id).maybeSingle();
+      if (bErr) throw bErr;
+      if (!bundle) return res.status(404).json({ error: 'bundle not found' });
+      if (bundle.status === 'ARCHIVED') return res.status(400).json({ error: 'cannot book an archived bundle' });
+
+      const { data: items, error: iErr } = await supabase
+        .from('bundle_items').select('*').eq('bundle_id', id);
+      if (iErr) throw iErr;
+      if (!items || items.length === 0) {
+        return res.status(400).json({ error: 'cannot book a bundle with no items' });
+      }
+
+      const totals = computeBundlePayouts(items, bundle.assembler_partner_id);
+      const bookingRow: Record<string, any> = {
+        bundle_id: id,
+        lead_id: body.lead_id || null,
+        client_id: body.client_id || bundle.client_id || null,
+        status: 'PENDING',
+        total_client_paid: totals.total_client_paid,
+        total_supplier_payout: totals.total_supplier_payout,
+        total_klo_revenue: totals.total_klo_revenue,
+        cross_sell_partner_email: bundle.assembled_by_email,
+        cross_sell_payout: totals.cross_sell_payout,
+        items_snapshot: items,
+        notes: body.notes || null,
+      };
+      const inserted = await resilientInsert('bundle_bookings', bookingRow);
+      if (inserted.error) throw inserted.error;
+      res.status(201).json({ booking: inserted.data, totals });
+    } catch (e: any) {
+      console.error('POST /api/bundles/:id/book failed', e?.message || e);
+      res.status(500).json({ error: e?.message || 'book failed' });
+    }
+  });
+
+  // GET /api/bundles/visibility-requests/pending — admin sees the queue.
+  app.get("/api/bundles/visibility-requests/pending", async (req, res) => {
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (!role) return res.status(401).json({ error: 'auth required' });
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const { data, error } = await supabase
+        .from('bundle_visibility_requests')
+        .select('*')
+        .eq('status', 'PENDING')
+        .order('requested_at', { ascending: true });
+      if (error) throw error;
+      res.json({ requests: data || [] });
+    } catch (e: any) {
+      console.error('GET /api/bundles/visibility-requests/pending failed', e?.message || e);
+      res.status(500).json({ error: e?.message || 'list failed' });
+    }
+  });
+
   // ── Experiences (v1.8.0 Step 11) ───────────────────────────────────────────
   // GET /api/experiences — public for PUBLISHED, admin for ALL.
   // Query: ?status=PUBLISHED|DRAFT|ARCHIVED|ALL
