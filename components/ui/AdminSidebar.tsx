@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Users, ClipboardList, UserCheck, Inbox,
@@ -21,6 +21,32 @@ export type AdminSection =
   | 'BUNDLES'   | 'STATS'    | 'SETTINGS'
   | 'SERVICES'  | 'EXPERIENCES';  // v1.8.0 Step 11.5: added for EntityEditor tabs
 
+// v1.8.0 Step 22.23: role-based section visibility.
+//
+// The server already enforces `role === 'admin'` on every write endpoint
+// (see server.ts admin-only guards), so this is a UX gate, not a security
+// one. The map below decides which sidebar items a non-admin role can SEE.
+// Admins always see everything. Each role gets a sensible default; the
+// optional `permissions.tabs` JSONB on `user_roles` can grant individual
+// sections beyond the role's default.
+export type AdminRole = 'admin' | 'ops' | 'sales' | 'partner' | 'viewer';
+
+const ROLE_TABS: Record<AdminRole, AdminSection[]> = {
+  admin:   ['SUPPLIERS', 'SERVICES', 'EXPERIENCES', 'BOOKINGS', 'CLIENTS', 'LEADS', 'BUNDLES', 'STATS', 'SETTINGS'],
+  ops:     ['SUPPLIERS', 'SERVICES', 'EXPERIENCES', 'BOOKINGS', 'CLIENTS', 'LEADS', 'BUNDLES', 'STATS'],
+  sales:   ['BOOKINGS', 'CLIENTS', 'LEADS', 'STATS'],
+  partner: ['SERVICES', 'EXPERIENCES', 'BOOKINGS', 'STATS'],
+  viewer:  ['STATS'],
+};
+
+const ROLE_LABEL: Record<AdminRole, { EN: string; ES: string; PT: string }> = {
+  admin:   { EN: 'Admin',   ES: 'Admin',    PT: 'Admin' },
+  ops:     { EN: 'Ops',     ES: 'Ops',      PT: 'Ops' },
+  sales:   { EN: 'Sales',   ES: 'Ventas',   PT: 'Vendas' },
+  partner: { EN: 'Partner', ES: 'Socio',    PT: 'Parceiro' },
+  viewer:  { EN: 'Viewer',  ES: 'Lector',   PT: 'Leitor' },
+};
+
 interface AdminSidebarProps {
   activeSection: AdminSection;
   onSelect: (section: AdminSection) => void;
@@ -33,6 +59,11 @@ interface AdminSidebarProps {
   newLeadsCount?: number;
   // Total pending suppliers (gold badge)
   pendingSuppliersCount?: number;
+  // v1.8.0 Step 22.23: optional role + permissions gate. If omitted, the
+  // sidebar shows every section (back-compat with the rest of the app that
+  // hasn't been threaded yet).
+  role?: AdminRole | null;
+  permissions?: { tabs?: AdminSection[] } | null;
 }
 
 const T: Record<string, { EN: string; ES: string; PT: string }> = {
@@ -65,6 +96,9 @@ const T: Record<string, { EN: string; ES: string; PT: string }> = {
   sign_out:     { EN: 'Sign out',     ES: 'Cerrar sesión',   PT: 'Sair' },
   pending_badge:{ EN: 'pending',      ES: 'pendientes',      PT: 'pendentes' },
   new_badge:    { EN: 'new',          ES: 'nuevos',          PT: 'novos' },
+  // v1.8.0 Step 22.23
+  no_access:    { EN: 'No access',   ES: 'Sin acceso',       PT: 'Sem acesso' },
+  role_label:   { EN: 'Role',        ES: 'Rol',              PT: 'Função' },
 };
 
 const t = (key: keyof typeof T, lang: 'EN' | 'ES' | 'PT') => T[key][lang] || T[key].EN;
@@ -98,8 +132,26 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   counts,
   newLeadsCount,
   pendingSuppliersCount,
+  role = null,
+  permissions = null,
 }) => {
   const [open, setOpen] = useState(false);
+
+  // v1.8.0 Step 22.23: filter the visible sections by role. If `role` is
+  // null (legacy callers haven't been threaded yet) we show everything,
+  // preserving back-compat. Permissions can grant individual sections on
+  // top of the role's default.
+  const allowedTabs = useMemo<Set<AdminSection> | null>(() => {
+    if (!role) return null; // null sentinel = show everything
+    const base = new Set(ROLE_TABS[role] || []);
+    for (const tab of permissions?.tabs || []) base.add(tab);
+    return base;
+  }, [role, permissions]);
+
+  const visibleSections = useMemo(
+    () => (allowedTabs ? SECTIONS.filter(s => allowedTabs.has(s.key)) : SECTIONS),
+    [allowedTabs],
+  );
 
   const renderSectionItem = (s: SectionDef, isMobile: boolean) => {
     const isActive = activeSection === s.key;
@@ -178,12 +230,26 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
       {/* Sections */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-3 space-y-1">
-        {SECTIONS.map(s => renderSectionItem(s, false))}
+        {visibleSections.map(s => renderSectionItem(s, false))}
       </nav>
 
-      {/* Footer: signed-in + sign out */}
+      {/* Footer: role chip + signed-in + sign out */}
       {onSignOut && (
         <div className="py-3 px-2 border-t border-white/10 space-y-2">
+          {role && (
+            <div className="px-2 flex items-center gap-2">
+              <span className="text-[9px] uppercase tracking-[0.2em] text-white/40">
+                {t('role_label', lang)}:
+              </span>
+              <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                role === 'admin'
+                  ? 'bg-[#B8963E]/20 text-[#B8963E] border-[#B8963E]/40'
+                  : 'bg-white/5 text-white/70 border-white/10'
+              }`}>
+                {ROLE_LABEL[role][lang] || ROLE_LABEL[role].EN}
+              </span>
+            </div>
+          )}
           {signedInEmail && (
             <p className="text-[9px] text-white/40 uppercase tracking-[0.2em] break-all leading-relaxed px-2">
               {t('signed_in_as', lang)} {signedInEmail}

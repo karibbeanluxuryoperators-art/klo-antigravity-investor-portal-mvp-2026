@@ -94,7 +94,11 @@ type AdminState =
   | { kind: 'config-missing' }
   | { kind: 'needs-sign-in' }
   | { kind: 'not-authorized'; email: string }
-  | { kind: 'ready'; email: string };
+  // v1.8.0 Step 22.23: ready now also carries role + permissions so the
+  // sidebar can render a role-aware navigation. AdminGate still gates on
+  // isAdmin (anyone else hits the "not-authorized" screen); the role field
+  // distinguishes admin/ops/sales/partner/viewer within the admin cohort.
+  | { kind: 'ready'; email: string; role: string | null; permissions: any };
 
 export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = 'EN', subroute = null }) => {
   const t = T[lang];
@@ -152,7 +156,7 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
       }
       const data = await res.json();
       if (data.isAdmin) {
-        setState({ kind: 'ready', email });
+        setState({ kind: 'ready', email, role: data.role ?? 'admin', permissions: data.permissions ?? null });
       } else {
         setState({ kind: 'not-authorized', email });
       }
@@ -178,6 +182,9 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
         lang,
         signedInEmail: state.email,
         onSignOut: handleSignOut,
+        // v1.8.0 Step 22.23
+        role: state.role as any,
+        permissions: state.permissions,
       };
       if (subroute.entity === 'suppliers') return <SupplierDetail {...detailProps} />;
       if (subroute.entity === 'clients')   return <ClientDetail {...detailProps} />;
@@ -192,6 +199,9 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
         onViewAssets={(supplierId) => { window.location.href = `/admin/suppliers/${supplierId}`; }}
         onSignOut={handleSignOut}
         signedInEmail={state.email}
+        // v1.8.0 Step 22.23
+        role={state.role as any}
+        permissions={state.permissions}
       />
     );
   }

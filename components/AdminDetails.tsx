@@ -9,6 +9,7 @@ import {
   AdminDetailLayout, DetailCard, DetailField, DetailGrid,
   type Language, type AdminSection,
 } from './ui/AdminDetailLayout';
+import type { AdminRole } from './ui/AdminSidebar';
 import { DataTable, StatusPill, type Column } from './ui/DataTable';
 import { ArchiveButton } from './ui/ArchiveButton';
 import { ArchivedBanner } from './ui/ArchivedBanner';
@@ -72,6 +73,9 @@ interface SupplierDetailProps {
   counts?: Partial<Record<AdminSection, number>>;
   pendingSuppliersCount?: number;
   newLeadsCount?: number;
+  // v1.8.0 Step 22.23: threaded from AdminGate.
+  role?: AdminRole | null;
+  permissions?: { tabs?: AdminSection[] } | null;
 }
 
 const ASSET_TYPE_LABEL: Record<string, { EN: string; ES: string; PT: string }> = {
@@ -83,7 +87,7 @@ const ASSET_TYPE_LABEL: Record<string, { EN: string; ES: string; PT: string }> =
 };
 
 export const SupplierDetail: React.FC<SupplierDetailProps> = (props) => {
-  const { id, lang, signedInEmail, onSignOut, counts, pendingSuppliersCount, newLeadsCount } = props;
+  const { id, lang, signedInEmail, onSignOut, counts, pendingSuppliersCount, newLeadsCount, role, permissions } = props;
   const [assets, setAssets] = useState<any[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
 
@@ -130,6 +134,8 @@ export const SupplierDetail: React.FC<SupplierDetailProps> = (props) => {
       onSignOut={onSignOut}
       counts={counts}
       pendingSuppliersCount={pendingSuppliersCount}
+      role={role}
+      permissions={permissions}
       newLeadsCount={newLeadsCount}
       renderHeader={(s) => (
         <span className="text-3xl md:text-4xl font-serif italic text-white flex items-center gap-3 flex-wrap">
@@ -285,7 +291,7 @@ interface ClientDetailProps extends Omit<SupplierDetailProps, 'id'> {
 }
 
 export const ClientDetail: React.FC<ClientDetailProps> = (props) => {
-  const { id, lang, signedInEmail, onSignOut, counts, pendingSuppliersCount, newLeadsCount } = props;
+  const { id, lang, signedInEmail, onSignOut, counts, pendingSuppliersCount, newLeadsCount, role, permissions } = props;
   return (
     <AdminDetailLayout<ClientRecord>
       section="CLIENTS"
@@ -298,6 +304,8 @@ export const ClientDetail: React.FC<ClientDetailProps> = (props) => {
       onSignOut={onSignOut}
       counts={counts}
       pendingSuppliersCount={pendingSuppliersCount}
+      role={role}
+      permissions={permissions}
       newLeadsCount={newLeadsCount}
       renderHeader={(c) => (
         <span className="text-3xl md:text-4xl font-serif italic text-white flex items-center gap-3 flex-wrap">
@@ -433,7 +441,7 @@ interface BookingDetailProps extends Omit<SupplierDetailProps, 'id'> {
 }
 
 export const BookingDetail: React.FC<BookingDetailProps> = (props) => {
-  const { id, lang, signedInEmail, onSignOut, counts, pendingSuppliersCount, newLeadsCount } = props;
+  const { id, lang, signedInEmail, onSignOut, counts, pendingSuppliersCount, newLeadsCount, role, permissions } = props;
   const [notes, setNotes] = useState<string>('');
   const [savingNotes, setSavingNotes] = useState(false);
 
@@ -449,6 +457,8 @@ export const BookingDetail: React.FC<BookingDetailProps> = (props) => {
       onSignOut={onSignOut}
       counts={counts}
       pendingSuppliersCount={pendingSuppliersCount}
+      role={role}
+      permissions={permissions}
       newLeadsCount={newLeadsCount}
       renderHeader={(b) => (
         <span className="text-3xl md:text-4xl font-serif italic text-white flex items-center gap-3 flex-wrap">
@@ -580,7 +590,7 @@ interface LeadDetailProps extends Omit<SupplierDetailProps, 'id'> {
 }
 
 export const LeadDetail: React.FC<LeadDetailProps> = (props) => {
-  const { id, lang, signedInEmail, onSignOut, counts, pendingSuppliersCount, newLeadsCount } = props;
+  const { id, lang, signedInEmail, onSignOut, counts, pendingSuppliersCount, newLeadsCount, role, permissions } = props;
 
   const [bearer, setBearer] = useState<string | null>(null);
   // v1.8.0 Step 17: soft-delete (archive/restore). The hook handles the API
@@ -650,6 +660,8 @@ export const LeadDetail: React.FC<LeadDetailProps> = (props) => {
       onSignOut={onSignOut}
       counts={counts}
       pendingSuppliersCount={pendingSuppliersCount}
+      role={role}
+      permissions={permissions}
       newLeadsCount={newLeadsCount}
       renderHeader={(l) => (
         <span className="text-3xl md:text-4xl font-serif italic text-white flex items-center gap-3 flex-wrap">
@@ -804,7 +816,7 @@ interface ExperienceDetailProps extends Omit<SupplierDetailProps, 'id'> {
 }
 
 export const ExperienceDetail: React.FC<ExperienceDetailProps> = (props) => {
-  const { id, lang, signedInEmail, onSignOut, counts, pendingSuppliersCount, newLeadsCount } = props;
+  const { id, lang, signedInEmail, onSignOut, counts, pendingSuppliersCount, newLeadsCount, role, permissions } = props;
 
   return (
     <AdminDetailLayout<ExperienceRecord>
@@ -818,6 +830,8 @@ export const ExperienceDetail: React.FC<ExperienceDetailProps> = (props) => {
       onSignOut={onSignOut}
       counts={counts}
       pendingSuppliersCount={pendingSuppliersCount}
+      role={role}
+      permissions={permissions}
       newLeadsCount={newLeadsCount}
       renderHeader={(e) => {
         // Display localized title with fallback

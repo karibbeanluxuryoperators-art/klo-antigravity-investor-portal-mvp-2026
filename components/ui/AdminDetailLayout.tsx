@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import {
   ArrowLeft, Loader2, AlertCircle, RefreshCw, ChevronRight,
 } from 'lucide-react';
-import { AdminSidebar, type AdminSection } from './AdminSidebar';
+import { AdminSidebar, type AdminSection, type AdminRole } from './AdminSidebar';
 import { displayFieldValue } from '../../services/formatters';
 
 // v1.8.0 Step 6: Shared detail-page layout.
@@ -56,6 +56,9 @@ export interface AdminDetailLayoutProps<T> {
   counts?: Partial<Record<AdminSection, number>>;
   pendingSuppliersCount?: number;
   newLeadsCount?: number;
+  // v1.8.0 Step 22.23: role + permissions threaded from AdminGate.
+  role?: AdminRole | null;
+  permissions?: { tabs?: AdminSection[] } | null;
 
   // ── Actions ──
   headerActions?: (data: T) => React.ReactNode; // right-aligned in the page header (function so it can access data)
@@ -123,6 +126,9 @@ export function AdminDetailLayout<T extends Record<string, any>>({
   counts,
   pendingSuppliersCount,
   newLeadsCount,
+  // v1.8.0 Step 22.23
+  role,
+  permissions,
   headerActions,
 }: AdminDetailLayoutProps<T>) {
   const { data, loading, error, refetch, setData } = useDetail<T>(endpoint);
@@ -165,6 +171,8 @@ export function AdminDetailLayout<T extends Record<string, any>>({
         counts={counts}
         pendingSuppliersCount={pendingSuppliersCount}
         newLeadsCount={newLeadsCount}
+        role={role}
+        permissions={permissions}
       />
 
       <main className="flex-1 min-w-0 px-6 md:px-10 py-10 space-y-8 max-w-[1400px]">

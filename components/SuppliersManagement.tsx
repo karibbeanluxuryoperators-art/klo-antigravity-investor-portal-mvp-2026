@@ -11,7 +11,7 @@ import { ClientManagement } from './ClientManagement';
 import { LeadsManagement } from './LeadsManagement';
 import { AdminBundlesView, AdminStatsView, AdminSettingsView } from './AdminExtraViews';
 import { DataTable, StatusPill, type Column, type FilterOption, type BulkAction, type Language } from './ui/DataTable';
-import { AdminSidebar, type AdminSection } from './ui/AdminSidebar';
+import { AdminSidebar, type AdminSection, type AdminRole } from './ui/AdminSidebar';
 // v1.8.0 Step 11.10: EntityEditor re-enabled after the DataTable useRef crash
 // was fixed in Step 11.9. /admin is now stable on production.
 import { EntityEditor } from './admin/EntityEditor';
@@ -51,6 +51,10 @@ interface SuppliersManagementProps {
   onViewAssets: (supplierId: string) => void;
   onSignOut?: () => void;
   signedInEmail?: string | null;
+  // v1.8.0 Step 22.23: optional role + permissions. When omitted, the
+  // sidebar shows every section (back-compat). Threaded from AdminGate.
+  role?: AdminRole | null;
+  permissions?: { tabs?: AdminSection[] } | null;
 }
 
 // v1.7: trilingual copy for every user-visible string in the admin UI.
@@ -161,7 +165,7 @@ const BOOKING_STATUS_FILTERS: FilterOption[] = [
   { value: 'CANCELLED', label: { EN: 'Cancelled',  ES: 'Canceladas',   PT: 'Canceladas' } },
 ];
 
-export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, onViewAssets, onSignOut, signedInEmail }) => {
+export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, onViewAssets, onSignOut, signedInEmail, role, permissions }) => {
   const [activeView, setActiveView] = useState<AdminSection>('SUPPLIERS');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -531,6 +535,8 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
         onSignOut={handleSignOutClick}
         counts={counts}
         pendingSuppliersCount={counts.SUPPLIERS}
+        role={role}
+        permissions={permissions}
       />
 
       <main className="flex-1 min-w-0 px-6 md:px-8 py-10 space-y-8 max-w-[1600px] bg-[#0a1518]">
