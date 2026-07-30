@@ -3200,13 +3200,18 @@ ALWAYS:
 
 This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
-    // ── Try Gemini first (with 6s timeout). On failure or timeout, fall
+    // ── Try Gemini first, then OpenAI as fallback. On failure or timeout, fall
     //    through to the rule-based path so the user always gets an answer. ──
     let usedGemini = false;
-    if (!process.env.GEMINI_API_KEY) {
-      console.error('[maria] GEMINI_API_KEY is not set — running rule-based fallback only. Set this env var in Vercel → Settings → Environment Variables.');
+    const hasGeminiKey = !!process.env.GEMINI_API_KEY;
+    const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
+    if (!hasGeminiKey && !hasOpenAIKey) {
+      console.error('[maria] Neither GEMINI_API_KEY nor OPENAI_API_KEY is set — running rule-based fallback only.');
+    } else if (!hasGeminiKey) {
+      console.warn('[maria] GEMINI_API_KEY not set, will try OPENAI_API_KEY as fallback.');
     }
-    if (process.env.GEMINI_API_KEY) {
+
+    if (hasGeminiKey) {
       try {
         const { GoogleGenAI } = require('@google/genai');
         const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -3272,6 +3277,78 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         if (geminiErr instanceof Error) {
           console.error('[maria] gemini error type:', geminiErr.name, '| message:', geminiErr.message);
         }
+        // Fall through to OpenAI or rule-based below
+      }
+    }
+
+    // ── Try OpenAI as fallback (structured JSON via gpt-4o-mini) ──
+    if (!usedGemini && hasOpenAIKey) {
+      try {
+        const openaiMessages: any[] = [
+          { role: 'system', content: systemInstruction + '\n\nIMPORTANT: You MUST respond with valid JSON only. No markdown, no code fences, no extra text. Just the JSON object matching the schema.' },
+          ...((history || []).map((h: any) => ({
+            role: h.role === 'user' ? 'user' : 'assistant',
+            content: h.content || h.text || '',
+          })) as any[]),
+          { role: 'user', content: message },
+        ];
+        const openaiCall = fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o-mini',
+            messages: openaiMessages,
+            temperature: 0.3,
+            max_tokens: 1500,
+            response_format: { type: 'json_object' },
+          }),
+        });
+        const timeoutMs = 15000;
+        const openaiResp: any = await Promise.race([
+          openaiCall.then(r => r.json()),
+          new Promise<never>((_, rej) => setTimeout(() => rej(new Error('openai_timeout')), timeoutMs)),
+        ]);
+        const responseText = openaiResp.choices?.[0]?.message?.content || '{}';
+        let openaiResult: any;
+        try { openaiResult = JSON.parse(responseText); }
+        catch { openaiResult = { reply: responseText, qualified: false, preferredLanguage: lang }; }
+        openaiResult.preferredLanguage = openaiResult.preferredLanguage || lang;
+        if (!openaiResult.pillarInterest && Array.isArray(openaiResult.servicesNeeded) && openaiResult.servicesNeeded.length > 0) {
+          openaiResult.pillarInterest = openaiResult.servicesNeeded[0];
+        }
+        if (!Array.isArray(openaiResult.experienceDna)) openaiResult.experienceDna = [];
+        // Apply accumulated context from previous turns
+        if (context && typeof context === 'object') {
+          if (Array.isArray(context.servicesNeeded) && context.servicesNeeded.length > 0) {
+            const existing = Array.isArray(openaiResult.servicesNeeded) ? openaiResult.servicesNeeded : [];
+            for (const svc of context.servicesNeeded) {
+              if (!existing.includes(svc)) existing.push(svc);
+            }
+            openaiResult.servicesNeeded = existing;
+          }
+          if (context.fullName && !openaiResult.fullName) openaiResult.fullName = context.fullName;
+          if (context.email && !openaiResult.email) openaiResult.email = context.email;
+          if (context.phone && !openaiResult.phone) openaiResult.phone = context.phone;
+          if (context.origin && !openaiResult.origin) openaiResult.origin = context.origin;
+          if (context.destination && !openaiResult.destination) openaiResult.destination = context.destination;
+          if (context.passengers && !openaiResult.passengers) openaiResult.passengers = context.passengers;
+          if (context.budget && !openaiResult.budget) openaiResult.budget = context.budget;
+          if (context.travelDates && !openaiResult.travelDates) openaiResult.travelDates = context.travelDates;
+        }
+        // Persist + notify
+        const lead = await persistMariaLead(openaiResult, existingLeadId);
+        const openaiHasQuote = !!openaiResult.priceEstimate?.high;
+        if (lead && (!existingLeadId || openaiHasQuote)) {
+          notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new');
+        }
+        usedGemini = true;
+        console.log('[maria] openai succeeded');
+        return res.json({ success: true, result: openaiResult, lead, meta: { language: lang, source: 'openai' } });
+      } catch (openaiErr: any) {
+        console.error('[maria] openai failed, falling back to rule-based:', openaiErr?.message || openaiErr);
         // Fall through to rule-based below
       }
     }
@@ -3316,13 +3393,18 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       // ── Services detection + DNA extraction ──
       const dna: any[] = [];
       const servicesNeeded: string[] = [];
+      // Track services detected from THIS message only (not from context).
+      // Used for reply text so stale context doesn't phantom-detect services.
+      const currentMsgServices: string[] = [];
 
       // Aviation sub-type detection
       if (/helicopter|helicóptero|helicoptero/.test(msgLower)) {
         servicesNeeded.push('aviation');
+        currentMsgServices.push('aviation');
         dna.push({ pillar: 'aviation', type: 'helicopter', details: {} });
       } else if (/jet|fly|aviation|vuelo|voo|plane|aircraft/.test(msgLower)) {
         servicesNeeded.push('aviation');
+        currentMsgServices.push('aviation');
         // Heuristic: if long route (MIA, JFK, NYC, LAX, etc) → heavy, otherwise light
         const isLong = /\b(mia|jfk|nyc|lax|mex|sao|gru|eze|mco|ord|yyz|lhr)\b/i.test(msgLower);
         dna.push({ pillar: 'aviation', type: isLong ? 'heavy_jet' : 'light_jet', details: {} });
@@ -3330,6 +3412,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
       if (/yacht|yate|iate|boat|bote|barco/.test(msgLower)) {
         servicesNeeded.push('yacht');
+        currentMsgServices.push('yacht');
         // Yachts are always priced per day (full day or half day), never per hour.
         // If the user explicitly says "by the hour" or "hourly", we still book by day
         // and explain in the reply.
@@ -3348,6 +3431,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
       if (/villa|casa|mansion|estate|resort|island|isla|private island/.test(msgLower)) {
         servicesNeeded.push('villa');
+        currentMsgServices.push('villa');
         const isOldTown = /centro|old town|histórico|historico|ciudad amurallada/.test(msgLower);
         const isBeach = /playa|beach|baru|bocagrande/.test(msgLower);
         const isIsland = /island|isla/.test(msgLower);
@@ -3360,6 +3444,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
       if (/\btransport\b|\bairport\b|\bpickup\b|pick-up|\btransfer\b|\bcar\b|\bdriver\b|\bsuburban\b|\bsprinter\b|\bcarro\b|\bcamioneta\b|\bsedan\b|\bsuv\b|\bblindado\b|\bblindada\b|\btransporte\b|\brecogida\b/.test(msgLower)) {
         servicesNeeded.push('transport');
+        currentMsgServices.push('transport');
         // ── Luxury transport sub-types (KLO is exclusively HNW/UHNW) ──
         // Priority detection: armored > executive van > executive sedan > sprinter
         const isArmoredSUV = /armor|armour|blindad[oa]|blindado/.test(msgLower);
@@ -3382,6 +3467,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
       if (/chef|security|staff|concierge|guard/.test(msgLower)) {
         servicesNeeded.push('staff');
+        currentMsgServices.push('staff');
         if (/chef/.test(msgLower)) dna.push({ pillar: 'staff', type: 'private_chef', details: {} });
         if (/security|guard|seguridad/.test(msgLower)) dna.push({ pillar: 'staff', type: 'security', details: {} });
         if (!dna.some((d) => d.pillar === 'staff')) dna.push({ pillar: 'staff', type: 'concierge', details: {} });
@@ -3389,6 +3475,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
       if (/event|wedding|birthday|evento|boda|casamiento/.test(msgLower)) {
         servicesNeeded.push('events');
+        currentMsgServices.push('events');
         dna.push({ pillar: 'events', type: /wedding|boda|casamiento/.test(msgLower) ? 'wedding' : 'private_dining', details: {} });
       }
 
@@ -3408,9 +3495,14 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         }
         // Restore experienceDna from context so missingForQuote can compute
         // correctly even when the current message is just contact info.
-        if (Array.isArray(context.experienceDna) && context.experienceDna.length > 0 && dna.length === 0) {
+        // IMPORTANT: also restore when current msg detected SOME services but
+        // not all — e.g. user said "villas" but context also has aviation DNA.
+        if (Array.isArray(context.experienceDna) && context.experienceDna.length > 0) {
+          const currentPillars = new Set(dna.map(d => d.pillar));
           for (const d of context.experienceDna) {
-            dna.push({ ...d, details: { ...(d.details || {}) } });
+            if (!currentPillars.has(d.pillar)) {
+              dna.push({ ...d, details: { ...(d.details || {}) } });
+            }
           }
           // Re-apply context-level fields into restored DNA items so the
           // missingForQuote validator sees them.
@@ -3430,8 +3522,9 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         if (context.budget && !result.budget) result.budget = context.budget;
         if (context.travelDates && !result.travelDates) result.travelDates = context.travelDates;
       }
-      // Re-sync result.servicesNeeded after the merge
+      // Re-sync result.servicesNeeded and experienceDna after the merge
       result.servicesNeeded = servicesNeeded;
+      result.experienceDna = dna; // re-sync after DNA restoration so frontend gets full state
 
       // ── Passengers extraction (broader patterns) ──
       // "10 people", "10 personas", "10 guests", "party of 10", "for 10", "para 10"
@@ -3653,13 +3746,20 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           const n = parseInt(bareNights[1], 10);
           if (n >= 1 && n <= 30) {
             nightsValue = n;
+            // Apply to ALL villa DNA items (both current-message and context-restored)
             for (const item of dna) {
               if (item.pillar === 'villa') item.details = { ...item.details, nights: n };
               if (item.pillar === 'yacht') item.details = { ...item.details, days: n };
             }
+            // Also set passengers from the bare number if not already set
+            // (user likely means 6 guests for 6 nights)
+            if (!result.passengers) result.passengers = n;
+            console.log(`[maria] bare number "${n}" interpreted as villa nights (and passengers if not set)`);
           }
         }
       }
+      // Re-sync experienceDna after nights extraction
+      result.experienceDna = dna;
 
       // Staff AND transport schedule detection: medio día / día completo / 8h jornada
       const scheduleHint = (msgLower: string): 'half_day' | 'full_day' | 'eight_hour' | null => {
@@ -4180,8 +4280,9 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         // (Note: when sentencesES/EN/PT is empty, fall back to a generic follow-up
         //  so the reply doesn't end mid-sentence with the intro dangling.)
         if (lang === 'ES') {
-          const intro = servicesNeeded.length > 1
-            ? `Excelente. Para coordinar ${pe_(servicesNeeded, lang)}, me confirma algunos detalles.`
+          const replyServices = currentMsgServices.length > 0 ? currentMsgServices : servicesNeeded;
+          const intro = replyServices.length > 1
+            ? `Excelente. Para coordinar ${pe_(replyServices, lang)}, me confirma algunos detalles.`
             : `Perfecto. Para ${primaryPhrase},`;
           const sentences = sentencesES.length > 0
             ? sentencesES.join(' ')
@@ -4189,8 +4290,9 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           const outro = hasContact ? '' : ' Y, ¿cómo prefiere que le contactemos — correo o WhatsApp?';
           result.reply = `${intro}${yachtHourlyNote} ${sentences}${outro}`.trim();
         } else if (lang === 'EN') {
-          const intro = servicesNeeded.length > 1
-            ? `Excellent. To coordinate ${pe_(servicesNeeded, lang)}, just a few details.`
+          const replyServices = currentMsgServices.length > 0 ? currentMsgServices : servicesNeeded;
+          const intro = replyServices.length > 1
+            ? `Excellent. To coordinate ${pe_(replyServices, lang)}, just a few details.`
             : `Great. For ${primaryPhrase},`;
           const sentences = sentencesEN.length > 0
             ? sentencesEN.join(' ')
@@ -4293,16 +4395,18 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           }
 
           if (lang === 'ES') {
-            const intro = ncPillars.length > 1
-              ? `Excelente. Para coordinar ${pe_(servicesNeeded, lang)}, me confirma algunos detalles.`
+            const ncReplyServices = currentMsgServices.length > 0 ? currentMsgServices : servicesNeeded;
+            const intro = ncReplyServices.length > 1
+              ? `Excelente. Para coordinar ${pe_(ncReplyServices, lang)}, me confirma algunos detalles.`
               : `Perfecto. Para ${ncPhrase},`;
             const sentences = ncSentencesES.length > 0
               ? ncSentencesES.join(' ')
               : '¿podría confirmarme los detalles para que le prepare una propuesta personalizada?';
             result.reply = `${intro} ${sentences} Y, ¿cómo prefiere que le contactemos — correo o WhatsApp?`.trim();
           } else if (lang === 'EN') {
-            const intro = ncPillars.length > 1
-              ? `Excellent. To coordinate ${pe_(servicesNeeded, lang)}, just a few details.`
+            const ncReplyServices = currentMsgServices.length > 0 ? currentMsgServices : servicesNeeded;
+            const intro = ncReplyServices.length > 1
+              ? `Excellent. To coordinate ${pe_(ncReplyServices, lang)}, just a few details.`
               : `Great. For ${ncPhrase},`;
             const sentences = ncSentencesEN.length > 0
               ? ncSentencesEN.join(' ')

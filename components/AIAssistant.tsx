@@ -51,8 +51,18 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
   const [messages, setMessages] = useState<Message[]>(() => {
     try {
       const saved = sessionStorage.getItem(STORAGE_KEY_HISTORY);
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
+      const parsed = saved ? JSON.parse(saved) : [];
+      // If no chat history, clear stale qualification from a previous session
+      // to prevent phantom services (e.g. "private jet") leaking into new chats
+      if (!parsed || parsed.length === 0) {
+        try { localStorage.removeItem(STORAGE_KEY_QUAL); } catch {}
+        try { localStorage.removeItem(STORAGE_KEY_LEAD_ID); } catch {}
+      }
+      return parsed;
+    } catch {
+      try { localStorage.removeItem(STORAGE_KEY_QUAL); } catch {}
+      return [];
+    }
   });
   const [isLoading, setIsLoading] = useState(false);
   const [turnsUsed, setTurnsUsed] = useState(0);
