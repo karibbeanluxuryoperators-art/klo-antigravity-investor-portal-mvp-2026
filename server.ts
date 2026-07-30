@@ -3716,14 +3716,13 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       // multilingual version. This validator just collects the raw missing keys.)
 
       // ── Origin / destination extraction ──
-      // Extract from "MIA to CTG", "Bogota to Cartagena", "BOG → CTG" patterns.
-      // Also capture standalone 3-letter airport codes.
+      // Extract from "MIA to CTG", "from Bogota to Cartagena", "BOG → CTG" patterns.
       if (!result.origin || !result.destination) {
         const routePatterns = [
-          // "MIA to CTG", "BOG -> CTG", "from BOG to CTG"
-          /(?:from\s+)?([A-Z]{3})\s*(?:to|→|-{1,2}|>|hasta|para|a)\s*([A-Z]{3})/i,
-          // "Cartagena to Bogota" (city names)
-          /(?:from\s+)?([A-Z][a-záéíóúñÀ-ÿ]+(?:\s+[A-Z][a-záéíóúñÀ-ÿ]+){0,2})\s+(?:to|hasta|para|a)\s+([A-Z][a-záéíóúñÀ-ÿ]+(?:\s+[A-Z][a-záéíóúñÀ-ÿ]+){0,2})/i,
+          // "MIA to CTG", "BOG -> CTG", "from BOG to CTG" (airport codes)
+          /(?:from\s+)?([A-Z]{3})\s*(?:to|→|-{1,2}|>|hasta|para)\s*([A-Z]{3})\b/i,
+          // "from Bogota to Cartagena", "from Cartagena to Miami" (city names, requires "from")
+          /from\s+([A-Z][a-záéíóúñÀ-ÿ]+(?:\s+[A-Z][a-záéíóúñÀ-ÿ]+){0,2})\s+(?:to|hasta|para)\s+([A-Z][a-záéíóúñÀ-ÿ]+(?:\s+[A-Z][a-záéíóúñÀ-ÿ]+){0,2})/i,
         ];
         for (const re of routePatterns) {
           const m = message.match(re);
@@ -3741,8 +3740,14 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
       for (const item of dna) {
         if (item.pillar === 'aviation') {
+          // Check origin/destination: either extracted into result.*, or found
+          // as 3-letter airport codes in the current message.
+          const hasOrigin = !!(result.origin || item.details?.origin);
+          const hasDest = !!(result.destination || item.details?.destination);
           const codeMatches = (message.match(/\b([A-Z]{3})\b/g) || []);
-          if (codeMatches.length < 2) missingForQuote.push('aviation:origin', 'aviation:destination');
+          const hasCodes = codeMatches.length >= 2;
+          if (!hasOrigin && !hasCodes) missingForQuote.push('aviation:origin');
+          if (!hasDest && !hasCodes) missingForQuote.push('aviation:destination');
           if (!item.details?.travel_date && !result.travelDates) missingForQuote.push('aviation:date');
           if (!result.passengers) missingForQuote.push('aviation:passengers');
           if (isInternational) {
