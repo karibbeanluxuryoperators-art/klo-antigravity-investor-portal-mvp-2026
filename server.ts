@@ -3257,9 +3257,13 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           if (context.budget && !geminiResult.budget) geminiResult.budget = context.budget;
           if (context.travelDates && !geminiResult.travelDates) geminiResult.travelDates = context.travelDates;
         }
-        // Persist + notify
+        // Persist + notify (only on new leads or when a price quote is ready —
+        // avoids spamming the broker with every partial update)
         const lead = await persistMariaLead(geminiResult, existingLeadId);
-        if (lead) notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new');
+        const geminiHasQuote = !!geminiResult.priceEstimate?.high;
+        if (lead && (!existingLeadId || geminiHasQuote)) {
+          notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new');
+        }
         usedGemini = true;
         return res.json({ success: true, result: geminiResult, lead, meta: { language: lang, source: 'gemini' } });
       } catch (geminiErr: any) {
@@ -4118,7 +4122,9 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             else if (p === 'aviation' && missing.includes('origin')) sentencesES.push('¿Desde qué ciudad salen y cuál es el destino?');
             else if (p === 'aviation' && missing.includes('nationality')) sentencesES.push('¿Qué nacionalidad tienen los pasajeros? (Para antinarcóticos y migración.)');
             else if (p === 'yacht' && missing.includes('passengers')) sentencesES.push('Para el yate, ¿cuántas personas y qué día?');
-            else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) sentencesES.push('¿cuántas noches y huéspedes?');
+            else if (p === 'villa' && missing.includes('nights') && missing.includes('guests')) sentencesES.push('¿Cuántas noches y cuántos huéspedes?');
+            else if (p === 'villa' && missing.includes('nights')) sentencesES.push('¿Cuántas noches?');
+            else if (p === 'villa' && missing.includes('guests')) sentencesES.push('¿Cuántos huéspedes?');
             else if (p === 'transport' && missing.includes('schedule')) sentencesES.push('Para el transporte, ¿medio día o día completo?');
             else if (p === 'transport' && missing.includes('type')) sentencesES.push('¿Qué tipo de vehículo prefiere — blindado, sedán ejecutivo, van ejecutiva o sprinter VIP?');
             else if (p === 'transport' && missing.includes('passengers')) sentencesES.push('Para el transporte, ¿cuántas personas?');
@@ -4128,7 +4134,9 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             else if (p === 'aviation' && missing.includes('origin')) sentencesEN.push('Where are you flying from and to?');
             else if (p === 'aviation' && missing.includes('nationality')) sentencesEN.push('What nationality are the passengers? (For antinarcotics and migration.)');
             else if (p === 'yacht' && missing.includes('passengers')) sentencesEN.push('For the yacht, how many guests and on what date?');
-            else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) sentencesEN.push('how many nights and guests?');
+            else if (p === 'villa' && missing.includes('nights') && missing.includes('guests')) sentencesEN.push('How many nights and guests?');
+            else if (p === 'villa' && missing.includes('nights')) sentencesEN.push('How many nights?');
+            else if (p === 'villa' && missing.includes('guests')) sentencesEN.push('How many guests?');
             else if (p === 'transport' && missing.includes('schedule')) sentencesEN.push('For the transport, will that be half day or full day?');
             else if (p === 'transport' && missing.includes('type')) sentencesEN.push('What vehicle would you like — armored SUV, executive sedan, executive van, or VIP sprinter?');
             else if (p === 'staff' && missing.includes('schedule')) sentencesEN.push('For staff, would that be half day, 8-hour shift, or full day?');
@@ -4136,7 +4144,9 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             if (p === 'aviation' && missing.includes('passengers')) sentencesPT.push('Quantas pessoas viajam e quais datas?');
             else if (p === 'aviation' && missing.includes('origin')) sentencesPT.push('De qual cidade partem e qual é o destino?');
             else if (p === 'aviation' && missing.includes('nationality')) sentencesPT.push('Qual a nacionalidade dos passageiros? (Para antinarcóticos e migração.)');
-            else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) sentencesPT.push('Para a villa, quantas noites e hóspedes?');
+            else if (p === 'villa' && missing.includes('nights') && missing.includes('guests')) sentencesPT.push('Para a villa, quantas noites e hóspedes?');
+            else if (p === 'villa' && missing.includes('nights')) sentencesPT.push('Quantas noites?');
+            else if (p === 'villa' && missing.includes('guests')) sentencesPT.push('Quantos hóspedes?');
             else if (p === 'staff' && missing.includes('schedule')) sentencesPT.push('Para o staff, meio período, 8h ou integral?');
           }
         }
@@ -4210,8 +4220,11 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
                 ncSentencesES.push('¿Qué nacionalidad tienen los pasajeros? (Para antinarcóticos y migración.)');
               else if (p === 'yacht' && (missing.includes('passengers') || missing.includes('date')))
                 ncSentencesES.push('Para el yate, ¿cuántas personas y qué día?');
-              else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests')))
-                ncSentencesES.push('¿cuántas noches y huéspedes?');
+              else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) {
+                if (missing.includes('nights') && missing.includes('guests')) ncSentencesES.push('¿Cuántas noches y cuántos huéspedes?');
+                else if (missing.includes('nights')) ncSentencesES.push('¿Cuántas noches?');
+                else if (missing.includes('guests')) ncSentencesES.push('¿Cuántos huéspedes?');
+              }
               else if (p === 'transport' && missing.includes('schedule'))
                 ncSentencesES.push('Para el transporte, ¿medio día o día completo?');
               else if (p === 'transport' && missing.includes('passengers'))
@@ -4244,8 +4257,11 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             } else {
               if (p === 'aviation' && (missing.includes('passengers') || missing.includes('origin')))
                 ncSentencesPT.push('De qual cidade partem, quantos passageiros e quais datas?');
-              else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests')))
-                ncSentencesPT.push('quantas noites e hóspedes?');
+              else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) {
+                if (missing.includes('nights') && missing.includes('guests')) ncSentencesPT.push('Quantas noites e hóspedes?');
+                else if (missing.includes('nights')) ncSentencesPT.push('Quantas noites?');
+                else if (missing.includes('guests')) ncSentencesPT.push('Quantos hóspedes?');
+              }
               else if (missing.length > 0)
                 ncSentencesPT.push(`Poderia confirmar os detalhes de ${phraseByPillar[p]?.PT || p}?`);
             }
@@ -4319,8 +4335,11 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
               caSentencesES.push('¿Cuántas personas viajan y qué fecha tienen en mente?');
             else if (p === 'aviation' && missing.includes('nationality'))
               caSentencesES.push('¿Qué nacionalidad tienen los pasajeros?');
-            else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests')))
-              caSentencesES.push('¿Cuántas noches y huéspedes?');
+            else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) {
+              if (missing.includes('nights') && missing.includes('guests')) caSentencesES.push('¿Cuántas noches y cuántos huéspedes?');
+              else if (missing.includes('nights')) caSentencesES.push('¿Cuántas noches?');
+              else if (missing.includes('guests')) caSentencesES.push('¿Cuántos huéspedes?');
+            }
             else if (p === 'yacht' && (missing.includes('passengers') || missing.includes('date')))
               caSentencesES.push('Para el yate, ¿cuántas personas y qué día?');
             else if (p === 'transport' && missing.includes('schedule'))
@@ -4369,10 +4388,12 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
       // Persist to Supabase
       const lead = await persistMariaLead(result, existingLeadId);
-      // Notify admin via Telegram on EVERY save (new + update) so the broker
-      // always has the full current lead state. Fire-and-forget so it doesn't
-      // block the response.
-      if (lead) notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new');
+      // Notify admin via Telegram only on new leads or when a price quote is
+      // ready — avoids spamming the broker on every partial turn.
+      const fallbackHasQuote = !!result.priceEstimate?.high;
+      if (lead && (!existingLeadId || fallbackHasQuote)) {
+        notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new');
+      }
       return res.json({ success: true, result, lead, meta: { language: lang, source: 'rule-based-fallback' } });
     }
   });
