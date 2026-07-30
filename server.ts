@@ -3613,6 +3613,16 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       // ── Passengers / dates / budget extraction ──
       const paxMatch = message.match(/(\d+)\s*(personas|guests|pax|huespedes|hóspedes|people)/i);
       if (paxMatch) result.passengers = parseInt(paxMatch[1], 10);
+      // Bare number as passengers fallback: when the user replies with just
+      // "6" or "for 6" to María's "how many people?" question.
+      // Safe because it only fires when no keyword-based extraction matched.
+      if (!result.passengers) {
+        const barePax = message.match(/^(?:for\s+|para\s+)?(\d{1,2})$/i);
+        if (barePax) {
+          const n = parseInt(barePax[1], 10);
+          if (n >= 1 && n <= 50) result.passengers = n;
+        }
+      }
 
       // Detect nights: explicit number, or "a week" → 7
       let nightsValue: number | null = null;
@@ -3633,6 +3643,21 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         for (const item of dna) {
           if (item.pillar === 'villa') item.details = { ...item.details, nights: nightsValue };
           if (item.pillar === 'yacht') item.details = { ...item.details, days: nightsValue };
+        }
+      } else if (dna.some((d) => d.pillar === 'villa') || servicesNeeded.includes('villa')) {
+        // Bare number as nights fallback: when the user replies with just
+        // "6" or "for 6" to María's "how many nights?" question.
+        // Only triggers when villa is active and no keyword-based extraction matched.
+        const bareNights = message.match(/^(?:for\s+|para\s+)?(\d{1,2})$/i);
+        if (bareNights) {
+          const n = parseInt(bareNights[1], 10);
+          if (n >= 1 && n <= 30) {
+            nightsValue = n;
+            for (const item of dna) {
+              if (item.pillar === 'villa') item.details = { ...item.details, nights: n };
+              if (item.pillar === 'yacht') item.details = { ...item.details, days: n };
+            }
+          }
         }
       }
 
