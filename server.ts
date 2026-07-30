@@ -4044,7 +4044,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             else if (p === 'aviation' && missing.includes('origin')) sentencesES.push('¿Desde qué ciudad salen y cuál es el destino?');
             else if (p === 'aviation' && missing.includes('nationality')) sentencesES.push('¿Qué nacionalidad tienen los pasajeros? (Para antinarcóticos y migración.)');
             else if (p === 'yacht' && missing.includes('passengers')) sentencesES.push('Para el yate, ¿cuántas personas y qué día?');
-            else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) sentencesES.push('Para la villa, ¿cuántas noches y huéspedes?');
+            else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) sentencesES.push('¿cuántas noches y huéspedes?');
             else if (p === 'transport' && missing.includes('schedule')) sentencesES.push('Para el transporte, ¿medio día o día completo?');
             else if (p === 'transport' && missing.includes('type')) sentencesES.push('¿Qué tipo de vehículo prefiere — blindado, sedán ejecutivo, van ejecutiva o sprinter VIP?');
             else if (p === 'transport' && missing.includes('passengers')) sentencesES.push('Para el transporte, ¿cuántas personas?');
@@ -4054,7 +4054,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             else if (p === 'aviation' && missing.includes('origin')) sentencesEN.push('Where are you flying from and to?');
             else if (p === 'aviation' && missing.includes('nationality')) sentencesEN.push('What nationality are the passengers? (For antinarcotics and migration.)');
             else if (p === 'yacht' && missing.includes('passengers')) sentencesEN.push('For the yacht, how many guests and on what date?');
-            else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) sentencesEN.push('For the villa, how many nights and guests?');
+            else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests'))) sentencesEN.push('how many nights and guests?');
             else if (p === 'transport' && missing.includes('schedule')) sentencesEN.push('For the transport, will that be half day or full day?');
             else if (p === 'transport' && missing.includes('type')) sentencesEN.push('What vehicle would you like — armored SUV, executive sedan, executive van, or VIP sprinter?');
             else if (p === 'staff' && missing.includes('schedule')) sentencesEN.push('For staff, would that be half day, 8-hour shift, or full day?');
@@ -4137,7 +4137,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
               else if (p === 'yacht' && (missing.includes('passengers') || missing.includes('date')))
                 ncSentencesES.push('Para el yate, ¿cuántas personas y qué día?');
               else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests')))
-                ncSentencesES.push('Para la villa, ¿cuántas noches y huéspedes?');
+                ncSentencesES.push('¿cuántas noches y huéspedes?');
               else if (p === 'transport' && missing.includes('schedule'))
                 ncSentencesES.push('Para el transporte, ¿medio día o día completo?');
               else if (p === 'transport' && missing.includes('passengers'))
@@ -4158,7 +4158,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
               else if (p === 'yacht' && (missing.includes('passengers') || missing.includes('date')))
                 ncSentencesEN.push('For the yacht, how many guests and on what date?');
               else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests')))
-                ncSentencesEN.push('For the villa, how many nights and guests?');
+                ncSentencesEN.push('how many nights and guests?');
               else if (p === 'transport' && missing.includes('schedule'))
                 ncSentencesEN.push('For the transport, will that be half day or full day?');
               else if (p === 'transport' && missing.includes('passengers'))
@@ -4171,7 +4171,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
               if (p === 'aviation' && (missing.includes('passengers') || missing.includes('origin')))
                 ncSentencesPT.push('De qual cidade partem, quantos passageiros e quais datas?');
               else if (p === 'villa' && (missing.includes('nights') || missing.includes('guests')))
-                ncSentencesPT.push('Para a villa, quantas noites e hóspedes?');
+                ncSentencesPT.push('quantas noites e hóspedes?');
               else if (missing.length > 0)
                 ncSentencesPT.push(`Poderia confirmar os detalhes de ${phraseByPillar[p]?.PT || p}?`);
             }
