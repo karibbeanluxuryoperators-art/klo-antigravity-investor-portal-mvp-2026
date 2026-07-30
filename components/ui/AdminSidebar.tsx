@@ -35,7 +35,10 @@ const ROLE_TABS: Record<AdminRole, AdminSection[]> = {
   admin:   ['SUPPLIERS', 'SERVICES', 'EXPERIENCES', 'BOOKINGS', 'CLIENTS', 'LEADS', 'BUNDLES', 'STATS', 'SETTINGS'],
   ops:     ['SUPPLIERS', 'SERVICES', 'EXPERIENCES', 'BOOKINGS', 'CLIENTS', 'LEADS', 'BUNDLES', 'STATS'],
   sales:   ['BOOKINGS', 'CLIENTS', 'LEADS', 'STATS'],
-  partner: ['SERVICES', 'EXPERIENCES', 'BOOKINGS', 'STATS'],
+  // v1.8.0 Step 22.23a: partners can now see BUNDLES so they can assemble
+  // multi-supplier experiences (Phase 4 builder will use this). Partners
+  // cannot see the lead pipeline or other partners' rosters.
+  partner: ['SERVICES', 'EXPERIENCES', 'BOOKINGS', 'BUNDLES', 'STATS'],
   viewer:  ['STATS'],
 };
 
