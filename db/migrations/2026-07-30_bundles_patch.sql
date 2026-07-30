@@ -47,12 +47,9 @@ create trigger trg_bundles_touch
 -- ─────────────────────────────────────────────────────────────────────────
 -- 2. bundle_items: ensure all columns exist
 -- ─────────────────────────────────────────────────────────────────────────
-create table if not exists public.bundle_items (
-  id uuid primary key default gen_random_uuid(),
-  bundle_id uuid not null references public.bundles(id) on delete cascade
-);
-
--- If the table existed in a leaner form, add the missing columns.
+-- The existing bundles.id is TEXT (not uuid), so bundle_id must be TEXT too.
+-- bundle_items already exists in production with (id uuid, bundle_id text, asset_id, qty).
+-- We add the missing columns but keep bundle_id as text.
 alter table public.bundle_items
   add column if not exists line_type text not null default 'partner_sourced'
     check (line_type in ('partner_sourced', 'klo_addon')),
@@ -69,6 +66,7 @@ alter table public.bundle_items
   add column if not exists notes text,
   add column if not exists created_at timestamptz not null default now();
 
+-- Indexes (the bundle_id column already exists as text)
 create index if not exists idx_bundle_items_bundle
   on public.bundle_items (bundle_id, sort_order);
 create index if not exists idx_bundle_items_supplier
@@ -76,11 +74,12 @@ create index if not exists idx_bundle_items_supplier
   where supplier_id is not null;
 
 -- ─────────────────────────────────────────────────────────────────────────
--- 3. bundle_bookings: create if missing (the existing project likely doesn't have this)
+-- 3. bundle_bookings: create if missing
 -- ─────────────────────────────────────────────────────────────────────────
+-- bundle_id is TEXT (matches bundles.id type, not uuid)
 create table if not exists public.bundle_bookings (
   id uuid primary key default gen_random_uuid(),
-  bundle_id uuid not null references public.bundles(id),
+  bundle_id text not null references public.bundles(id),
   lead_id text,
   client_id text,
   status text not null default 'PENDING'
@@ -111,7 +110,7 @@ create index if not exists idx_bundle_bookings_partner
 -- ─────────────────────────────────────────────────────────────────────────
 create table if not exists public.bundle_visibility_requests (
   id uuid primary key default gen_random_uuid(),
-  bundle_id uuid not null references public.bundles(id) on delete cascade,
+  bundle_id text not null references public.bundles(id) on delete cascade,
   requested_visibility text not null
     check (requested_visibility in ('partner_scoped', 'public')),
   requested_by_email text not null,
