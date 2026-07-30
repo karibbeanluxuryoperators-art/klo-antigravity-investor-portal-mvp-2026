@@ -3203,6 +3203,9 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
     // ── Try Gemini first (with 6s timeout). On failure or timeout, fall
     //    through to the rule-based path so the user always gets an answer. ──
     let usedGemini = false;
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('[maria] GEMINI_API_KEY is not set — running rule-based fallback only. Set this env var in Vercel → Settings → Environment Variables.');
+    }
     if (process.env.GEMINI_API_KEY) {
       try {
         const { GoogleGenAI } = require('@google/genai');
@@ -3271,6 +3274,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
     // ── Rule-based fallback ──
     if (!usedGemini) {
+      console.warn('[maria] using rule-based fallback (gemini not available or failed)');
       const msgLower = message.toLowerCase();
       const result: any = {
         reply: lang === 'ES'
@@ -3592,7 +3596,15 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           break;
         }
       }
-      if (phoneMatch) result.phone = phoneMatch[0].trim();
+      // Keyword-gated short number: 7-9 digits ONLY when preceded by a
+      // phone/WhatsApp keyword. Catches "whatsapp 3111111", "celular 3111111",
+      // "mi numero es 3111111" etc. without false-positiving on dates.
+      if (!phoneMatch) {
+        const phoneKeywordRe = /(?:whatsapp|celular|tel[eé]fono|m[ií]\s*n[uú]mero|n[uú]mero|phone|mobile|cell|llamar(?:me)?|contac(?:to|tar)|es\s+mi)[^\d]{0,5}(\d{7,9})(?![\d])/i;
+        const kwMatch = message.match(phoneKeywordRe);
+        if (kwMatch) phoneMatch = kwMatch;
+      }
+      if (phoneMatch) result.phone = phoneMatch[1] ? phoneMatch[1].trim() : phoneMatch[0].trim();
 
       // ── Passengers / dates / budget extraction ──
       const paxMatch = message.match(/(\d+)\s*(personas|guests|pax|huespedes|hóspedes|people)/i);
