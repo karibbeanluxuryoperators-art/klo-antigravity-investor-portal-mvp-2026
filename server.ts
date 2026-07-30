@@ -3346,7 +3346,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         dna.push({ pillar: 'villa', type: villaType, details: {} });
       }
 
-      if (/transport|airport|pickup|pick-up|transfer|car|driver|suburban|sprinter|carro|camioneta|sedan|suv|blindado|blindada|transporte|recogida/.test(msgLower)) {
+      if (/\btransport\b|\bairport\b|\bpickup\b|pick-up|\btransfer\b|\bcar\b|\bdriver\b|\bsuburban\b|\bsprinter\b|\bcarro\b|\bcamioneta\b|\bsedan\b|\bsuv\b|\bblindado\b|\bblindada\b|\btransporte\b|\brecogida\b/.test(msgLower)) {
         servicesNeeded.push('transport');
         // ── Luxury transport sub-types (KLO is exclusively HNW/UHNW) ──
         // Priority detection: armored > executive van > executive sedan > sprinter
@@ -3735,8 +3735,11 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       }
 
       // Detect if aviation is international (origin/destination are non-CO airports)
+      // Check BOTH the current message AND accumulated context (origin/dest
+      // may have been provided in a previous turn).
       const intlAirports = /\b(mia|jfk|nyc|lax|mex|sao|gru|eze|mco|ord|yyz|lhr|cdg|frankfurt|munich|bcn|mad|lis|panama|sjo|gua|lim|clo|ups|aqp)\b/i;
-      const isInternational = dna.some((d) => d.pillar === 'aviation') && intlAirports.test(message);
+      const originOrDest = [result.origin, result.destination, message].filter(Boolean).join(' ');
+      const isInternational = dna.some((d) => d.pillar === 'aviation') && intlAirports.test(originOrDest);
 
       for (const item of dna) {
         if (item.pillar === 'aviation') {
