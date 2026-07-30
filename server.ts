@@ -2806,7 +2806,7 @@ async function startServer() {
 
         const genai = new GoogleGenAI({ apiKey });
         const result = await genai.models.generateContent({
-          model: 'gemini-3-flash-preview',
+          model: 'gemini-2.0-flash',
           contents: userMessage,
           config: { systemInstruction: systemPrompt }
         });
@@ -3222,7 +3222,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             temperature: 0.3,
           },
         });
-        const timeoutMs = 6000;
+        const timeoutMs = 12000;
         const geminiResp = await Promise.race([
           geminiCall,
           new Promise<never>((_, rej) => setTimeout(() => rej(new Error('gemini_timeout')), timeoutMs)),
@@ -3260,7 +3260,11 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         usedGemini = true;
         return res.json({ success: true, result: geminiResult, lead, meta: { language: lang, source: 'gemini' } });
       } catch (geminiErr: any) {
-        console.warn('[maria] gemini failed, falling back to rule-based:', geminiErr?.message || geminiErr);
+        console.error('[maria] gemini failed, falling back to rule-based:', geminiErr?.message || geminiErr);
+        // Log extra detail for debugging (timeout vs API error vs key issue)
+        if (geminiErr instanceof Error) {
+          console.error('[maria] gemini error type:', geminiErr.name, '| message:', geminiErr.message);
+        }
         // Fall through to rule-based below
       }
     }
@@ -4299,7 +4303,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       // always has the full current lead state. Fire-and-forget so it doesn't
       // block the response.
       if (lead) notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new');
-      return res.json({ success: true, result, lead, meta: { language: lang, source: 'fallback' } });
+      return res.json({ success: true, result, lead, meta: { language: lang, source: 'rule-based-fallback' } });
     }
   });
 
