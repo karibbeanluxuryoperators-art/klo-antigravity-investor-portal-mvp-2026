@@ -3481,6 +3481,22 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           parsedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         }
       }
+      // Pattern 1b: Spanish/Portuguese "para el 15 de agosto", "15 de agosto", "15 agosto" (day first)
+      if (!parsedDate) {
+        const dayFirstES = message.match(/(?:para\s+(?:el\s+)?)?(\d{1,2})\s+(?:de\s+)?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/i);
+        if (dayFirstES) {
+          const day = parseInt(dayFirstES[1], 10);
+          const monthName = dayFirstES[2].toLowerCase();
+          const month = monthMap[monthName];
+          if (month && day >= 1 && day <= 31) {
+            const now = new Date();
+            let year = now.getFullYear();
+            const candidate = new Date(year, month - 1, day);
+            if (candidate < now) year += 1;
+            parsedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          }
+        }
+      }
       // Pattern 2: "august 7" (month first, must be a month name, not random word)
       if (!parsedDate) {
         const monthFirstMatch = message.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+(\d{1,2})(?:st|nd|rd|th)?/i);
@@ -3721,12 +3737,15 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
       // ── Origin / destination extraction ──
       // Extract from "MIA to CTG", "from Bogota to Cartagena", "BOG → CTG" patterns.
+      // Also handles bare city names in Spanish ("barranquilla", "desde cartagena").
       if (!result.origin || !result.destination) {
         const routePatterns = [
           // "MIA to CTG", "BOG -> CTG", "from BOG to CTG" (airport codes)
           /(?:from\s+)?([A-Z]{3})\s*(?:to|→|-{1,2}|>|hasta|para)\s*([A-Z]{3})\b/i,
           // "from Bogota to Cartagena", "from Cartagena to Miami" (city names, requires "from")
           /from\s+([A-Z][a-záéíóúñÀ-ÿ]+(?:\s+[A-Z][a-záéíóúñÀ-ÿ]+){0,2})\s+(?:to|hasta|para)\s+([A-Z][a-záéíóúñÀ-ÿ]+(?:\s+[A-Z][a-záéíóúñÀ-ÿ]+){0,2})/i,
+          // Spanish "desde Bogotá hasta Cartagena", "desde barranquilla para tayrona"
+          /desde\s+([A-Z][a-záéíóúñÀ-ÿ]+(?:\s+[A-Z][a-záéíóúñÀ-ÿ]+){0,2})\s+(?:hasta|para|a|hacia)\s+([A-Z][a-záéíóúñÀ-ÿ]+(?:\s+[A-Z][a-záéíóúñÀ-ÿ]+){0,2})/i,
         ];
         for (const re of routePatterns) {
           const m = message.match(re);
@@ -3734,6 +3753,39 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             if (!result.origin) result.origin = m[1].trim();
             if (!result.destination) result.destination = m[2].trim();
             break;
+          }
+        }
+        // Fallback: bare city name as origin (no "from/desde" prefix)
+        // Known Colombian/LatAm cities the user might mention directly
+        if (!result.origin) {
+          const bareCityMap: Record<string, string> = {
+            'barranquilla': 'Barranquilla', 'bogota': 'Bogotá', 'bogotá': 'Bogotá',
+            'cartagena': 'Cartagena', 'medellin': 'Medellín', 'medellín': 'Medellín',
+            'cali': 'Cali', 'santa marta': 'Santa Marta', 'san andres': 'San Andrés',
+            'bucaramanga': 'Bucaramanga', 'pereira': 'Pereira', 'cucuta': 'Cúcuta',
+            'miami': 'Miami', 'panama': 'Panamá', 'lima': 'Lima',
+          };
+          for (const [key, val] of Object.entries(bareCityMap)) {
+            const re = new RegExp(`\\b${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+            if (re.test(message)) {
+              result.origin = val;
+              break;
+            }
+          }
+        }
+        // Fallback: known destinations that aren't airport codes
+        if (!result.destination) {
+          const destKeywords: Record<string, string> = {
+            'tayrona': 'Tayrona', 'rosario': 'Islas del Rosario', 'baru': 'Barú',
+            'barú': 'Barú', 'bocagrande': 'Bocagrande', 'old town': 'Old Town',
+            'centro historico': 'Centro Histórico', 'castillo san felipe': 'Castillo San Felipe',
+          };
+          for (const [key, val] of Object.entries(destKeywords)) {
+            const re = new RegExp(`\\b${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+            if (re.test(message)) {
+              result.destination = val;
+              break;
+            }
           }
         }
       }
