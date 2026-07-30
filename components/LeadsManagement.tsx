@@ -11,6 +11,7 @@ import { DataTable, type Column, type BulkAction } from './ui/DataTable';
 import { useArchive } from '../hooks/useArchive';
 import { ArchiveButton } from './ui/ArchiveButton';
 import { ShowArchivedToggle } from './ui/ShowArchivedToggle';
+import { LeadsKanban } from './LeadsKanban';
 
 // v1.8.0 Step 8: Leads tab converted to DataTable for visual consistency
 // with the other admin tabs (SOCIOS, RESERVAS, CLIENTES). The expandable
@@ -47,6 +48,8 @@ export interface Lead {
   status: 'NEW' | 'CONTACTED' | 'QUALIFIED' | 'WON' | 'LOST';
   timestamp: string;
   source: string | null;
+  /** v1.8.0 Step 14 — ArchiveButton reads this. ISO timestamp or null. */
+  archived_at?: string | null;
 }
 
 interface LeadsManagementProps {
@@ -93,6 +96,9 @@ const T_LEADS: Record<string, { EN: string; ES: string; PT: string }> = {
   bulk_lost:        { EN: 'Mark Lost', ES: 'Marcar Perdido', PT: 'Marcar Perdido' },
   open:             { EN: 'Open', ES: 'Abrir', PT: 'Abrir' },
   open_detail:      { EN: 'View full detail', ES: 'Ver detalle completo', PT: 'Ver detalhe completo' },
+  view_list:        { EN: 'List', ES: 'Lista', PT: 'Lista' },
+  view_kanban:      { EN: 'Kanban', ES: 'Kanban', PT: 'Kanban' },
+  view_label:       { EN: 'View', ES: 'Vista', PT: 'Vista' },
 };
 
 const t = (key: keyof typeof T_LEADS, lang: Language): string => {
@@ -156,6 +162,10 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
   // it gates the fetchLeads URL below. The useArchive hook reads showArchived
   // from props so both stay in sync without a TDZ dance.
   const [showArchived, setShowArchived] = useState<boolean>(false);
+  // v1.8.0 Step 22.22: Kanban toggle. Default = list (preserves the
+  // existing fast-bulk-action workflow). User can flip to Kanban to
+  // see the pipeline at a glance and one-click advance each lead.
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
   useEffect(() => {
     (async () => {
@@ -395,8 +405,33 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
         <StatCard label={t('won_count', lang)} value={counts.won} accent="text-[#B8963E]" />
       </div>
 
-      {/* ── Toolbar: Show archived toggle (v1.8.0 Step 14) ─────────── */}
-      <div className="flex items-center justify-end">
+      {/* ── Toolbar: View mode + Show archived (v1.8.0 Step 22.22) ─── */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-1 p-0.5 rounded-lg border border-white/10 bg-white/[0.02]">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 px-2">
+            {t('view_label', lang)}
+          </span>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded transition-colors ${
+              viewMode === 'list'
+                ? 'bg-[#B8963E] text-white'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            {t('view_list', lang)}
+          </button>
+          <button
+            onClick={() => setViewMode('kanban')}
+            className={`text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded transition-colors ${
+              viewMode === 'kanban'
+                ? 'bg-[#B8963E] text-white'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            {t('view_kanban', lang)}
+          </button>
+        </div>
         <ShowArchivedToggle
           value={showArchived}
           onChange={(v) => { setShowArchived(v); }}
@@ -404,7 +439,19 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
         />
       </div>
 
+      {/* ── Kanban (v1.8.0 Step 22.22) ───────────────────────────── */}
+      {viewMode === 'kanban' && (
+        <LeadsKanban
+          leads={leads}
+          lang={lang}
+          onStatusChange={updateStatus}
+          statusUpdating={statusUpdating}
+          onOpenDetail={(l) => { window.location.href = `/admin/leads/${l.id}`; }}
+        />
+      )}
+
       {/* ── DataTable ──────────────────────────────────────────────── */}
+      {viewMode === 'list' && (
       <DataTable<Lead>
         rows={leads}
         loading={loading}
@@ -424,7 +471,7 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
           ],
         }}
         searchFields={['name', 'email', 'source', 'message', 'experience_type', 'special_requests']}
-        searchPlaceholder={t('search', lang)}
+        searchPlaceholder={T_LEADS.search}
         defaultSort={{ key: 'timestamp', order: 'desc' }}
         pageSize={25}
         lang={lang}
@@ -485,6 +532,7 @@ export const LeadsManagement: React.FC<LeadsManagementProps> = ({ lang }) => {
           );
         }}
       />
+      )}
     </div>
   );
 };
