@@ -4360,6 +4360,20 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         const kwMatch = message.match(phoneKeywordRe);
         if (kwMatch) phoneMatch = kwMatch;
       }
+      // Last-resort: bare digit run of 7-15 digits. Catches "3111111" and
+      // "322331111" (colombian mobile without +57 prefix, common in WhatsApp
+      // copy-paste). Guarded by: short message length (≤25 chars), no other
+      // numeric keywords (nights/guests/etc), and no service words that would
+      // suggest a price/nights/pax context instead of contact info.
+      if (!phoneMatch) {
+        const msg = message.trim();
+        const hasServiceContext = /\b(nights?|noches|guests?|personas|huespedes|pax|people|days?|d[ií]as|weeks?|semanas|villa|yacht|jet|villa|villas)\b/i.test(msg);
+        const bareNumber = msg.match(/^\+?\d{7,15}$/);
+        if (bareNumber && msg.length <= 25 && !hasServiceContext) {
+          // Strip any leading + and treat as phone
+          phoneMatch = bareNumber;
+        }
+      }
       if (phoneMatch) result.phone = phoneMatch[1] ? phoneMatch[1].trim() : phoneMatch[0].trim();
 
       // ── Passengers / dates / budget extraction ──
