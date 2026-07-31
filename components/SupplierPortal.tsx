@@ -578,7 +578,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           />
         </motion.div>
         <h1 className="text-5xl md:text-6xl font-serif italic tracking-wide text-white">{tx(T.s1_title)}</h1>
-        <p className="text-white/60 font-sans font-light text-xl max-w-2xl mx-auto leading-relaxed">
+        <p className="text-white/80 font-sans font-light text-xl max-w-2xl mx-auto leading-relaxed">
           {tx(T.s1_subtitle)}
         </p>
       </div>
@@ -596,7 +596,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
             whileHover={{ y: -10, scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => handleTypeSelect(item.id)}
-            className="bg-white border border-white/10 rounded-2xl p-8 text-center space-y-6 group hover:border-[#B8963E]/50 hover:shadow-xl transition-all duration-500"
+            className="bg-luxury-slate border border-white/10 rounded-2xl p-8 text-center space-y-6 group hover:border-[#B8963E]/50 hover:shadow-xl transition-all duration-500"
           >
             <div className={`w-20 h-20 ${item.color} rounded-xl flex items-center justify-center mx-auto group-hover:scale-110 transition-transform`}>
               <item.icon size={40} />
@@ -640,46 +640,46 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
         </div>
       </div>
 
-      <div className="bg-white border border-white/10 rounded-2xl p-10 space-y-10 shadow-sm">
+      <div className="bg-luxury-slate border border-white/10 rounded-2xl p-10 space-y-10 shadow-sm">
         {/* Common Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-2">
             <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.s2_business_name)}</label>
-            <input name="business_name" value={formData.business_name} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.s2_business_ph)} />
+            <input name="business_name" value={formData.business_name} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.s2_business_ph)} />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.s2_contact_name)}</label>
-            <input name="contact_name" value={formData.contact_name} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.s2_contact_ph)} />
+            <input name="contact_name" value={formData.contact_name} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.s2_contact_ph)} />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.s2_email)}</label>
-            <input name="email" type="email" value={formData.email} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.s2_email_ph)} />
+            <input name="email" type="email" value={formData.email} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.s2_email_ph)} />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.s2_whatsapp)}</label>
-            <input name="whatsapp" value={formData.whatsapp} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.s2_whatsapp_ph)} />
+            <input name="whatsapp" value={formData.whatsapp} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.s2_whatsapp_ph)} />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.s2_location)}</label>
-            <select name="location" value={formData.location} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light appearance-none text-white">
+            <select name="location" value={formData.location} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light appearance-none text-white">
               {LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
             </select>
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.s2_experience)}</label>
-            <input name="experience" type="number" value={formData.experience} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.s2_experience_ph)} />
+            <input name="experience" type="number" value={formData.experience} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.s2_experience_ph)} />
           </div>
         </div>
 
         <div className="space-y-2">
           <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.s2_description)}</label>
-          <textarea name="description" maxLength={500} value={formData.description} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light h-32 resize-none text-white" placeholder={tx(T.s2_description_ph)} />
+          <textarea name="description" maxLength={500} value={formData.description} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light h-32 resize-none text-white" placeholder={tx(T.s2_description_ph)} />
         </div>
 
         <div className="space-y-2">
           <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.s2_photo_url)}</label>
           <div className="relative">
-            <input name="photo_url" value={formData.photo_url} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 pl-14 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.s2_photo_url_ph)} />
+            <input name="photo_url" value={formData.photo_url} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 pl-14 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.s2_photo_url_ph)} />
             <Camera className="absolute left-6 top-1/2 -translate-y-1/2 text-white/30" size={20} />
           </div>
           <p className="text-[11px] text-white/40 italic font-sans">{tx(T.s2_photo_hint)}</p>
@@ -693,15 +693,15 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.v_bedrooms)}</label>
-                <input name="bedrooms" type="number" value={formData.bedrooms} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
+                <input name="bedrooms" type="number" value={formData.bedrooms} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.v_max_guests)}</label>
-                <input name="max_guests" type="number" value={formData.max_guests} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
+                <input name="max_guests" type="number" value={formData.max_guests} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.v_price)}</label>
-                <input name="price_per_night" type="number" value={formData.price_per_night} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
+                <input name="price_per_night" type="number" value={formData.price_per_night} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
               </div>
             </div>
             <div className="space-y-4">
@@ -722,21 +722,21 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.ya_length)}</label>
-                <input name="vessel_length" type="number" value={formData.vessel_length} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
+                <input name="vessel_length" type="number" value={formData.vessel_length} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.ya_max_guests)}</label>
-                <input name="max_guests" type="number" value={formData.max_guests} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
+                <input name="max_guests" type="number" value={formData.max_guests} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.ya_price)}</label>
-                <input name="price_per_day" type="number" value={formData.price_per_day} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
+                <input name="price_per_day" type="number" value={formData.price_per_day} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.ya_home_port)}</label>
-                <input name="home_port" value={formData.home_port} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
+                <input name="home_port" value={formData.home_port} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.ya_crew)}</label>
@@ -767,31 +767,31 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.av_type)}</label>
-                <select name="aircraft_type" value={formData.aircraft_type} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light appearance-none text-white">
+                <select name="aircraft_type" value={formData.aircraft_type} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light appearance-none text-white">
                   {AIRCRAFT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.av_tail)}</label>
-                <input name="tail_number" value={formData.tail_number} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
+                <input name="tail_number" value={formData.tail_number} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.av_max_pax)}</label>
-                <input name="max_passengers" type="number" value={formData.max_passengers} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
+                <input name="max_passengers" type="number" value={formData.max_passengers} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.av_price)}</label>
-                <input name="price_per_hour" type="number" value={formData.price_per_hour} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
+                <input name="price_per_hour" type="number" value={formData.price_per_hour} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.av_home_base)}</label>
-                <input name="home_base" value={formData.home_base} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.av_home_base_ph)} />
+                <input name="home_base" value={formData.home_base} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.av_home_base_ph)} />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.av_range)}</label>
-                <input name="range" type="number" value={formData.range} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
+                <input name="range" type="number" value={formData.range} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
               </div>
             </div>
           </div>
@@ -802,13 +802,13 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.st_role)}</label>
-                <select name="role" value={formData.role} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light appearance-none text-white">
+                <select name="role" value={formData.role} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light appearance-none text-white">
                   {STAFF_ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.st_daily_rate)}</label>
-                <input name="daily_rate" type="number" value={formData.daily_rate} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
+                <input name="daily_rate" type="number" value={formData.daily_rate} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
               </div>
             </div>
             <div className="space-y-4">
@@ -823,7 +823,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.st_certs)}</label>
-              <input name="certifications" value={formData.certifications} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.st_certs_ph)} />
+              <input name="certifications" value={formData.certifications} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.st_certs_ph)} />
             </div>
           </div>
         )}
@@ -833,24 +833,24 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.gr_vehicle)}</label>
-                <select name="vehicle_type" value={formData.vehicle_type} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light appearance-none text-white">
+                <select name="vehicle_type" value={formData.vehicle_type} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light appearance-none text-white">
                   {VEHICLE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.gr_passengers)}</label>
-                <input name="max_passengers_ground" type="number" value={formData.max_passengers_ground} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
+                <input name="max_passengers_ground" type="number" value={formData.max_passengers_ground} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.gr_price)}</label>
-                <input name="price_per_day_ground" type="number" value={formData.price_per_day_ground} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
+                <input name="price_per_day_ground" type="number" value={formData.price_per_day_ground} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.gr_plate)}</label>
-                <input name="license_plate" value={formData.license_plate} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.gr_plate_ph)} />
+                <input name="license_plate" value={formData.license_plate} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder={tx(T.gr_plate_ph)} />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.gr_driver_inc)}</label>
@@ -994,7 +994,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-white border border-white/10 rounded-2xl p-10 space-y-8 shadow-sm flex flex-col items-center text-center opacity-60">
+          <div className="bg-luxury-slate border border-white/10 rounded-2xl p-10 space-y-8 shadow-sm flex flex-col items-center text-center opacity-60">
             <div className="w-20 h-20 rounded-xl flex items-center justify-center bg-blue-500/10 text-blue-500">
               <Globe size={40} />
             </div>
@@ -1016,7 +1016,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
             </p>
           </div>
 
-          <div className="bg-white border border-white/10 rounded-2xl p-10 space-y-8 shadow-sm">
+          <div className="bg-luxury-slate border border-white/10 rounded-2xl p-10 space-y-8 shadow-sm">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-12 h-12 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center">
                 <Calendar size={24} />
@@ -1033,7 +1033,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           </div>
         </div>
 
-        <div className="bg-white border border-white/10 rounded-2xl p-10 space-y-8 shadow-sm">
+        <div className="bg-luxury-slate border border-white/10 rounded-2xl p-10 space-y-8 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <h3 className="text-xl font-sans font-medium text-white">{tx(T.s3_seasonal)}</h3>
@@ -1053,14 +1053,14 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
                 <div className="space-y-2">
                   <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.s3_high_season)}</label>
                   <div className="relative">
-                    <input name="high_season_price" type="number" value={formData.high_season_price} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 pl-12 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder="0" />
+                    <input name="high_season_price" type="number" value={formData.high_season_price} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 pl-12 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder="0" />
                     <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-sans uppercase tracking-[0.3em] text-white/60 font-semibold">{tx(T.s3_low_season)}</label>
                   <div className="relative">
-                    <input name="low_season_price" type="number" value={formData.low_season_price} onChange={handleInputChange} className="w-full bg-white border border-white/10 rounded-lg py-4 px-5 pl-12 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder="0" />
+                    <input name="low_season_price" type="number" value={formData.low_season_price} onChange={handleInputChange} className="w-full bg-luxury-black border border-white/10 rounded-lg py-4 px-5 pl-12 focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30 transition-all font-light text-white" placeholder="0" />
                     <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 text-white/30" size={16} />
                   </div>
                 </div>
@@ -1089,7 +1089,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-white border border-white/10 rounded-2xl p-10 space-y-8 shadow-sm">
+        <div className="bg-luxury-slate border border-white/10 rounded-2xl p-10 space-y-8 shadow-sm">
           <h3 className="text-xl font-serif border-b border-white/10 pb-4 text-white">{tx(T.s4_business)}</h3>
           <div className="space-y-4 text-white">
             {[
@@ -1108,7 +1108,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           </div>
         </div>
 
-        <div className="bg-white border border-white/10 rounded-2xl p-10 space-y-8 shadow-sm">
+        <div className="bg-luxury-slate border border-white/10 rounded-2xl p-10 space-y-8 shadow-sm">
           <h3 className="text-xl font-sans font-medium border-b border-white/10 pb-4 text-white">{tx(T.s4_asset)}</h3>
           <div className="space-y-4">
             {type === 'VILLA' && (
@@ -1160,7 +1160,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
         </div>
       </div>
 
-      <div className="bg-white border border-white/10 rounded-2xl p-10 space-y-8 shadow-sm">
+      <div className="bg-luxury-slate border border-white/10 rounded-2xl p-10 space-y-8 shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 bg-[#B8963E]/10 text-[#B8963E] rounded-xl flex items-center justify-center">
             <Shield size={24} />
@@ -1277,7 +1277,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
           checkmarks for completed steps, current step highlighted in
           #B8963E. Sits below the top nav (which is also light). */}
       {step < 5 && (
-        <div className="sticky top-[73px] left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-white/5">
+        <div className="sticky top-[73px] left-0 right-0 z-40 bg-luxury-black/95 backdrop-blur-md border-b border-white/5">
           <div className="max-w-3xl mx-auto px-6 py-4">
             <div className="flex items-center justify-between gap-2">
               {STEPS.slice(0, 4).map((label, i) => {
@@ -1294,7 +1294,7 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
                             ? 'bg-[#B8963E] text-white'
                             : isCurrent
                             ? 'bg-[#B8963E]/15 text-[#B8963E] border-2 border-#B8963E'
-                            : 'bg-white text-white/30 border border-white/10'
+                            : 'bg-luxury-slate text-white/30 border border-white/10'
                         }`}
                       >
                         {isComplete ? <Check size={14} /> : stepNum}
