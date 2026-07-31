@@ -165,6 +165,26 @@ const SUPPLIER_STATUS_FILTERS: FilterOption[] = [
   { value: 'REJECTED', label: { EN: 'Rejected',  ES: 'Rechazados',  PT: 'Rejeitados' } },
 ];
 
+// Defensive: some legacy supplier rows have business_name/contact_name stored
+// as {EN,ES,PT} objects instead of plain strings (data issue from an earlier
+// save path). This helper normalizes either shape to a readable string so the
+// admin table never shows raw JSON like {"EN":"Foo","ES":"","PT":""}.
+const displayField = (raw: unknown, lang: 'EN' | 'ES' | 'PT' = 'EN'): string => {
+  if (raw == null) return '';
+  if (typeof raw === 'string') return raw;
+  if (typeof raw === 'object') {
+    const obj = raw as Record<string, unknown>;
+    const fromLang = obj[lang];
+    if (typeof fromLang === 'string' && fromLang.length > 0) return fromLang;
+    // Fallback: any non-empty key
+    for (const k of ['EN', 'ES', 'PT']) {
+      const v = obj[k];
+      if (typeof v === 'string' && v.length > 0) return v;
+    }
+  }
+  return '';
+};
+
 const BOOKING_STATUS_FILTERS: FilterOption[] = [
   { value: 'ALL',       label: { EN: 'All',        ES: 'Todos',        PT: 'Todos' } },
   { value: 'PENDING',   label: { EN: 'Pending',    ES: 'Pendientes',   PT: 'Pendentes' } },
@@ -401,22 +421,26 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({
     {
       key: 'business_name',
       label: { EN: 'Partner', ES: 'Socio', PT: 'Parceiro' },
-      sortValue: (s) => s.business_name,
+      sortValue: (s) => displayField(s.business_name),
       width: 'w-auto',
-      render: (s) => (
+      render: (s) => {
+        const name = displayField(s.business_name);
+        const contact = displayField(s.contact_name);
+        return (
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-lg bg-[#B8963E]/15 flex items-center justify-center text-[#B8963E] font-serif text-lg shrink-0">
-            {s.business_name.charAt(0).toUpperCase()}
+            {(name || '?').charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
             <div className="text-sm font-medium text-white truncate flex items-center gap-2">
-              {s.business_name}
+              {name}
               {s.google_calendar_id && <Calendar size={12} className="text-blue-400 shrink-0" />}
             </div>
-            <div className="text-[10px] text-white/40 uppercase tracking-[0.2em] truncate">{s.contact_name}</div>
+            <div className="text-[10px] text-white/40 uppercase tracking-[0.2em] truncate">{contact}</div>
           </div>
         </div>
-      ),
+        );
+      },
     },
     {
       key: 'contact',
