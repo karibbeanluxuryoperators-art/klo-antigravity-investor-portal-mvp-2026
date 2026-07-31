@@ -3883,11 +3883,12 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           if (context.budget && !geminiResult.budget) geminiResult.budget = context.budget;
           if (context.travelDates && !geminiResult.travelDates) geminiResult.travelDates = context.travelDates;
         }
-        // Persist + notify (only on new leads or when a price quote is ready —
-        // avoids spamming the broker with every partial update)
+        // Persist + notify (only when the lead is actionable: contact + service).
+        // Step 22.30: replaced the old "new OR has-quote" rule. A bare "Villas in
+        // Cartagena" with no contact is NOT actionable — the broker can't reach
+        // the guest yet, so the notification is just noise.
         const lead = await persistMariaLead(geminiResult, existingLeadId);
-        const geminiHasQuote = !!geminiResult.priceEstimate?.high;
-        if (lead && (!existingLeadId || geminiHasQuote)) {
+        if (lead && isLeadActionable(geminiResult)) {
           notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new');
         }
         usedGemini = true;
@@ -3961,8 +3962,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         }
         // Persist + notify
         const lead = await persistMariaLead(openaiResult, existingLeadId);
-        const openaiHasQuote = !!openaiResult.priceEstimate?.high;
-        if (lead && (!existingLeadId || openaiHasQuote)) {
+        if (lead && isLeadActionable(openaiResult)) {
           notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new');
         }
         usedGemini = true;
@@ -5138,10 +5138,10 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
       // Persist to Supabase
       const lead = await persistMariaLead(result, existingLeadId);
-      // Notify admin via Telegram only on new leads or when a price quote is
-      // ready — avoids spamming the broker on every partial turn.
-      const fallbackHasQuote = !!result.priceEstimate?.high;
-      if (lead && (!existingLeadId || fallbackHasQuote)) {
+      // Step 22.30: only notify when the lead is actionable (contact + service).
+      // The old "new OR has-quote" rule was pinging the broker on bare
+      // "Villas in Cartagena" messages with no contact info — pure noise.
+      if (lead && isLeadActionable(result)) {
         notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new');
       }
       return res.json({ success: true, result, lead, meta: { language: lang, source: 'rule-based-fallback' } });
@@ -5300,6 +5300,29 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
   // /api/leads, /api/maria/chat, and /api/maria/chat-gemini. Sends the FULL
   // current lead state so the broker has the complete picture.
   //
+  // Anti-spam policy (so the broker isn't pinged on every message):
+  //   - new lead → notify
+  //   - update that gains contact info → notify (becomes actionable)
+  //   - update that gains a service or date → notify (becomes actionable)
+  //   - update with no new info → silent (no notification)
+  //   - any update → mark (tracked in __notifiedLeads set) so we don't
+  //     double-notify within a short window
+  //
+  // Step 22.30 fix: a lead is "actionable" only when Maria has BOTH a way to
+  // reach the guest (email or phone) AND a service/destination to act on. A
+  // bare "Villas in Cartagena" with no contact info is NOT actionable — the
+  // broker cannot call or message the guest yet, so the notification is just
+  // noise. isLeadActionable() is called before notifyAdminNewLead() at the
+  // three Maria/chat code paths to enforce this rule consistently.
+  function isLeadActionable(resultOrLead: any): boolean {
+    const r = resultOrLead || {};
+    const hasContact = !!(r.email || r.phone);
+    const servicesArr: string[] = Array.isArray(r.servicesNeeded) ? r.servicesNeeded : [];
+    const hasService = servicesArr.length > 0 || !!r.destination || !!r.pillarInterest;
+    return hasContact && hasService;
+  }
+
+
   // Anti-spam policy (so the broker isn't pinged on every message):
   //   - new lead → notify
   //   - update that gains contact info → notify (becomes actionable)
