@@ -7,6 +7,30 @@ import { google } from "googleapis";
 import { createClient } from "@supabase/supabase-js";
 import { GoogleGenAI } from "@google/genai";
 import fetch from "node-fetch";
+import rateLimit from "express-rate-limit";
+
+// v1.8.0 Sprint H1: Sentry observability. Guarded on SENTRY_DSN so the server
+// boots and runs normally when the env var is missing (e.g. local dev, preview
+// before secrets are set). Set SENTRY_DSN in Vercel env vars to enable.
+if (process.env.SENTRY_DSN) {
+  try {
+    // Dynamic require to avoid loading @sentry/node at module init when DSN
+    // is absent (keeps cold start fast and the dev experience simple).
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const Sentry = require('@sentry/node');
+    Sentry.init({
+      dsn: process.env.SENTRY_DSN,
+      tracesSampleRate: 0.1,
+      environment: process.env.VERCEL_ENV || process.env.NODE_ENV || 'development',
+      // Don't send PII (email, IP) to Sentry by default — luxury guests are
+      // sensitive. Override only if you intentionally want full PII.
+      sendDefaultPii: false,
+    });
+    console.log('[sentry] backend init OK');
+  } catch (e: any) {
+    console.warn('[sentry] backend init failed:', e?.message || e);
+  }
+}
 
 // Vite is only needed for local dev (it provides the SPA HMR server). On Vercel
 // the static dist/ folder is served directly, so we avoid importing Vite there
@@ -3582,7 +3606,21 @@ ${assetContext}`;
   // - Resilient insert: drops fields that don't exist yet (PGRST204/42703)
   // - Returns contract that AIAssistant.tsx expects: { success, reply, lead, meta }
   // ─────────────────────────────────────────────────────────────────────────
-  app.post("/api/maria/chat", async (req, res) => {
+  // v1.8.0 Sprint H1: rate-limit /api/maria/chat to 30 req/min per IP.
+  // Pre-Facebook-ads hardening: stops a single client (or botnet) from
+  // DoS'ing the endpoint or running up OpenAI bills. Scoped to this route
+  // only — does NOT touch any other endpoint.
+  const mariaChatLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 30,            // 30 requests per IP per minute
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      error: 'rate_limited',
+      reply: 'Too many messages — please give me a few seconds before trying again.',
+    },
+  });
+  app.post("/api/maria/chat", mariaChatLimiter, async (req, res) => {
     const { message, history, lang: reqLang, leadId: existingLeadId, context } = req.body || {};
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'message is required' });
