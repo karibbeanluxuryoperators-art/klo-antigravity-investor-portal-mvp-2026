@@ -23,6 +23,7 @@ import {
 } from '../services/supabase';
 import { SuppliersManagement } from './SuppliersManagement';
 import { SupplierDetail, ClientDetail, BookingDetail, LeadDetail, ExperienceDetail } from './AdminDetails';
+import { type AdminRole } from './ui/AdminSidebar';
 import {
   Section,
   SectionLabel,
@@ -104,6 +105,32 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
   const t = T[lang];
   const [state, setState] = useState<AdminState>({ kind: 'loading' });
   const [reloadKey, setReloadKey] = useState(0);
+  // v1.8.1: dev-only role switcher wiring. `devModeEnabled` is decided
+  // ONCE on mount (URL ?dev_roles=1 OR non-prod build) and never changes
+  // for the session — this is the safety gate that keeps end users from
+  // ever seeing the picker. `roleOverride` is what the user picked from
+  // the dropdown (null = use the real role from /api/admin/check).
+  const [devModeEnabled, setDevModeEnabled] = useState<boolean>(false);
+  const [roleOverride, setRoleOverride] = useState<AdminRole | null>(null);
+
+  useEffect(() => {
+    // URL flag is the QA escape hatch on prod. In a real prod build
+    // (Vite production), the env check is false unless ?dev_roles=1 is
+    // present, so a curious visitor with no flag never sees the picker.
+    // In dev/preview builds, it's on by default.
+    let enabled = false;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('dev_roles') === '1') enabled = true;
+    } catch {
+      /* SSR or non-browser: leave disabled */
+    }
+    // import.meta.env.MODE is a Vite compile-time constant; in prod it
+    // is 'production', so this check is false. In dev/preview it is not.
+    const mode = (import.meta as any).env?.MODE as string | undefined;
+    if (mode && mode !== 'production') enabled = true;
+    setDevModeEnabled(enabled);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -202,6 +229,12 @@ export const AdminGate: React.FC<AdminGateProps> = ({ onBack, onSignIn, lang = '
         // v1.8.0 Step 22.23
         role={state.role as any}
         permissions={state.permissions}
+        // v1.8.1: dev-only role switcher. `role` above is the AUTHENTICATED
+        // role and never changes; the override only affects what the
+        // sidebar renders. No server endpoint sees the override.
+        devModeEnabled={devModeEnabled}
+        effectiveRoleOverride={roleOverride}
+        onRoleChange={setRoleOverride}
       />
     );
   }

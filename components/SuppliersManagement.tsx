@@ -55,6 +55,13 @@ interface SuppliersManagementProps {
   // sidebar shows every section (back-compat). Threaded from AdminGate.
   role?: AdminRole | null;
   permissions?: { tabs?: AdminSection[] } | null;
+  // v1.8.1 dev-only role switcher. AdminGate reads ?dev_roles=1 / non-prod
+  // build, sets `devModeEnabled`, and tracks the override in its own
+  // state. We just thread the override down to the sidebar and let the
+  // sidebar render the picker. The real `role` (auth) is unchanged.
+  devModeEnabled?: boolean;
+  effectiveRoleOverride?: AdminRole | null;
+  onRoleChange?: (newRole: AdminRole | null) => void;
 }
 
 // v1.7: trilingual copy for every user-visible string in the admin UI.
@@ -165,7 +172,21 @@ const BOOKING_STATUS_FILTERS: FilterOption[] = [
   { value: 'CANCELLED', label: { EN: 'Cancelled',  ES: 'Canceladas',   PT: 'Canceladas' } },
 ];
 
-export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, onViewAssets, onSignOut, signedInEmail, role, permissions }) => {
+export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({
+  lang,
+  onViewAssets,
+  onSignOut,
+  signedInEmail,
+  role,
+  permissions,
+  devModeEnabled = false,
+  effectiveRoleOverride = null,
+  onRoleChange,
+}) => {
+  // v1.8.1: `role` is the AUTHENTICATED role (from /api/admin/check) and
+  // must never be overridden — every API call below still uses the real
+  // email session. `displayRole` is just what the sidebar should render.
+  const displayRole: AdminRole | null = effectiveRoleOverride ?? role;
   const [activeView, setActiveView] = useState<AdminSection>('SUPPLIERS');
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -535,8 +556,10 @@ export const SuppliersManagement: React.FC<SuppliersManagementProps> = ({ lang, 
         onSignOut={handleSignOutClick}
         counts={counts}
         pendingSuppliersCount={counts.SUPPLIERS}
-        role={role}
+        role={displayRole}
         permissions={permissions}
+        devModeEnabled={devModeEnabled}
+        onRoleChange={onRoleChange}
       />
 
       <main className="flex-1 min-w-0 px-6 md:px-8 py-10 space-y-8 max-w-[1600px] bg-[#0a1518]">
