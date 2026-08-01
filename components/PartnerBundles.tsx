@@ -31,9 +31,15 @@ const formatPrice = (n: number) =>
 
 export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang }) => {
   // Trilingual copy (matches PartnersPage.tsx pattern)
-  const t = {
+  // Defensive: build a `t` object that ALWAYS has a value, even if `lang`
+  // is missing or invalid. The previous implementation used `}[lang]`
+  // inline which crashed with "Cannot read properties of undefined" if
+  // anything went wrong with the trilingual object literal closure.
+  // This rebuilds the per-language objects in a separate const first
+  // and then indexes with a guaranteed fallback. See commit d540fb7
+  // for the failed attempt — this is the correct shape.
+  const tMap = {
     EN: {
-      eyebrow: 'Multi-Supplier Bundles',
       title: 'Your Bundles',
       sub: 'Combine services from approved KLO suppliers into a single bookable package.',
       create: 'Create Bundle',
@@ -149,7 +155,8 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
         createFailed: 'Não foi possível criar o pacote.',
       },
     },
-  }[lang];
+  } as const;
+  const t = tMap[lang] || tMap.EN;
 
   const [bundles, setBundles] = useState<Bundle[]>([]);
   const [loading, setLoading] = useState(true);
