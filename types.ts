@@ -124,47 +124,6 @@ export interface BundleItem {
   supplier_business_name?: string;
 }
 
-// ─── Bundle v2 (Step 22.26) ─────────────────────────────────────────────────
-// Server-side filter by `assembled_by_email` (partners only see their own).
-// v1 `Bundle` above is kept intact for any other legacy consumer.
-export type BundleV2Status = 'DRAFT' | 'PROPOSED' | 'APPROVED' | 'ARCHIVED';
-export type BundleV2Visibility = 'private' | 'partner_scoped' | 'public';
-
-export interface BundleV2 {
-  id: string;
-  name: string;
-  description: string | null;
-  status: BundleV2Status;
-  visibility: BundleV2Visibility;
-  assembled_by_email: string;
-  assembled_by_role: 'admin' | 'ops' | 'partner';
-  assembler_partner_id: string | null;
-  client_id: string | null;
-  notes: string | null;
-  created_at: string;
-  items_count?: number;
-  // Server returns a few more columns; keep loose for forward-compat.
-  [k: string]: any;
-}
-
-export interface BundleItemV2 {
-  id: string;
-  bundle_id: string;
-  line_type: 'partner_sourced' | 'klo_addon';
-  service_id: string | null;
-  service_kind: string | null;
-  service_name: string | null;
-  supplier_id: string | null;
-  supplier_price: number | null;
-  sale_price: number;
-  klo_commission_pct: number;
-  default_markup_pct: number;
-  quantity: number;
-  sort_order?: number;
-  notes?: string | null;
-  [k: string]: any;
-}
-
 export interface AvailableAsset {
   id: string;
   name: string;

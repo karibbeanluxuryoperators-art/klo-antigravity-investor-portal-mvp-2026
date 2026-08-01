@@ -5,7 +5,7 @@ import {
   AlertCircle, ChevronDown, ChevronRight, Send,
   DollarSign, Calendar
 } from 'lucide-react';
-import { Bundle, BundleItem, AvailableAsset, BundleV2, BundleItemV2 } from '../types';
+import { Bundle, BundleItem, AvailableAsset } from '../types';
 
 // Local Language alias — see SupplierPortal.tsx for rationale
 type Language = 'EN' | 'ES' | 'PT';
@@ -46,10 +46,9 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
       createdAt: 'Created',
       readOnly: 'Read-only — this bundle is locked.',
       status: {
-        DRAFT:    'Draft',
-        PROPOSED: 'Pending Review',
+        PENDING:  'Pending Review',
         APPROVED: 'Approved',
-        ARCHIVED: 'Archived',
+        REJECTED: 'Rejected',
       },
       modal: {
         name: 'Bundle Name',
@@ -86,10 +85,9 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
       createdAt: 'Creado',
       readOnly: 'Solo lectura — este paquete está bloqueado.',
       status: {
-        DRAFT:    'Borrador',
-        PROPOSED: 'Pendiente',
+        PENDING:  'Pendiente',
         APPROVED: 'Aprobado',
-        ARCHIVED: 'Archivado',
+        REJECTED: 'Rechazado',
       },
       modal: {
         name: 'Nombre del Paquete',
@@ -126,10 +124,9 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
       createdAt: 'Criado',
       readOnly: 'Somente leitura — este pacote está bloqueado.',
       status: {
-        DRAFT:    'Rascunho',
-        PROPOSED: 'Pendente',
+        PENDING:  'Pendente',
         APPROVED: 'Aprovado',
-        ARCHIVED: 'Arquivado',
+        REJECTED: 'Rejeitado',
       },
       modal: {
         name: 'Nome do Pacote',
@@ -154,7 +151,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
     },
   }[lang];
 
-  const [bundles, setBundles] = useState<BundleV2[]>([]);
+  const [bundles, setBundles] = useState<Bundle[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -172,19 +169,10 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
     setLoading(true);
     setLoadError(null);
     try {
-      // v2 endpoint: ownership is enforced server-side via assembled_by_email.
-      // Partners only see their own bundles; admins see all.
-      const res = await fetch('/api/bundles');
+      const res = await fetch(`/api/bundles?supplier_id=${encodeURIComponent(supplierId)}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
-      const list: BundleV2[] = Array.isArray(data?.bundles) ? data.bundles : [];
-      // Defensive client-side sort by created_at desc (server may already do this).
-      list.sort((a, b) => {
-        const at = a?.created_at ? new Date(a.created_at).getTime() : 0;
-        const bt = b?.created_at ? new Date(b.created_at).getTime() : 0;
-        return bt - at;
-      });
-      setBundles(list);
+      setBundles(Array.isArray(data) ? data : []);
     } catch (err: any) {
       setLoadError(err?.message || t.error);
     } finally {
@@ -193,12 +181,8 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
   };
 
   useEffect(() => {
-    // v2 server filters by authed user email, so supplierId is no longer
-    // needed to drive the list — but we still require it on mount for
-    // prop-shape compatibility with SupplierDashboard.tsx.
     if (supplierId) loadBundles();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [supplierId]);
 
   // Group available assets by supplier business_name for the picker
   const grouped = useMemo(() => {
@@ -271,34 +255,22 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
     }
     setSubmitting(true);
     try {
-      // v2 body: server derives assembled_by_email/role from authed user.
-      // Defaults: 10% KLO commission, 30% markup (matches server convention).
-      const items = (Object.values(selected) as SelectedAsset[]).map(s => {
-        const unitPrice = parsePrice(s.price_per_unit);
-        return {
-          line_type: 'partner_sourced' as const,
-          service_id: s.id,
-          service_kind: s.type,
-          service_name: s.name,
-          supplier_id: s.supplier_id,
-          supplier_price: unitPrice,
-          sale_price: unitPrice, // default to supplier price; admin/partner can PATCH later
-          klo_commission_pct: 10,
-          default_markup_pct: 30,
-          quantity: s.qty || 1,
-        };
-      });
+      const items = (Object.values(selected) as SelectedAsset[]).map(s => ({
+        asset_id: s.id,
+        qty: s.qty,
+      }));
       const res = await fetch('/api/bundles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          owner_supplier_id: supplierId,
           name: name.trim(),
           description: description.trim() || null,
           items,
         }),
       });
       const data = await res.json();
-      if (!res.ok) {
+      if (!res.ok || !data.success) {
         throw new Error(data?.error || t.errors.createFailed);
       }
       setIsCreateOpen(false);
@@ -311,10 +283,9 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
   };
 
   const STATUS_COLORS: Record<string, string> = {
-    DRAFT:    'bg-slate-500/10  text-slate-300   border-slate-500/20',
-    PROPOSED: 'bg-amber-500/10  text-amber-400   border-amber-500/20',
+    PENDING:  'bg-amber-500/10  text-amber-400  border-amber-500/20',
     APPROVED: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    ARCHIVED: 'bg-zinc-500/10   text-zinc-400    border-zinc-500/20',
+    REJECTED: 'bg-red-500/10    text-red-400    border-red-500/20',
   };
 
   const formatDate = (iso: string) => {
@@ -323,24 +294,6 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
       const d = new Date(iso);
       return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
     } catch { return iso; }
-  };
-
-  // v2 bundles no longer carry a denormalized `total_price` string on the row.
-  // Prefer `total_client_paid` from `totals` (if the caller inlined it),
-  // else derive from inlined items: Σ sale_price × quantity.
-  const formatBundleTotal = (b: BundleV2): string => {
-    const t = (b as any).totals;
-    if (t && typeof t.total_client_paid === 'number') {
-      return formatPrice(t.total_client_paid);
-    }
-    if (Array.isArray((b as any).items)) {
-      const sum = ((b as any).items as BundleItemV2[]).reduce(
-        (acc, it) => acc + (Number(it?.sale_price) || 0) * (Number(it?.quantity) || 0),
-        0
-      );
-      if (sum > 0) return formatPrice(sum);
-    }
-    return '—';
   };
 
   return (
@@ -381,9 +334,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {bundles.map(b => {
-            // v2 locked states: APPROVED is locked for partners; ARCHIVED is read-only.
-            const isLocked = b.status === 'APPROVED' || b.status === 'ARCHIVED';
-            const totalLabel = formatBundleTotal(b);
+            const isLocked = b.status === 'APPROVED' || b.status === 'REJECTED';
             return (
               <div
                 key={b.id}
@@ -414,7 +365,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
                       <p className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">
                         {t[lang].items}
                       </p>
-                      <p className="text-sm font-medium text-text-main">{b.items_count ?? (b as any).items?.length ?? 0}</p>
+                      <p className="text-sm font-medium text-text-main">{b.items_count ?? b.items?.length ?? 0}</p>
                     </div>
                     <div>
                       <p className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold text-right">
@@ -426,7 +377,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
                       <p className="text-[10px] uppercase tracking-widest text-text-main/40 font-semibold">
                         Total
                       </p>
-                      <p className="text-lg font-serif italic text-gold">{totalLabel}</p>
+                      <p className="text-lg font-serif italic text-gold">{b.total_price}</p>
                     </div>
                   </div>
 
@@ -437,9 +388,9 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
                   )}
                 </div>
 
-                {/* Items list (collapsible preview) — v2 doesn't always inline items; safe-render */}
-                {Array.isArray((b as any).items) && (b as any).items.length > 0 && (
-                  <BundleItemsPreview items={(b as any).items as BundleItemV2[]} lang={lang} />
+                {/* Items list (collapsible preview) */}
+                {b.items && b.items.length > 0 && (
+                  <BundleItemsPreview items={b.items} lang={lang} />
                 )}
               </div>
             );
@@ -655,8 +606,8 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
   );
 };
 
-// Small inline sub-component for the items preview block (v2 fields)
-const BundleItemsPreview: React.FC<{ items: BundleItemV2[]; lang: Language }> = ({ items, lang }) => {
+// Small inline sub-component for the items preview block
+const BundleItemsPreview: React.FC<{ items: BundleItem[]; lang: Language }> = ({ items, lang }) => {
   const [open, setOpen] = useState(false);
   return (
     <div className="border-t border-border-main">
@@ -669,28 +620,19 @@ const BundleItemsPreview: React.FC<{ items: BundleItemV2[]; lang: Language }> = 
       </button>
       {open && (
         <div className="px-6 pb-4 divide-y divide-border-main">
-          {items.map(it => {
-            const name = it.service_name ?? it.service_id ?? '—';
-            const kind = it.service_kind ?? '—';
-            const qty = Number(it.quantity) || 0;
-            const lineTotal = (Number(it.sale_price) || 0) * qty;
-            return (
-              <div key={it.id} className="py-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm text-text-main truncate">{name}</p>
-                  <p className="text-[10px] text-text-main/40 uppercase tracking-widest">
-                    {kind}{it.line_type ? ` · ${it.line_type}` : ''}
-                  </p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-xs text-gold font-medium">×{qty}</p>
-                  {lineTotal > 0 && (
-                    <p className="text-[10px] text-text-main/40">{formatPrice(lineTotal)}</p>
-                  )}
-                </div>
+          {items.map(it => (
+            <div key={it.id} className="py-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm text-text-main truncate">
+                  {it.asset_name ?? it.asset_id}
+                </p>
+                <p className="text-[10px] text-text-main/40 uppercase tracking-widest">
+                  {it.asset_type ?? '—'}{it.supplier_business_name ? ` · ${it.supplier_business_name}` : ''}
+                </p>
               </div>
-            );
-          })}
+              <span className="text-xs text-gold font-medium">×{it.qty}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>
