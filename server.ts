@@ -3870,6 +3870,88 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       console.warn('[maria] GEMINI_API_KEY not set, will try OPENAI_API_KEY as fallback.');
     }
 
+    // Backfill fields the AI sometimes misses even though a simple regex
+    // catches them reliably — e.g. "somos 6" (Spanish "we are 6") for
+    // passengers, or "el 15 de agosto" for a date. Only fills gaps that are
+    // still empty after the AI call + context merge; never overwrites what
+    // the AI (or a previous turn, via context) already extracted. Returns
+    // which fields it actually filled, so callers can tell when the AI's
+    // own `reply` text (written before backfill) is now stale.
+    function backfillFromMessage(result: any, msg: string): { passengers: boolean; travelDates: boolean } {
+      const filled = { passengers: false, travelDates: false };
+      if (!result.passengers) {
+        const m = msg.match(/\bsomos\s+(\d{1,2})\b/i)
+          || msg.match(/\b(\d{1,2})\s*(?:personas|pax|guests|huespedes|hu[ée]spedes|people)\b/i);
+        if (m) { result.passengers = parseInt(m[1], 10); filled.passengers = true; }
+      }
+      if (!result.travelDates) {
+        const dayFirst = msg.match(/(\d{1,2})\s+(?:de\s+)?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janeiro|fevereiro|março|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)/i);
+        if (dayFirst) {
+          result.travelDates = dayFirst[0];
+          filled.travelDates = true;
+        } else {
+          const monthFirst = msg.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec)\s+(\d{1,2})(?:st|nd|rd|th)?/i);
+          if (monthFirst) {
+            result.travelDates = monthFirst[0];
+            filled.travelDates = true;
+          } else {
+            // Bare day, no month named — "el 15", "para ir el 15", "the 15th".
+            // Assume the current month, rolling to next month if that day
+            // has already passed this month.
+            const bareDay = msg.match(/\b(?:el|the)\s+(\d{1,2})(?:st|nd|rd|th)?\b/i);
+            if (bareDay) {
+              const day = parseInt(bareDay[1], 10);
+              if (day >= 1 && day <= 31) {
+                const now = new Date();
+                let year = now.getFullYear();
+                let month = now.getMonth() + 1;
+                const candidate = new Date(year, month - 1, day);
+                if (candidate < now) { month += 1; if (month > 12) { month = 1; year += 1; } }
+                result.travelDates = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                filled.travelDates = true;
+              }
+            }
+          }
+        }
+      }
+      return filled;
+    }
+
+    // Scoped to aviation on purpose: it's the pillar where the reported bug
+    // showed up (AI wrote its reply, then backfill filled passengers/date
+    // the AI missed — leaving a reply that re-asks for info we now have).
+    // Villa/yacht/etc. replies are working today; don't touch them.
+    function correctStaleAviationReply(result: any, lang: 'EN' | 'ES' | 'PT'): void {
+      const isAviation = result.pillarInterest === 'aviation'
+        || (Array.isArray(result.servicesNeeded) && result.servicesNeeded.includes('aviation'));
+      if (!isAviation) return;
+      const missing: string[] = [];
+      const L = lang === 'ES'
+        ? { origin: 'ciudad de origen', dest: 'destino', pax: 'número de pasajeros', date: 'fecha', join: ' y ',
+            ask: (s: string) => `Perfecto. ¿Me confirma ${s}?`,
+            contact: '¿Cómo prefiere que le contactemos — correo o WhatsApp?',
+            done: 'Perfecto, tengo todo lo necesario. Un asesor le escribirá en breve con una propuesta a medida.' }
+        : lang === 'PT'
+        ? { origin: 'cidade de origem', dest: 'destino', pax: 'número de passageiros', date: 'data', join: ' e ',
+            ask: (s: string) => `Perfeito. Pode confirmar ${s}?`,
+            contact: 'Como prefere que entremos em contato — e-mail ou WhatsApp?',
+            done: 'Perfeito, tenho tudo que preciso. Um consultor entrará em contato em breve com uma proposta personalizada.' }
+        : { origin: 'origin city', dest: 'destination', pax: 'number of passengers', date: 'date', join: ' and ',
+            ask: (s: string) => `Great. Could you confirm ${s}?`,
+            contact: 'How would you prefer to be contacted — email or WhatsApp?',
+            done: 'Perfect, I have everything I need. A broker will reach out shortly with a bespoke proposal.' };
+      if (!result.origin) missing.push(L.origin);
+      if (!result.destination) missing.push(L.dest);
+      if (!result.passengers) missing.push(L.pax);
+      if (!result.travelDates) missing.push(L.date);
+      if (missing.length > 0) {
+        result.reply = L.ask(missing.join(L.join));
+        return;
+      }
+      const hasContact = !!(result.email || result.phone);
+      result.reply = hasContact ? L.done : L.contact;
+    }
+
     if (hasGeminiKey) {
       try {
         const { GoogleGenAI } = require('@google/genai');
@@ -3920,6 +4002,10 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           if (context.passengers && !geminiResult.passengers) geminiResult.passengers = context.passengers;
           if (context.budget && !geminiResult.budget) geminiResult.budget = context.budget;
           if (context.travelDates && !geminiResult.travelDates) geminiResult.travelDates = context.travelDates;
+        }
+        {
+          const filled = backfillFromMessage(geminiResult, message);
+          if (filled.passengers || filled.travelDates) correctStaleAviationReply(geminiResult, lang);
         }
         // Persist + notify (only when the lead is actionable: contact + service).
         // Step 22.30: replaced the old "new OR has-quote" rule. A bare "Villas in
@@ -3997,6 +4083,10 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           if (context.passengers && !openaiResult.passengers) openaiResult.passengers = context.passengers;
           if (context.budget && !openaiResult.budget) openaiResult.budget = context.budget;
           if (context.travelDates && !openaiResult.travelDates) openaiResult.travelDates = context.travelDates;
+        }
+        {
+          const filled = backfillFromMessage(openaiResult, message);
+          if (filled.passengers || filled.travelDates) correctStaleAviationReply(openaiResult, lang);
         }
         // Persist + notify
         const lead = await persistMariaLead(openaiResult, existingLeadId);
@@ -4293,6 +4383,23 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           }
         }
       }
+      // Pattern 5: bare day, no month named — "el 15", "para ir el 15", "the
+      // 15th". Assume the current month, rolling to next month if that day
+      // has already passed this month.
+      if (!parsedDate) {
+        const bareDayMatch = message.match(/\b(?:el|the)\s+(\d{1,2})(?:st|nd|rd|th)?\b/i);
+        if (bareDayMatch) {
+          const day = parseInt(bareDayMatch[1], 10);
+          if (day >= 1 && day <= 31) {
+            const now = new Date();
+            let year = now.getFullYear();
+            let month = now.getMonth() + 1;
+            const candidate = new Date(year, month - 1, day);
+            if (candidate < now) { month += 1; if (month > 12) { month = 1; year += 1; } }
+            parsedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          }
+        }
+      }
       if (parsedDate) {
         result.travelDates = parsedDate;
         for (const item of dna) {
@@ -4304,6 +4411,13 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
       // ── Name extraction (capture "im juan", "my name is carlos", or a bare
       //    single-word name at the start like "mario 311..." ) ──
+      // Words that commonly start a sentence right before a number but are
+      // NOT a name — "somos 10" (we are 10) was being misread as name="somos".
+      const nameStopWords = new Set([
+        'somos', 'seremos', 'seriamos', 'seríamos', 'necesito', 'necesitamos',
+        'quiero', 'queremos', 'buscamos', 'para', 'hay', 'van', 'iremos',
+        'we', 'need', 'want', 'looking', 'for', 'there', 'are', 'is',
+      ]);
       const namePatterns = [
         /\b(?:i'?m|mi\s+nombre\s+es|me\s+llamo|soy|my\s+name\s+is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})/i,
         /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/m,
@@ -4317,7 +4431,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       ];
       for (const re of namePatterns) {
         const m = message.match(re);
-        if (m) {
+        if (m && !nameStopWords.has(m[1].trim().toLowerCase())) {
           result.fullName = m[1].trim();
           break;
         }
@@ -4377,7 +4491,8 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       if (phoneMatch) result.phone = phoneMatch[1] ? phoneMatch[1].trim() : phoneMatch[0].trim();
 
       // ── Passengers / dates / budget extraction ──
-      const paxMatch = message.match(/(\d+)\s*(personas|guests|pax|huespedes|hóspedes|people)/i);
+      const paxMatch = message.match(/(\d+)\s*(personas|guests|pax|huespedes|hóspedes|people)/i)
+        || message.match(/\bsomos\s+(\d{1,2})\b/i);
       if (paxMatch) result.passengers = parseInt(paxMatch[1], 10);
       // Bare number as passengers fallback: when the user replies with just
       // "6" or "for 6" to María's "how many people?" question.
@@ -5366,12 +5481,62 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
   // broker cannot call or message the guest yet, so the notification is just
   // noise. isLeadActionable() is called before notifyAdminNewLead() at the
   // three Maria/chat code paths to enforce this rule consistently.
+  //
+  // Follow-up fix: contact + service alone still let half-answered leads
+  // through (e.g. aviation with no passenger count) — the broker had to call
+  // back just to get basics. Now also requires the same per-pillar minimum
+  // used for quoting (see the missingForQuote system-prompt rule above:
+  // aviation = origin+destination+date+passengers, yacht/transport/staff =
+  // date+passengers, villa = nights+guests, events = type+guests+date) so
+  // notifications only fire once the broker has what's needed to quote
+  // without calling the guest back.
+  function hasMinimumToQuote(resultOrLead: any): boolean {
+    const r = resultOrLead || {};
+    const services: string[] = Array.isArray(r.servicesNeeded) && r.servicesNeeded.length > 0
+      ? r.servicesNeeded
+      : (r.pillarInterest ? [r.pillarInterest] : []);
+    if (services.length === 0) return false;
+    const dna: any[] = Array.isArray(r.experienceDna) ? r.experienceDna : [];
+    const detailsFor = (pillar: string) => dna.find((d: any) => d?.pillar === pillar)?.details || {};
+    for (const svc of services) {
+      switch (svc) {
+        case 'aviation':
+          if (!r.origin || !r.destination || !r.travelDates || !r.passengers) return false;
+          break;
+        case 'yacht':
+          if (!r.travelDates || !r.passengers) return false;
+          break;
+        case 'villa': {
+          const d = detailsFor('villa');
+          if (!(d.nights || r.nights) || !r.passengers) return false;
+          break;
+        }
+        case 'transport':
+          if (!r.travelDates || !r.passengers) return false;
+          break;
+        case 'staff': {
+          const d = detailsFor('staff');
+          if (!(d.days || d.nights || r.travelDates) || !r.passengers) return false;
+          break;
+        }
+        case 'events': {
+          const d = detailsFor('events');
+          if (!(d.event_type || r.eventType) || !r.passengers || !r.travelDates) return false;
+          break;
+        }
+        default:
+          break; // unknown pillar — don't block on a rule we don't have
+      }
+    }
+    return true;
+  }
+
   function isLeadActionable(resultOrLead: any): boolean {
     const r = resultOrLead || {};
     const hasContact = !!(r.email || r.phone);
     const servicesArr: string[] = Array.isArray(r.servicesNeeded) ? r.servicesNeeded : [];
     const hasService = servicesArr.length > 0 || !!r.destination || !!r.pillarInterest;
-    return hasContact && hasService;
+    return hasContact && hasService && hasMinimumToQuote(r);
   }
 
 
@@ -5380,8 +5545,17 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
   //   - update that gains contact info → notify (becomes actionable)
   //   - update that gains a service or date → notify (becomes actionable)
   //   - update with no new info → silent (no notification)
-  //   - any update → mark (tracked in __notifiedLeads set) so we don't
-  //     double-notify within a short window
+  //   - any update → mark (tracked in __notifiedLeads, below) so we don't
+  //     double-notify the same lead within a short window
+  //
+  // Bug fix: the line above described this dedup, but no such tracking was
+  // ever implemented — every actionable turn fired its own Telegram message,
+  // which is why the same lead notified twice in a row for two consecutive
+  // user messages seconds apart. This Map is best-effort (in-memory, so it
+  // resets on a cold start) but covers the real-world case: a burst of
+  // messages in one live conversation hits the same warm serverless instance.
+  const __notifiedLeads = new Map<string, number>();
+  const NOTIFY_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
   function notifyAdminNewLead(lead: any, source: string, mode: 'new' | 'update' = 'new') {
     const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -5398,6 +5572,12 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       const isActionable = hasContact && (services > 0 || lead.experience_type);
       if (!isActionable) return; // skip silent updates
     }
+    const last = __notifiedLeads.get(lead.id);
+    if (last && (Date.now() - last) < NOTIFY_COOLDOWN_MS) {
+      console.log(`[maria] skipping duplicate Telegram notification for lead ${lead.id} (last sent ${Math.round((Date.now() - last) / 1000)}s ago)`);
+      return;
+    }
+    __notifiedLeads.set(lead.id, Date.now());
     const price = lead.price_estimate_usd
       ? `$${Number(lead.price_estimate_usd).toLocaleString()} USD`
       : (lead.budget || (lead.budget_max ? `hasta $${lead.budget_max} USD` : '—'));
