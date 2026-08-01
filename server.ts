@@ -5560,8 +5560,13 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
     const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     if (!adminChatId || !botToken) return;
-    if (mode === 'update') {
-      // Check if the lead has actionable info (contact + service) before notifying
+    // Step 22.30b fix: check isActionable for BOTH 'new' and 'update' modes.
+    // Previous version only checked updates, so a new lead without contact
+    // info (e.g. user said "villa" but no email/phone yet) would still
+    // notify the admin — pure noise. Apply the same gate to new leads:
+    // a lead is actionable when it has BOTH contact (email/phone) AND
+    // some service/destination info.
+    {
       const hasContact = !!(lead.email || lead.phone);
       const services = (() => {
         try {
@@ -5569,8 +5574,13 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           return Array.isArray(exp) ? exp.length : 0;
         } catch { return 0; }
       })();
-      const isActionable = hasContact && (services > 0 || lead.experience_type);
-      if (!isActionable) return; // skip silent updates
+      const isActionable = hasContact && (services > 0 || lead.experience_type || lead.pillar_interest || lead.destination);
+      if (!isActionable) {
+        // Lead is in the DB (we still save it) but not actionable enough to
+        // ping the admin via Telegram. The admin can find it in /admin/leads
+        // when they're ready to follow up.
+        return;
+      }
     }
     const last = __notifiedLeads.get(lead.id);
     if (last && (Date.now() - last) < NOTIFY_COOLDOWN_MS) {
