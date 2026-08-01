@@ -1174,17 +1174,6 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
         </label>
       </div>
 
-      {submitError && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl"
-        >
-          <AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
-          <p className="text-sm text-red-700 leading-relaxed">{submitError}</p>
-        </motion.div>
-      )}
-
       <div className="flex justify-between pt-8">
         <button onClick={prevStep} className="flex items-center gap-2 text-[10px] font-sans uppercase tracking-[0.3em] font-semibold text-white/40 hover:text-white transition-colors">
           <ChevronLeft size={16} /> {tx(T.back)}
@@ -1319,6 +1308,21 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
       )}
 
       <div className="pt-12 pb-40 px-6 max-w-7xl mx-auto">
+        {/* Global submit error — shows on every step, not just Step 4.
+            Step 22.30c fix: moved from inside renderStep4 (where it
+            was invisible to users in earlier steps) to here so
+            validation errors always show up regardless of which
+            step the user is on. */}
+        {submitError && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl"
+          >
+            <AlertCircle size={16} className="text-red-400 mt-0.5 shrink-0" />
+            <p className="text-sm text-red-300 leading-relaxed">{submitError}</p>
+          </motion.div>
+        )}
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={step}
