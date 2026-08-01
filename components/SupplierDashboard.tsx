@@ -798,49 +798,72 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                   <Plus size={14} /> {lang === 'EN' ? 'Add Asset' : lang === 'ES' ? 'Agregar' : 'Adicionar'}
                 </button>
               </div>
-              <DataTable<Asset>
-                rows={assets}
-                columns={assetColumns}
-                rowKey={(a) => a.id}
-                filters={{ field: 'status', options: ASSET_FILTERS }}
-                searchFields={['name', 'location', 'type', 'description']}
-                searchPlaceholder={{ EN: 'Search by name, location, type...', ES: 'Buscar por nombre, ubicación, tipo...', PT: 'Buscar por nome, localização, tipo...' }}
-                defaultSort={{ key: 'name', order: 'asc' }}
-                pageSize={25}
-                lang={lang}
-                urlStateKey="assets"
-                emptyTitle={{ EN: 'No assets yet', ES: 'Sin activos aún', PT: 'Sem ativos ainda' }}
-                emptyHint={{ EN: 'List your first asset to start receiving bookings.', ES: 'Lista tu primer activo para empezar a recibir reservas.', PT: 'Liste seu primeiro ativo para começar a receber reservas.' }}
-                rowActions={(a) => {
-                  const isSyncing = syncingCalendar === a.id;
-                  return (
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => openEditModal(a)}
-                        className="p-2 text-white/40 hover:text-[#B8963E] hover:bg-white/5 rounded-lg transition-colors"
-                        title={lang === 'EN' ? 'Edit' : lang === 'ES' ? 'Editar' : 'Editar'}
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button
-                        onClick={() => handleSyncCalendar(a.id)}
-                        disabled={isSyncing}
-                        className="p-2 text-white/40 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors disabled:opacity-50"
-                        title={lang === 'EN' ? 'Sync calendar' : lang === 'ES' ? 'Sincronizar' : 'Sincronizar'}
-                      >
-                        {isSyncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-                      </button>
-                      <button
-                        onClick={() => handleDeleteAsset(a.id)}
-                        className="p-2 text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                        title={lang === 'EN' ? 'Delete' : lang === 'ES' ? 'Eliminar' : 'Excluir'}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  );
-                }}
-              />
+
+              {assets.length === 0 ? (
+                <div className="bg-luxury-slate border border-white/5 rounded-2xl p-12 text-center">
+                  <div className="w-14 h-14 bg-[#B8963E]/10 rounded-full flex items-center justify-center mx-auto text-[#B8963E] mb-4">
+                    <Package size={24} />
+                  </div>
+                  <p className="text-base text-white font-serif italic mb-2">
+                    {lang === 'EN' ? 'No assets yet' : lang === 'ES' ? 'Sin activos aún' : 'Sem ativos ainda'}
+                  </p>
+                  <p className="text-sm text-white/50 mb-5 max-w-xs mx-auto leading-relaxed">
+                    {lang === 'EN'
+                      ? 'List your first asset to start receiving bookings.'
+                      : lang === 'ES'
+                      ? 'Lista tu primer activo para empezar a recibir reservas.'
+                      : 'Liste seu primeiro ativo para começar a receber reservas.'}
+                  </p>
+                  <button onClick={() => openEditModal()}
+                    className="px-6 py-3 bg-[#B8963E] text-luxury-black rounded-full text-xs font-bold uppercase tracking-widest hover:bg-white transition-all inline-flex items-center gap-2">
+                    <Plus size={14} /> {lang === 'EN' ? 'Add your first asset' : lang === 'ES' ? 'Agrega tu primer activo' : 'Adicione seu primeiro ativo'}
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {assets.map(a => {
+                    const Icon = ASSET_TYPE_ICONS[a.type] || Package;
+                    const price = (a as any).price_per_night || (a as any).price_per_day || (a as any).price_per_unit;
+                    const isSyncing = syncingCalendar === a.id;
+                    return (
+                      <div key={a.id} className="bg-luxury-slate border border-white/5 rounded-2xl p-5 flex items-start gap-4 hover:border-[#B8963E]/30 transition-colors">
+                        <div className="w-14 h-14 rounded-xl bg-[#B8963E]/15 flex items-center justify-center text-[#B8963E] shrink-0">
+                          <Icon size={26} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-base font-semibold text-white truncate">{a.name}</h4>
+                          <p className="text-xs text-white/50 truncate">
+                            {ASSET_TYPE_LABELS?.[a.type]?.[lang] || a.type}
+                            {a.location && <span className="text-white/40"> · {a.location}</span>}
+                          </p>
+                          {price != null && price !== '' && (
+                            <p className="font-serif italic text-lg text-[#B8963E] mt-1">${price}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-3">
+                            <StatusPill status={a.status} lang={lang} />
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <button onClick={() => openEditModal(a)}
+                            className="text-[#B8963E] hover:text-white text-[10px] uppercase tracking-widest font-semibold flex items-center gap-1">
+                            <Edit2 size={10} /> {lang === 'EN' ? 'Edit' : lang === 'ES' ? 'Editar' : 'Editar'}
+                          </button>
+                          <button onClick={() => handleSyncCalendar(a.id)} disabled={isSyncing}
+                            className="text-blue-400 hover:text-white text-[10px] uppercase tracking-widest font-semibold flex items-center gap-1 disabled:opacity-50"
+                            title={lang === 'EN' ? 'Sync calendar' : lang === 'ES' ? 'Sincronizar' : 'Sincronizar'}>
+                            {isSyncing ? <Loader2 size={10} className="animate-spin" /> : <RefreshCw size={10} />}
+                          </button>
+                          <button onClick={() => handleDeleteAsset(a.id)}
+                            className="text-red-400 hover:text-white text-[10px] uppercase tracking-widest font-semibold flex items-center gap-1"
+                            title={lang === 'EN' ? 'Delete' : lang === 'ES' ? 'Eliminar' : 'Excluir'}>
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </motion.div>
           )}
 

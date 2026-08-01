@@ -522,17 +522,10 @@ export const SupplierPortal: React.FC<SupplierPortalProps> = ({
         }
       }
 
-      // STEP 4: On success, advance to Step 5 (success screen)
-      // Also open WhatsApp notification
-      window.open(`https://wa.me/${import.meta.env.VITE_WHATSAPP_NUMBER}?text=` +
-        encodeURIComponent(
-          `New KLO supplier application:\n` +
-          `Business: ${formData.business_name}\n` +
-          `Type: ${type}\n` +
-          `Location: ${formData.location}\n` +
-          `WhatsApp: ${formData.whatsapp}`
-        ), '_blank');
-
+      // STEP 4: On success, advance to Step 5 (success screen).
+      // The admin is already notified via the Supabase + Telegram flow,
+      // so we deliberately do NOT auto-open WhatsApp Web here. The user can
+      // still reach a broker manually from the step 5 CTA.
       // v1.5: successful submit — clear the draft so a future session starts clean.
       clearDraft();
       setStep(5);
