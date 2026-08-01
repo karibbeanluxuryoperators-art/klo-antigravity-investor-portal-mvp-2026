@@ -21,3 +21,34 @@
 html {
   scroll-behavior: smooth;
 }
+
+/* Step 22.30c fix: global form input styling for the dark theme.
+   The SupplierPortal onboarding has ~30+ form inputs (after the
+   bg-white → bg-luxury-black theme migration). Inputs were
+   showing as "black on black" because the browser's default
+   `color: #000` for `input[type=number]`, `input::placeholder`,
+   and `select` was inheriting through Tailwind and overriding
+   `text-white` in some Chromium versions. Rather than touch every
+   input className, we set the color explicitly here. */
+input.bg-luxury-black,
+select.bg-luxury-black,
+textarea.bg-luxury-black {
+  color: #ffffff !important;
+  caret-color: #B8963E;
+  -webkit-text-fill-color: #ffffff !important;
+}
+input.bg-luxury-black::placeholder,
+textarea.bg-luxury-black::placeholder {
+  color: rgba(255, 255, 255, 0.35) !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.35) !important;
+}
+input.bg-luxury-black:-webkit-autofill,
+input.bg-luxury-black:-webkit-autofill:hover,
+input.bg-luxury-black:-webkit-autofill:focus {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0 30px #080808 inset !important;
+}
+select.bg-luxury-black option {
+  background-color: #080808;
+  color: #ffffff;
+}
