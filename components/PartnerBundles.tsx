@@ -169,10 +169,12 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch(`/api/bundles?supplier_id=${encodeURIComponent(supplierId)}`);
+      // v2: ownership enforced server-side via assembled_by_email.
+      // No supplier_id param needed; server filters by authed user.
+      const res = await fetch('/api/bundles');
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
-      setBundles(Array.isArray(data) ? data : []);
+      setBundles(Array.isArray(data?.bundles) ? data.bundles : []);
     } catch (err: any) {
       setLoadError(err?.message || t.error);
     } finally {
@@ -255,22 +257,33 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
     }
     setSubmitting(true);
     try {
+      // v2 body: each item uses line_type, service_id (from available-asset.id),
+      // service_kind, service_name, supplier_id, supplier_price, sale_price,
+      // klo_commission_pct, default_markup_pct, quantity. Server derives
+      // assembled_by_email + assembled_by_role from the authed user.
       const items = (Object.values(selected) as SelectedAsset[]).map(s => ({
-        asset_id: s.id,
-        qty: s.qty,
+        line_type: 'partner_sourced' as const,
+        service_id: s.id,
+        service_kind: (s as any).type ?? null,
+        service_name: s.name,
+        supplier_id: s.supplier_id,
+        supplier_price: parsePrice(s.price_per_unit),
+        sale_price: parsePrice(s.price_per_unit),
+        klo_commission_pct: 10,
+        default_markup_pct: 30,
+        quantity: s.qty || 1,
       }));
       const res = await fetch('/api/bundles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          owner_supplier_id: supplierId,
           name: name.trim(),
           description: description.trim() || null,
           items,
         }),
       });
       const data = await res.json();
-      if (!res.ok || !data.success) {
+      if (!res.ok) {
         throw new Error(data?.error || t.errors.createFailed);
       }
       setIsCreateOpen(false);
@@ -620,19 +633,25 @@ const BundleItemsPreview: React.FC<{ items: BundleItem[]; lang: Language }> = ({
       </button>
       {open && (
         <div className="px-6 pb-4 divide-y divide-border-main">
-          {items.map(it => (
-            <div key={it.id} className="py-3 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm text-text-main truncate">
-                  {it.asset_name ?? it.asset_id}
-                </p>
-                <p className="text-[10px] text-text-main/40 uppercase tracking-widest">
-                  {it.asset_type ?? '—'}{it.supplier_business_name ? ` · ${it.supplier_business_name}` : ''}
-                </p>
+          {items.map(it => {
+            // v2 uses service_name / service_kind / quantity. v1 (old) used
+            // asset_name / asset_type / qty. Fall back gracefully.
+            const anyIt = it as any;
+            const displayName = anyIt.service_name ?? anyIt.asset_name ?? anyIt.asset_id ?? anyIt.service_id ?? '—';
+            const displayKind = anyIt.service_kind ?? anyIt.asset_type ?? null;
+            const displayQty = anyIt.quantity ?? anyIt.qty ?? 1;
+            return (
+              <div key={it.id} className="py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm text-text-main truncate">{displayName}</p>
+                  <p className="text-[10px] text-text-main/40 uppercase tracking-widest">
+                    {displayKind ?? '—'}
+                  </p>
+                </div>
+                <span className="text-xs text-gold font-medium">×{displayQty}</span>
               </div>
-              <span className="text-xs text-gold font-medium">×{it.qty}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
