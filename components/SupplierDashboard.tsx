@@ -426,7 +426,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
             doesn't flash blank while /api/suppliers/lookup and
             /api/suppliers/:id/assets are in flight. Three pulse layers:
             header bar, 4 stat cards, two content rows. */}
-        <div className="bg-white border-b border-white/10 ">
+        <div className="bg-luxury-slate border-b border-white/10 ">
           <div className="max-w-7xl mx-auto px-6 py-6">
             <div className="flex items-center gap-4 mb-6">
               <div className="w-5 h-5 rounded bg-white/5 animate-pulse" />
@@ -446,7 +446,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
           {/* 4 stat-card skeletons */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} className="bg-white border border-white/10  rounded-2xl p-6">
+              <div key={i} className="bg-luxury-slate border border-white/10  rounded-2xl p-6">
                 <div className="flex items-center justify-between mb-3">
                   <div className="h-3 w-20 rounded bg-white/5 animate-pulse" />
                   <div className="w-4 h-4 rounded bg-white/5 animate-pulse" />
@@ -457,8 +457,8 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
           </div>
           {/* Two content rows */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white border border-white/10  rounded-2xl h-64 animate-pulse" />
-            <div className="bg-white border border-white/10  rounded-2xl h-64 animate-pulse" />
+            <div className="bg-luxury-slate border border-white/10  rounded-2xl h-64 animate-pulse" />
+            <div className="bg-luxury-slate border border-white/10  rounded-2xl h-64 animate-pulse" />
           </div>
         </div>
       </div>
@@ -492,7 +492,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
   return (
     <div className="min-h-screen bg-white/5 text-white">
       {/* Header */}
-      <div className="bg-white border-b border-white/10 ">
+      <div className="bg-luxury-slate border-b border-white/10 ">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
@@ -585,7 +585,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                   { label: { EN: 'Total Earnings', ES: 'Ganancias Totales', PT: 'Ganhos Totais' }, value: `$${stats.totalEarnings.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, icon: DollarSign, color: 'text-gold' },
                 ].map((stat, i) => (
                   <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                    className="bg-white border border-white/10  rounded-2xl p-6">
+                    className="bg-luxury-slate border border-white/10  rounded-2xl p-6">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{stat.label[lang]}</span>
                       <stat.icon size={16} className={stat.color} />
@@ -596,7 +596,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
               </div>
 
               {/* Recent Bookings */}
-              <div className="bg-white border border-white/10  rounded-2xl overflow-hidden">
+              <div className="bg-luxury-slate border border-white/10  rounded-2xl overflow-hidden">
                 <div className="px-8 py-6 border-b border-white/10 flex items-center justify-between">
                   <h3 className="text-lg font-serif italic text-white">
                     {lang === 'EN' ? 'Recent Bookings' : lang === 'ES' ? 'Reservas Recientes' : 'Reservas Recentes'}
@@ -636,7 +636,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
               </div>
 
               {/* Assets Preview */}
-              <div className="bg-white border border-white/10  rounded-2xl overflow-hidden">
+              <div className="bg-luxury-slate border border-white/10  rounded-2xl overflow-hidden">
                 <div className="px-8 py-6 border-b border-white/10 flex items-center justify-between">
                   <h3 className="text-lg font-serif italic text-white">
                     {lang === 'EN' ? 'Your Assets' : lang === 'ES' ? 'Tus Activos' : 'Seus Ativos'}
@@ -765,7 +765,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
           {/* ── SETTINGS TAB ── */}
           {activeTab === 'settings' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6 max-w-2xl">
-              <div className="bg-white border border-white/10  rounded-2xl overflow-hidden">
+              <div className="bg-luxury-slate border border-white/10  rounded-2xl overflow-hidden">
                 <div className="px-8 py-6 border-b border-white/10">
                   <h3 className="text-xl font-serif italic text-white">{lang === 'EN' ? 'Account Settings' : lang === 'ES' ? 'Ajustes de Cuenta' : 'Configurações da Conta'}</h3>
                   <p className="text-[11px] text-white/60 mt-1">{lang === 'EN' ? 'Manage your partner profile' : lang === 'ES' ? 'Gestiona tu perfil de socio' : 'Gerencie seu perfil de parceiro'}</p>
@@ -805,7 +805,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
               </div>
 
               {/* Telegram Settings */}
-              <div className="bg-white border border-white/10  rounded-2xl overflow-hidden">
+              <div className="bg-luxury-slate border border-white/10  rounded-2xl overflow-hidden">
                 <div className="px-8 py-6 border-b border-white/10 flex items-start gap-4">
                   <div className="w-10 h-10 bg-blue-500/15 rounded-xl flex items-center justify-center text-blue-400 shrink-0 mt-0.5">
                     <MessageSquare size={20} />
@@ -860,7 +860,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
               onClick={closeModal} className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-xl bg-white border border-white/10  rounded-2xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+              className="relative w-full max-w-xl bg-luxury-slate border border-white/10  rounded-2xl p-8 shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
               <button onClick={closeModal} className="absolute top-6 right-6 text-white/60 hover:text-white">
                 <X size={20} />
               </button>
