@@ -572,108 +572,218 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
       )}
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* ── DASHBOARD TAB ── */}
+        {/* ── DASHBOARD (RESUMEN) TAB ── */}
         <AnimatePresence mode="wait">
           {activeTab === 'dashboard' && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-8">
-              {/* Stats */}
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+              {/* Hero / Identity Card — 2-col: identity on left, contact summary on right */}
+              <div className="bg-luxury-slate border border-white/5 rounded-2xl p-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                  {/* Left: business identity */}
+                  <div>
+                    <p className="text-xs text-[#B8963E] uppercase tracking-[0.3em] font-semibold mb-3">
+                      {lang === 'EN' ? 'Welcome back' : lang === 'ES' ? 'Bienvenido de nuevo' : 'Bem-vindo de volta'}
+                      <span className="text-white/40 ml-2">·</span>
+                      <span className="text-white/60 ml-2 normal-case tracking-normal font-light">
+                        {user.name?.split(' ')[0] || (lang === 'EN' ? 'Partner' : lang === 'ES' ? 'Socio' : 'Parceiro')}
+                      </span>
+                    </p>
+                    <h1 className="text-4xl md:text-5xl font-serif italic text-white leading-tight mb-3">
+                      {supplierData?.business_name || user.name}
+                    </h1>
+                    <p className="text-xs text-white/60 uppercase tracking-[0.3em] font-semibold">
+                      {supplierData?.asset_type} Partner · {supplierData?.location}
+                    </p>
+                  </div>
+
+                  {/* Right: contact + status summary */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white/5 border border-white/5 rounded-xl p-5">
+                      <p className="text-xs uppercase tracking-[0.3em] text-white/60 font-semibold mb-2">
+                        {lang === 'EN' ? 'Status' : lang === 'ES' ? 'Estado' : 'Status'}
+                      </p>
+                      <span className={`inline-block text-[11px] px-3 py-1 rounded-full border uppercase tracking-widest font-bold ${
+                        supplierData?.status === 'APPROVED'
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                          : 'bg-white/5 text-white/60 border-white/10'
+                      }`}>
+                        {supplierData?.status || '—'}
+                      </span>
+                    </div>
+                    <div className="bg-white/5 border border-white/5 rounded-xl p-5">
+                      <p className="text-xs uppercase tracking-[0.3em] text-white/60 font-semibold mb-2">
+                        {lang === 'EN' ? 'Member since' : lang === 'ES' ? 'Miembro desde' : 'Membro desde'}
+                      </p>
+                      <p className="text-sm font-serif italic text-white">
+                        {supplierData?.created_at
+                          ? new Date(supplierData.created_at).toLocaleDateString(lang === 'ES' ? 'es-CO' : lang === 'PT' ? 'pt-BR' : 'en-US', { month: 'short', year: 'numeric' })
+                          : (lang === 'EN' ? 'Recently' : lang === 'ES' ? 'Recientemente' : 'Recentemente')}
+                      </p>
+                    </div>
+                    {supplierData?.whatsapp && (
+                      <div className="col-span-2 bg-[#B8963E]/5 border border-[#B8963E]/20 rounded-xl p-4 flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-[#B8963E]/15 flex items-center justify-center text-[#B8963E] shrink-0">
+                          <MessageSquare size={16} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] uppercase tracking-[0.3em] text-[#B8963E] font-semibold">WhatsApp</p>
+                          <p className="text-sm text-white font-medium truncate">{supplierData.whatsapp}</p>
+                        </div>
+                        <a href={`https://wa.me/${supplierData.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
+                          className="text-[10px] text-[#B8963E] uppercase tracking-widest font-semibold hover:text-white transition-colors flex items-center gap-1 shrink-0">
+                          {lang === 'EN' ? 'Open' : lang === 'ES' ? 'Abrir' : 'Abrir'}
+                          <ExternalLink size={10} />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* KPI tiles — bigger, gold values */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { label: { EN: 'Total Assets', ES: 'Total Activos', PT: 'Total Ativos' }, value: stats.totalAssets, icon: Package, color: 'text-gold' },
+                  { label: { EN: 'Total Assets', ES: 'Total Activos', PT: 'Total Ativos' }, value: stats.totalAssets, icon: Package, color: 'text-[#B8963E]' },
                   { label: { EN: 'Active Listings', ES: 'Activos', PT: 'Ativos' }, value: stats.activeAssets, icon: Eye, color: 'text-emerald-400' },
                   { label: { EN: 'Pending Bookings', ES: 'Reservas Pendientes', PT: 'Reservas Pendentes' }, value: stats.pendingBookings, icon: Clock, color: 'text-amber-400' },
-                  { label: { EN: 'Total Earnings', ES: 'Ganancias Totales', PT: 'Ganhos Totais' }, value: `$${stats.totalEarnings.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, icon: DollarSign, color: 'text-gold' },
+                  { label: { EN: 'Total Earnings', ES: 'Ganancias Totales', PT: 'Ganhos Totais' }, value: `$${stats.totalEarnings.toLocaleString('en-US', { maximumFractionDigits: 0 })}`, icon: DollarSign, color: 'text-[#B8963E]', isString: true },
                 ].map((stat, i) => (
                   <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-                    className="bg-luxury-slate border border-white/10  rounded-2xl p-6">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{stat.label[lang]}</span>
-                      <stat.icon size={16} className={stat.color} />
+                    className="bg-luxury-slate border border-white/5 rounded-2xl p-7 hover:border-[#B8963E]/30 transition-colors">
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-xs uppercase tracking-[0.3em] text-white/60 font-semibold">{stat.label[lang]}</span>
+                      <stat.icon size={18} className={stat.color} />
                     </div>
-                    <span className="text-3xl font-serif italic text-white">{stat.value}</span>
+                    <span className={`block font-serif italic text-[#B8963E] leading-none ${(stat as any).isString ? 'text-3xl md:text-4xl' : 'text-4xl md:text-5xl'}`}>
+                      {stat.value}
+                    </span>
                   </motion.div>
                 ))}
               </div>
 
-              {/* Recent Bookings */}
-              <div className="bg-luxury-slate border border-white/10  rounded-2xl overflow-hidden">
-                <div className="px-8 py-6 border-b border-white/10 flex items-center justify-between">
-                  <h3 className="text-lg font-serif italic text-white">
-                    {lang === 'EN' ? 'Recent Bookings' : lang === 'ES' ? 'Reservas Recientes' : 'Reservas Recentes'}
-                  </h3>
-                  <button onClick={() => setActiveTab('bookings')}
-                    className="text-[10px] text-gold uppercase tracking-widest font-semibold hover:text-white transition-colors flex items-center gap-1">
-                    {lang === 'EN' ? 'View All' : lang === 'ES' ? 'Ver Todas' : 'Ver Todas'} <ChevronRight size={12} />
-                  </button>
-                </div>
-                {bookings.length === 0 ? (
-                  <div className="p-12 text-center text-white/40 text-sm">
-                    {lang === 'EN' ? 'No bookings yet' : lang === 'ES' ? 'Sin reservas aún' : 'Nenhuma reserva ainda'}
-                  </div>
-                ) : (
-                  <div className="divide-y divide-white/10">
-                    {bookings.slice(0, 5).map(b => (
-                      <div key={b.id} className="px-8 py-5 flex items-center justify-between hover:bg-white/5 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-[#B8963E]/10 rounded-xl flex items-center justify-center text-[#B8963E]">
-                            <Users size={18} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-white">{b.guest_name}</p>
-                            <p className="text-[10px] text-white/60">{b.asset_name} · {b.start_date}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <span className={`text-[8px] px-3 py-1 rounded-full border uppercase tracking-widest font-bold ${BOOKING_STATUS_COLORS[b.status] || 'bg-white/5 text-white/60 border-white/10'}`}>
-                            {b.status}
-                          </span>
-                          <span className="text-sm font-bold text-gold">{b.total_price}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Assets Preview */}
-              <div className="bg-luxury-slate border border-white/10  rounded-2xl overflow-hidden">
-                <div className="px-8 py-6 border-b border-white/10 flex items-center justify-between">
-                  <h3 className="text-lg font-serif italic text-white">
-                    {lang === 'EN' ? 'Your Assets' : lang === 'ES' ? 'Tus Activos' : 'Seus Ativos'}
-                  </h3>
-                  <button onClick={() => setActiveTab('assets')}
-                    className="text-[10px] text-gold uppercase tracking-widest font-semibold hover:text-white transition-colors flex items-center gap-1">
-                    {lang === 'EN' ? 'Manage' : lang === 'ES' ? 'Gestionar' : 'Gerenciar'} <ChevronRight size={12} />
-                  </button>
-                </div>
-                {assets.length === 0 ? (
-                  <div className="p-12 text-center">
-                    <p className="text-white/40 text-sm mb-4">
-                      {lang === 'EN' ? 'No assets yet — add your first one!' : lang === 'ES' ? 'Sin activos aún — ¡agrega el primero!' : 'Nenhum ativo ainda — adicione o primeiro!'}
-                    </p>
-                    <button onClick={() => openEditModal()}
-                      className="px-6 py-3 bg-gold text-luxury-black rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-white transition-all">
-                      <Plus size={12} className="inline mr-2" /> Add First Asset
+              {/* Two-column row: Bookings (left) + Assets (right) — fills horizontal space */}
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                {/* Recent Bookings */}
+                <div className="lg:col-span-3 bg-luxury-slate border border-white/5 rounded-2xl overflow-hidden">
+                  <div className="px-7 py-5 border-b border-white/5 flex items-center justify-between">
+                    <h3 className="text-xl font-serif italic text-white">
+                      {lang === 'EN' ? 'Recent Bookings' : lang === 'ES' ? 'Reservas Recientes' : 'Reservas Recentes'}
+                    </h3>
+                    <button onClick={() => setActiveTab('bookings')}
+                      className="text-xs text-[#B8963E] uppercase tracking-widest font-semibold hover:text-white transition-colors flex items-center gap-1">
+                      {lang === 'EN' ? 'View All' : lang === 'ES' ? 'Ver Todas' : 'Ver Todas'} <ChevronRight size={12} />
                     </button>
                   </div>
-                ) : (
-                  <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {assets.slice(0, 3).map(asset => {
-                      const Icon = ASSET_TYPE_ICONS[asset.type] || Package;
-                      return (
-                        <div key={asset.id} className="bg-white/5 border border-white/10 rounded-xl p-5 flex items-center gap-4">
-                          <div className="w-12 h-12 bg-[#B8963E]/10 rounded-xl flex items-center justify-center text-[#B8963E] shrink-0">
-                            <Icon size={20} />
+                  {bookings.length === 0 ? (
+                    <div className="p-10 text-center">
+                      <div className="w-14 h-14 bg-[#B8963E]/10 rounded-full flex items-center justify-center mx-auto text-[#B8963E] mb-4">
+                        <Calendar size={24} />
+                      </div>
+                      <p className="text-base text-white font-serif italic mb-2">
+                        {lang === 'EN' ? 'Upcoming bookings' : lang === 'ES' ? 'Próximas reservas' : 'Próximas reservas'}
+                      </p>
+                      <p className="text-sm text-white/50 mb-5 max-w-xs mx-auto leading-relaxed">
+                        {lang === 'EN'
+                          ? "Once guests book your assets, you'll see them here. Set up your calendar to start receiving requests."
+                          : lang === 'ES'
+                          ? 'Cuando los huéspedes reserven tus activos, aparecerán aquí. Configura tu calendario para empezar a recibir solicitudes.'
+                          : 'Quando os hóspedes reservarem seus ativos, eles aparecerão aqui. Configure seu calendário para começar a receber solicitações.'}
+                      </p>
+                      <button onClick={() => setActiveTab('settings')}
+                        className="inline-flex items-center gap-2 text-sm text-[#B8963E] hover:text-white font-semibold transition-colors">
+                        {lang === 'EN' ? 'Set up your calendar' : lang === 'ES' ? 'Configura tu calendario' : 'Configure seu calendário'} <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-white/5">
+                      {bookings.slice(0, 5).map(b => (
+                        <div key={b.id} className="px-7 py-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+                          <div className="flex items-center gap-4 min-w-0">
+                            <div className="w-11 h-11 bg-[#B8963E]/10 rounded-xl flex items-center justify-center text-[#B8963E] shrink-0">
+                              <Users size={18} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-white truncate">{b.guest_name}</p>
+                              <p className="text-xs text-white/60 truncate">{b.asset_name} · {b.start_date}</p>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-white truncate">{asset.name}</p>
-                            <p className="text-[10px] text-white/60">{ASSET_TYPE_LABELS[asset.type]?.[lang] || asset.type}</p>
+                          <div className="flex items-center gap-4 shrink-0">
+                            <span className={`text-[10px] px-3 py-1 rounded-full border uppercase tracking-widest font-bold ${BOOKING_STATUS_COLORS[b.status] || 'bg-white/5 text-white/60 border-white/10'}`}>
+                              {b.status}
+                            </span>
+                            <span className="text-sm font-bold text-[#B8963E] font-serif italic">{b.total_price}</span>
                           </div>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Assets Preview */}
+                <div className="lg:col-span-2 bg-luxury-slate border border-white/5 rounded-2xl overflow-hidden">
+                  <div className="px-7 py-5 border-b border-white/5 flex items-center justify-between">
+                    <h3 className="text-xl font-serif italic text-white">
+                      {lang === 'EN' ? 'Your Assets' : lang === 'ES' ? 'Tus Activos' : 'Seus Ativos'}
+                    </h3>
+                    <button onClick={() => setActiveTab('assets')}
+                      className="text-xs text-[#B8963E] uppercase tracking-widest font-semibold hover:text-white transition-colors flex items-center gap-1">
+                      {lang === 'EN' ? 'Manage' : lang === 'ES' ? 'Gestionar' : 'Gerenciar'} <ChevronRight size={12} />
+                    </button>
                   </div>
-                )}
+                  {assets.length === 0 ? (
+                    <div className="p-10 text-center">
+                      <div className="w-14 h-14 bg-[#B8963E]/10 rounded-full flex items-center justify-center mx-auto text-[#B8963E] mb-4">
+                        <Package size={24} />
+                      </div>
+                      <p className="text-base text-white font-serif italic mb-2">
+                        {lang === 'EN' ? 'No assets yet' : lang === 'ES' ? 'Sin activos aún' : 'Sem ativos ainda'}
+                      </p>
+                      <p className="text-sm text-white/50 mb-5 leading-relaxed">
+                        {lang === 'EN' ? 'List your first asset to start receiving bookings.' : lang === 'ES' ? 'Lista tu primer activo para empezar a recibir reservas.' : 'Liste seu primeiro ativo para começar a receber reservas.'}
+                      </p>
+                      <button onClick={() => openEditModal()}
+                        className="px-6 py-3 bg-[#B8963E] text-luxury-black rounded-full text-xs font-bold uppercase tracking-widest hover:bg-white transition-all inline-flex items-center gap-2">
+                        <Plus size={14} /> {lang === 'EN' ? 'Add First Asset' : lang === 'ES' ? 'Agregar Activo' : 'Adicionar Ativo'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="p-5 space-y-4">
+                      {assets.slice(0, 3).map(asset => {
+                        const Icon = ASSET_TYPE_ICONS[asset.type] || Package;
+                        return (
+                          <div key={asset.id} className="bg-white/5 border border-white/5 rounded-xl p-5 hover:border-[#B8963E]/30 transition-colors">
+                            <div className="flex items-start gap-4">
+                              <div className="w-14 h-14 bg-[#B8963E]/15 rounded-xl flex items-center justify-center text-[#B8963E] shrink-0">
+                                <Icon size={22} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-base font-medium text-white truncate">{asset.name}</p>
+                                <p className="text-xs text-white/60 uppercase tracking-wider mt-0.5">
+                                  {ASSET_TYPE_LABELS[asset.type]?.[lang] || asset.type}
+                                  {asset.location && <span className="text-white/40"> · {asset.location}</span>}
+                                </p>
+                                <div className="flex items-center justify-between mt-3">
+                                  <span className="text-lg font-serif italic text-[#B8963E] font-bold">{asset.price_per_unit}</span>
+                                  <span className="text-xs text-white/40">{asset.capacity} PAX</span>
+                                </div>
+                              </div>
+                            </div>
+                            <button onClick={() => openEditModal(asset)}
+                              className="mt-4 w-full py-2 border border-white/10 rounded-lg text-xs uppercase tracking-widest font-semibold text-white/70 hover:text-white hover:border-[#B8963E]/40 hover:bg-white/5 transition-all flex items-center justify-center gap-2">
+                              <Edit2 size={12} /> {lang === 'EN' ? 'Edit' : lang === 'ES' ? 'Editar' : 'Editar'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                      {assets.length >= 1 && (
+                        <button onClick={() => openEditModal()}
+                          className="w-full py-3 border border-dashed border-white/15 rounded-xl text-xs uppercase tracking-widest font-semibold text-white/50 hover:text-[#B8963E] hover:border-[#B8963E]/40 transition-all flex items-center justify-center gap-2">
+                          <Plus size={14} /> {lang === 'EN' ? 'Add another asset' : lang === 'ES' ? 'Crear otro activo' : 'Adicionar outro ativo'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </motion.div>
           )}
