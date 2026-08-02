@@ -91,6 +91,12 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
   const [editingAsset, setEditingAsset] = useState<Partial<Asset> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  // v1.8.0 Step 22.34: Sticky "Save & add another" mode for bulk asset onboarding.
+  // When the partner hits the sticky button we keep the modal open and reset the
+  // form to a fresh default so they can keep adding without re-clicking the
+  // top-right "+ Agregar" every time. `addedInSession` is the in-modal counter
+  // that shows progress ("3 added so far").
+  const [addedInSession, setAddedInSession] = useState(0);
   const [telegramChatId, setTelegramChatId] = useState('');
   const [telegramSaved, setTelegramSaved] = useState(false);
   const [syncingCalendar, setSyncingCalendar] = useState<string | null>(null);
@@ -168,31 +174,37 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
       }, 0),
   };
 
+  // Derive a sensible default type from the supplier's pillar
+  // (was hard-coded to LODGING — broadened to cover all 5 pillars).
+  const buildDefaultAsset = (): Partial<Asset> => {
+    const SUPPLIER_TYPE_TO_ASSET: Record<string, string> = {
+      VILLA:    'LODGING',
+      YACHT:    'VESSEL',
+      AVIATION: 'AIRCRAFT',
+      GROUND:   'VEHICLE',
+      STAFF:    'STAFF',
+    };
+    const defaultType =
+      SUPPLIER_TYPE_TO_ASSET[supplierData?.asset_type as string] ?? 'LODGING';
+    const defaultPriceType =
+      defaultType === 'LODGING' ? 'PER_NIGHT'
+      : defaultType === 'AIRCRAFT' ? 'PER_HOUR'
+      : 'PER_DAY';
+
+    return {
+      name: '', type: defaultType, location: supplierData?.location || 'Cartagena',
+      description: '', price_per_unit: '', price_type: defaultPriceType, capacity: 1,
+      amenities: [], images: [], status: 'ACTIVE',
+    };
+  };
+
   const openEditModal = (asset?: Asset) => {
     if (asset) {
       setEditingAsset(asset);
+      setAddedInSession(0);
     } else {
-      // Derive a sensible default type from the supplier's pillar
-      // (was hard-coded to LODGING — broadened to cover all 5 pillars).
-      const SUPPLIER_TYPE_TO_ASSET: Record<string, string> = {
-        VILLA:    'LODGING',
-        YACHT:    'VESSEL',
-        AVIATION: 'AIRCRAFT',
-        GROUND:   'VEHICLE',
-        STAFF:    'STAFF',
-      };
-      const defaultType =
-        SUPPLIER_TYPE_TO_ASSET[supplierData?.asset_type as string] ?? 'LODGING';
-      const defaultPriceType =
-        defaultType === 'LODGING' ? 'PER_NIGHT'
-        : defaultType === 'AIRCRAFT' ? 'PER_HOUR'
-        : 'PER_DAY';
-
-      setEditingAsset({
-        name: '', type: defaultType, location: supplierData?.location || 'Cartagena',
-        description: '', price_per_unit: '', price_type: defaultPriceType, capacity: 1,
-        amenities: [], images: [], status: 'ACTIVE',
-      });
+      setEditingAsset(buildDefaultAsset());
+      setAddedInSession(0);
     }
     setIsModalOpen(true);
   };
@@ -200,10 +212,20 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingAsset(null);
+    setAddedInSession(0);
   };
 
-  const handleSaveAsset = async () => {
+  // v1.8.0 Step 22.34: `mode` controls the post-save behavior.
+  //   'close'  -> save and dismiss modal (default; used by Save and Save & close)
+  //   'sticky' -> save and reset the form to a fresh default, keep modal open
+  //               so the partner can keep adding (e.g. Partner B's 100 vehicles).
+  const handleSaveAsset = async (mode: 'close' | 'sticky' = 'close') => {
     if (!editingAsset || !supplierId) return;
+    // Basic validation — name is the only hard requirement.
+    if (!editingAsset.name || !editingAsset.name.trim()) {
+      alert(lang === 'ES' ? 'El nombre es obligatorio' : lang === 'PT' ? 'O nome é obrigatório' : 'Name is required');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -231,6 +253,9 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
         if (data.success) {
           setAssets(prev => prev.map(a => a.id === editingAsset!.id ? { ...a, ...payload } as Asset : a));
         }
+        // Edit mode always closes (no sticky here — you only edit one at a time).
+        closeModal();
+        return;
       } else {
         // Create new
         const res = await fetch('/api/assets', {
@@ -241,11 +266,40 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
         const data = await res.json();
         if (data.success) {
           setAssets(prev => [{ ...payload, id: data.asset_id, created_at: new Date().toISOString() } as Asset, ...prev]);
+          if (mode === 'sticky') {
+            // Reset form, keep modal open, bump the counter.
+            // Pre-fill the next name with the previous one + " (#N)" as a
+            // sensible starting point for bulk entry (e.g. "Van Mercedes (2)").
+            const previousName = (editingAsset.name || '').trim();
+            const baseName = previousName.replace(/\s*\(\d+\)\s*$/, ''); // strip trailing " (N)"
+            const next = addedInSession + 2; // 2 because this one was #1
+            const suggested = baseName ? `${baseName} (${next})` : '';
+            setEditingAsset({
+              ...buildDefaultAsset(),
+              // Carry over the asset type, price, location, and capacity so the
+              // partner only has to type the name + (optional) tweak.
+              type: editingAsset.type,
+              location: editingAsset.location,
+              price_per_unit: editingAsset.price_per_unit,
+              price_type: editingAsset.price_type,
+              capacity: editingAsset.capacity,
+              name: suggested,
+            });
+            setAddedInSession(n => n + 1);
+            // Focus the name input on next paint so the partner can keep typing.
+            setTimeout(() => {
+              const el = document.querySelector<HTMLInputElement>('input[data-asset-name-input]');
+              el?.focus();
+              el?.select();
+            }, 30);
+          } else {
+            closeModal();
+          }
         }
       }
-      closeModal();
     } catch (err) {
       console.error('Failed to save asset', err);
+      alert(lang === 'ES' ? 'No se pudo guardar el activo' : lang === 'PT' ? 'Não foi possível salvar o ativo' : 'Failed to save asset');
     } finally {
       setSaving(false);
     }
@@ -1007,7 +1061,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                   <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">
                     {lang === 'EN' ? 'Asset Name' : lang === 'ES' ? 'Nombre del Activo' : 'Nome do Ativo'}
                   </label>
-                  <input value={editingAsset.name || ''} onChange={e => setEditingAsset({ ...editingAsset, name: e.target.value })}
+                  <input data-asset-name-input value={editingAsset.name || ''} onChange={e => setEditingAsset({ ...editingAsset, name: e.target.value })}
                     className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30" />
                 </div>
 
@@ -1060,17 +1114,45 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                 </div>
               </div>
 
-              <div className="flex gap-4 mt-8">
+              {/* v1.8.0 Step 22.34: bulk-add progress counter (only visible in create mode after at least 1 add) */}
+              {!editingAsset.id && addedInSession > 0 && (
+                <div className="mt-6 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-center">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-emerald-300 font-semibold">
+                    {lang === 'EN' ? `${addedInSession} added so far` : lang === 'ES' ? `${addedInSession} añadido(s) en esta sesión` : `${addedInSession} adicionado(s) nesta sessão`}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-4 mt-6">
                 <button onClick={closeModal}
                   className="flex-1 py-4 bg-white/5 border border-white/10 rounded-xl text-[11px] uppercase tracking-widest font-semibold text-white hover:bg-white/5 transition-all">
                   {lang === 'EN' ? 'Cancel' : lang === 'ES' ? 'Cancelar' : 'Cancelar'}
                 </button>
-                <button onClick={handleSaveAsset} disabled={saving}
-                  className="flex-1 py-3 bg-[#B8963E] text-white rounded-full hover:bg-white/10 text-[11px] uppercase tracking-widest font-semibold flex items-center justify-center gap-2 hover:bg-white transition-all disabled:opacity-50">
-                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                  {saving ? (lang === 'EN' ? 'Saving...' : lang === 'ES' ? 'Guardando...' : 'Salvando...')
-                    : (lang === 'EN' ? 'Save Asset' : lang === 'ES' ? 'Guardar' : 'Salvar')}
-                </button>
+                {editingAsset.id ? (
+                  // Edit mode: single "Save" button (no sticky option).
+                  <button onClick={() => handleSaveAsset('close')} disabled={saving}
+                    className="flex-1 py-3 bg-[#B8963E] text-white rounded-full hover:bg-white/10 text-[11px] uppercase tracking-widest font-semibold flex items-center justify-center gap-2 hover:bg-white transition-all disabled:opacity-50">
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                    {saving ? (lang === 'EN' ? 'Saving...' : lang === 'ES' ? 'Guardando...' : 'Salvando...')
+                      : (lang === 'EN' ? 'Save Asset' : lang === 'ES' ? 'Guardar' : 'Salvar')}
+                  </button>
+                ) : (
+                  // Create mode: TWO buttons — sticky (save & add another) + close (save & exit).
+                  // The sticky one is the primary CTA in gold; the close one is secondary outlined.
+                  <>
+                    <button onClick={() => handleSaveAsset('close')} disabled={saving}
+                      className="flex-1 py-3 bg-white/5 border border-[#B8963E]/40 rounded-full text-[#B8963E] text-[11px] uppercase tracking-widest font-semibold flex items-center justify-center gap-2 hover:bg-[#B8963E]/10 transition-all disabled:opacity-50">
+                      <Check size={14} />
+                      {lang === 'EN' ? 'Save & Close' : lang === 'ES' ? 'Guardar y Cerrar' : 'Salvar e Fechar'}
+                    </button>
+                    <button onClick={() => handleSaveAsset('sticky')} disabled={saving}
+                      className="flex-[1.4] py-3 bg-[#B8963E] text-white rounded-full text-[11px] uppercase tracking-widest font-semibold flex items-center justify-center gap-2 hover:bg-white hover:text-slate-900 transition-all disabled:opacity-50">
+                      {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                      {saving ? (lang === 'EN' ? 'Saving...' : lang === 'ES' ? 'Guardando...' : 'Salvando...')
+                        : (lang === 'EN' ? 'Save & Add Another' : lang === 'ES' ? 'Guardar y Agregar Otro' : 'Salvar e Adicionar Outro')}
+                    </button>
+                  </>
+                )}
               </div>
             </motion.div>
           </div>
