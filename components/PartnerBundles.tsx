@@ -40,6 +40,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
   // for the failed attempt — this is the correct shape.
   const tMap = {
     EN: {
+      eyebrow: 'Multi-partner Packages',
       title: 'Your Bundles',
       sub: 'Combine services from approved KLO suppliers into a single bookable package.',
       create: 'Create Bundle',
