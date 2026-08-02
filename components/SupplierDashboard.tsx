@@ -6,7 +6,7 @@ import {
   Plus, Search, Edit2, Trash2, Eye, EyeOff,
   X, Check, Loader2, TrendingUp, MessageSquare,
   ChevronRight, BarChart3, Settings, AlertCircle,
-  ExternalLink, RefreshCw, Send, Layers
+  ExternalLink, RefreshCw, Send, Layers, LogOut
 } from 'lucide-react';
 import { AssetType } from '../types';
 import { KLOUser } from '../services/firebase';
@@ -665,63 +665,80 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
   }
 
   return (
-    <div className="min-h-screen bg-white/5 text-white">
-      {/* Header */}
-      <div className="bg-luxury-slate border-b border-white/10 ">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <button onClick={onBack} className="text-white/60 hover:text-white transition-colors">
-                <ChevronRight size={20} className="rotate-180" />
-              </button>
-              <div>
-                {/* v1.5: small trilingual greeting above the business name.
-                    Keeps the existing title hierarchy but adds the human
-                    touch the handoff asked for ("Welcome back, {name}"). */}
-                <p className="text-[10px] text-[#B8963E] uppercase tracking-[0.3em] font-semibold mb-1">
-                  {lang === 'EN' ? `Welcome back, ${user.name?.split(' ')[0] || 'Partner'}` : lang === 'ES' ? `Bienvenido de nuevo, ${user.name?.split(' ')[0] || 'Socio'}` : `Bem-vindo de volta, ${user.name?.split(' ')[0] || 'Parceiro'}`}
-                </p>
-                <h1 className="text-2xl font-serif italic text-white">
-                  {supplierData?.business_name || user.name}
-                </h1>
-                <p className="text-[10px] text-white/60 uppercase tracking-[0.3em] font-semibold">
-                  {supplierData?.asset_type} Partner · {supplierData?.location}
-                </p>
-              </div>
+    // v1.8.0 Step 22.37: Layout redesigned to match /admin's pattern.
+    // Was a top banner with horizontal pill tabs; now a left sidebar
+    // (288px) with the same dark luxury-slate + gold active treatment
+    // as the admin sidebar. Content scrolls independently on the right.
+    <div className="min-h-screen flex bg-white/5 text-white">
+      {/* ── LEFT SIDEBAR ─────────────────────────────────────────── */}
+      <aside className="w-72 shrink-0 bg-luxury-slate border-r border-white/10 flex flex-col h-screen sticky top-0">
+        {/* Brand block */}
+        <div className="px-5 py-6 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <button onClick={onBack} className="w-10 h-10 rounded-xl bg-[#B8963E]/15 border border-[#B8963E]/30 flex items-center justify-center text-[#B8963E] hover:bg-[#B8963E]/25 transition-colors shrink-0">
+              <ChevronRight size={18} className="rotate-180" />
+            </button>
+            <div className="min-w-0">
+              <p className="text-sm font-serif italic text-white truncate">{supplierData?.business_name || user.name}</p>
+              <p className="text-[10px] text-[#B8963E] uppercase tracking-[0.3em] truncate">
+                {supplierData?.asset_type ? `${supplierData.asset_type} · ${supplierData.location || '—'}` : (lang === 'ES' ? 'Socio' : lang === 'PT' ? 'Parceiro' : 'Partner')}
+              </p>
             </div>
-            <div className="flex items-center gap-3">
-              <span className={`text-[8px] px-3 py-1 rounded-full border uppercase tracking-widest font-bold ${
-                supplierData?.status === 'APPROVED'
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                  : 'bg-white/5 text-white/60 border-white/10'
-              }`}>
-                {supplierData?.status}
-              </span>
-              <div className="w-10 h-10 bg-[#B8963E]/10 rounded-full flex items-center justify-center text-[#B8963E] font-serif text-lg">
-                {user.name?.charAt(0)}
-              </div>
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex gap-1">
-            {TABS.map(tab => {
-              const Icon = tab.icon;
-              return (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-full text-[11px] font-semibold uppercase tracking-widest transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-[#B8963E] text-white'
-                      : 'text-white/60 hover:text-white/70 hover:bg-white/5'
-                  }`}>
-                  <Icon size={14} />
-                  {tab.label[lang]}
-                </button>
-              );
-            })}
           </div>
         </div>
-      </div>
+
+        {/* Greeting + status */}
+        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[9px] text-[#B8963E] uppercase tracking-[0.3em] font-semibold mb-1 truncate">
+              {lang === 'EN' ? `Welcome back, ${user.name?.split(' ')[0] || 'Partner'}` : lang === 'ES' ? `Bienvenido de nuevo, ${user.name?.split(' ')[0] || 'Socio'}` : `Bem-vindo de volta, ${user.name?.split(' ')[0] || 'Parceiro'}`}
+            </p>
+            <span className={`inline-block text-[8px] px-2.5 py-0.5 rounded-full border uppercase tracking-widest font-bold ${
+              supplierData?.status === 'APPROVED'
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                : 'bg-white/5 text-white/60 border-white/10'
+            }`}>
+              {supplierData?.status || 'PENDING'}
+            </span>
+          </div>
+          <div className="w-10 h-10 bg-[#B8963E]/10 rounded-full flex items-center justify-center text-[#B8963E] font-serif text-lg shrink-0">
+            {user.name?.charAt(0)}
+          </div>
+        </div>
+
+        {/* Tabs as vertical nav — same pattern as AdminSidebar */}
+        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1">
+          {TABS.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id as any)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-semibold uppercase tracking-widest transition-all ${
+                  isActive
+                    ? 'bg-[#B8963E] text-white'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}>
+                <Icon size={16} />
+                <span className="flex-1 text-left">{tab.label[lang]}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Footer: sign out */}
+        <div className="border-t border-white/10 px-3 py-3 space-y-1">
+          <button
+            onClick={() => window.location.href = '/supplier/login'}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-semibold uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/5 transition-all"
+          >
+            <LogOut size={16} />
+            <span className="flex-1 text-left">{lang === 'ES' ? 'Cerrar sesión' : lang === 'PT' ? 'Sair' : 'Sign out'}</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ── MAIN CONTENT ────────────────────────────────────────── */}
+      <main className="flex-1 min-w-0 overflow-y-auto">
 
       {loadError && (
         <div className="bg-red-50 border-b border-red-200">
@@ -1385,6 +1402,7 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
           </div>
         )}
       </AnimatePresence>
+      </main>
     </div>
   );
 };
