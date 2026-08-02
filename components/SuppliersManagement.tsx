@@ -171,7 +171,27 @@ const SUPPLIER_STATUS_FILTERS: FilterOption[] = [
 // admin table never shows raw JSON like {"EN":"Foo","ES":"","PT":""}.
 const displayField = (raw: unknown, lang: 'EN' | 'ES' | 'PT' = 'EN'): string => {
   if (raw == null) return '';
-  if (typeof raw === 'string') return raw;
+  if (typeof raw === 'string') {
+    // Some rows were saved as a JSON-encoded string (e.g. '{"EN":"Foo","ES":"","PT":""}').
+    // Parse it and run the trilingual pick; otherwise return as-is.
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+        if (parsed && typeof parsed === 'object') {
+          const fromLang = parsed[lang];
+          if (typeof fromLang === 'string' && fromLang.length > 0) return fromLang;
+          for (const k of ['EN', 'ES', 'PT']) {
+            const v = parsed[k];
+            if (typeof v === 'string' && v.length > 0) return v;
+          }
+        }
+      } catch {
+        // not valid JSON — fall through to plain string
+      }
+    }
+    return raw;
+  }
   if (typeof raw === 'object') {
     const obj = raw as Record<string, unknown>;
     const fromLang = obj[lang];
