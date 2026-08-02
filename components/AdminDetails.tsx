@@ -18,6 +18,7 @@ import { EditButton } from './ui/EditButton';
 import { useArchive } from '../hooks/useArchive';
 import { getSupplierSession, getAccessToken } from '../services/supabase';
 import { SUPPLIERS_CONFIG, CLIENTS_CONFIG, EXPERIENCES_CONFIG } from './admin/EntityConfigs';
+import { displayFieldValue } from '../services/formatters';
 
 // v1.8.0 Step 6: Admin detail pages (4 routes).
 //
@@ -139,7 +140,7 @@ export const SupplierDetail: React.FC<SupplierDetailProps> = (props) => {
       newLeadsCount={newLeadsCount}
       renderHeader={(s) => (
         <span className="text-3xl md:text-4xl font-serif italic text-white flex items-center gap-3 flex-wrap">
-          {s.business_name}
+          {displayFieldValue(s.business_name, lang)}
           <StatusPill status={s.status} lang={lang} />
         </span>
       )}
@@ -180,7 +181,7 @@ export const SupplierDetail: React.FC<SupplierDetailProps> = (props) => {
               <div className="lg:col-span-2 space-y-6">
                 <DetailCard title={{ EN: 'Business Information', ES: 'Información del Negocio', PT: 'Informações do Negócio' }} lang={lang}>
                   <DetailGrid>
-                    <DetailField lang={lang} label={{ EN: 'Business Name', ES: 'Razón Social', PT: 'Razão Social' }} value={s.business_name} />
+                    <DetailField lang={lang} label={{ EN: 'Business Name', ES: 'Razón Social', PT: 'Razão Social' }} value={displayFieldValue(s.business_name, lang)} />
                     <DetailField lang={lang} label={{ EN: 'Asset Type', ES: 'Tipo de Activo', PT: 'Tipo de Ativo' }} value={ASSET_TYPE_LABEL[s.asset_type]?.[lang] || s.asset_type} />
                     <DetailField lang={lang} label={{ EN: 'Location', ES: 'Ubicación', PT: 'Localização' }} value={s.location} />
                     <DetailField lang={lang} label={{ EN: 'Google Calendar', ES: 'Google Calendar', PT: 'Google Calendar' }} value={s.google_calendar_id || '—'} mono />
@@ -193,7 +194,7 @@ export const SupplierDetail: React.FC<SupplierDetailProps> = (props) => {
                         {lang === 'ES' ? 'Descripción' : lang === 'PT' ? 'Descrição' : 'Description'}
                       </p>
                       <p className="text-sm text-white/70 leading-relaxed italic border-l-2 border-[#B8963E]/30 pl-4">
-                        "{s.description}"
+                        "{displayFieldValue(s.description, lang)}"
                       </p>
                     </div>
                   )}
@@ -206,7 +207,7 @@ export const SupplierDetail: React.FC<SupplierDetailProps> = (props) => {
                       <User size={18} />
                     </div>
                     <div>
-                      <p className="text-sm text-white font-medium">{s.contact_name}</p>
+                      <p className="text-sm text-white font-medium">{displayFieldValue(s.contact_name, lang)}</p>
                       <p className="text-[10px] text-white/40 uppercase tracking-[0.3em]">
                         {lang === 'ES' ? 'Contacto principal' : lang === 'PT' ? 'Contato principal' : 'Primary contact'}
                       </p>

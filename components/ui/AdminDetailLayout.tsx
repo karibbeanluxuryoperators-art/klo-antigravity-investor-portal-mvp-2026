@@ -183,7 +183,7 @@ export function AdminDetailLayout<T extends Record<string, any>>({
             {tx(backLabel, lang)}
           </a>
           <ChevronRight size={10} className="text-white/20" />
-          <span className="text-white/60">{data ? (pageTitle || (data as any).name || (data as any).business_name || (data as any).guest_name || (data as any).id?.slice(0, 8) || '...') : (pageTitle || '...')}</span>
+          <span className="text-white/60">{data ? (pageTitle || displayFieldValue((data as any).name) || displayFieldValue((data as any).business_name) || (data as any).guest_name || (data as any).id?.slice(0, 8) || '...') : (pageTitle || '...')}</span>
         </nav>
 
         {/* Page header */}
