@@ -3881,7 +3881,8 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       const filled = { passengers: false, travelDates: false };
       if (!result.passengers) {
         const m = msg.match(/\bsomos\s+(\d{1,2})\b/i)
-          || msg.match(/\b(\d{1,2})\s*(?:personas|pax|guests|huespedes|hu[ée]spedes|people)\b/i);
+          || msg.match(/\b(\d{1,2})\s*(?:personas|pax|guests|huespedes|hu[ée]spedes|people)\b/i)
+          || msg.match(/\b(\d{1,2})\s+of\s+us\b/i);
         if (m) { result.passengers = parseInt(m[1], 10); filled.passengers = true; }
       }
       if (!result.travelDates) {
@@ -4282,6 +4283,8 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         /(?:for|party\s*of|para|grupo\s*de|grupo)\s+(\d+)/i,
         /(\d+)\s*(personas|h[uú]spedes|invitados|viajeros)/i,
         /\bim\s+(?:a\s+group\s+of\s+)?(\d+)/i,
+        /\b(\d{1,2})\s+of\s+us\b/i,
+        /\bsomos\s+(\d{1,2})\b/i,
       ];
       for (const re of paxPatterns) {
         const m = message.match(re);
@@ -4470,9 +4473,20 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       // phone/WhatsApp keyword. Catches "whatsapp 3111111", "celular 3111111",
       // "mi numero es 3111111" etc. without false-positiving on dates.
       if (!phoneMatch) {
-        const phoneKeywordRe = /(?:whatsapp|celular|tel[eé]fono|m[ií]\s*n[uú]mero|n[uú]mero|phone|mobile|cell|llamar(?:me)?|contac(?:to|tar)|es\s+mi)[^\d]{0,5}(\d{7,9})(?![\d])/i;
+        const phoneKeywordRe = /(?:whatsapp|celular|tel[eé]fono|m[ií]\s*n[uú]mero|n[uú]mero|number|phone|mobile|cell|llamar(?:me)?|contac(?:to|tar)|es\s+mi)[^\d]{0,5}([\d\s-]{7,20})(?![\d])/i;
         const kwMatch = message.match(phoneKeywordRe);
-        if (kwMatch) phoneMatch = kwMatch;
+        if (kwMatch) {
+          // Trim a trailing lone single digit that isn't part of the number
+          // (e.g. "...my number is 1305 8767809" followed later by "6 nights"
+          // — the free-run capture can grab that stray "6").
+          const groups = kwMatch[1].trim().split(/[\s-]+/).filter(Boolean);
+          while (groups.length > 1 && groups[groups.length - 1].length === 1) groups.pop();
+          const cleaned = groups.join(' ');
+          const digitCount = cleaned.replace(/\D/g, '').length;
+          if (digitCount >= 7 && digitCount <= 15) {
+            phoneMatch = [cleaned] as unknown as RegExpMatchArray;
+          }
+        }
       }
       // Last-resort: bare digit run of 7-15 digits. Catches "3111111" and
       // "322331111" (colombian mobile without +57 prefix, common in WhatsApp
@@ -5031,7 +5045,9 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         for (const p of [primaryPillar, ...otherPillars]) {
           const missing = groupedByPillar[p];
           if (lang === 'ES') {
-            if (p === 'aviation' && missing.includes('passengers')) sentencesES.push('¿Cuántas personas viajan y qué fecha tienen en mente?');
+            if (p === 'aviation' && missing.includes('passengers') && missing.includes('date')) sentencesES.push('¿Cuántas personas viajan y qué fecha tienen en mente?');
+            else if (p === 'aviation' && missing.includes('passengers')) sentencesES.push('¿Cuántas personas viajan?');
+            else if (p === 'aviation' && missing.includes('date')) sentencesES.push('¿Qué fecha tienen en mente?');
             else if (p === 'aviation' && missing.includes('origin')) sentencesES.push('¿Desde qué ciudad salen y cuál es el destino?');
             else if (p === 'aviation' && missing.includes('nationality')) sentencesES.push('¿Qué nacionalidad tienen los pasajeros? (Para antinarcóticos y migración.)');
             else if (p === 'yacht' && missing.includes('passengers')) sentencesES.push('Para el yate, ¿cuántas personas y qué día?');
@@ -5043,7 +5059,9 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             else if (p === 'transport' && missing.includes('passengers')) sentencesES.push('Para el transporte, ¿cuántas personas?');
             else if (p === 'staff' && missing.includes('schedule')) sentencesES.push('Para el staff, ¿medio día, jornada de 8h o día completo?');
           } else if (lang === 'EN') {
-            if (p === 'aviation' && missing.includes('passengers')) sentencesEN.push('How many people will be traveling, and what dates?');
+            if (p === 'aviation' && missing.includes('passengers') && missing.includes('date')) sentencesEN.push('How many people will be traveling, and what dates?');
+            else if (p === 'aviation' && missing.includes('passengers')) sentencesEN.push('How many people will be traveling?');
+            else if (p === 'aviation' && missing.includes('date')) sentencesEN.push('What dates do you have in mind?');
             else if (p === 'aviation' && missing.includes('origin')) sentencesEN.push('Where are you flying from and to?');
             else if (p === 'aviation' && missing.includes('nationality')) sentencesEN.push('What nationality are the passengers? (For antinarcotics and migration.)');
             else if (p === 'yacht' && missing.includes('passengers')) sentencesEN.push('For the yacht, how many guests and on what date?');
@@ -5054,7 +5072,9 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             else if (p === 'transport' && missing.includes('type')) sentencesEN.push('What vehicle would you like — armored SUV, executive sedan, executive van, or VIP sprinter?');
             else if (p === 'staff' && missing.includes('schedule')) sentencesEN.push('For staff, would that be half day, 8-hour shift, or full day?');
           } else {
-            if (p === 'aviation' && missing.includes('passengers')) sentencesPT.push('Quantas pessoas viajam e quais datas?');
+            if (p === 'aviation' && missing.includes('passengers') && missing.includes('date')) sentencesPT.push('Quantas pessoas viajam e quais datas?');
+            else if (p === 'aviation' && missing.includes('passengers')) sentencesPT.push('Quantas pessoas viajam?');
+            else if (p === 'aviation' && missing.includes('date')) sentencesPT.push('Quais datas você tem em mente?');
             else if (p === 'aviation' && missing.includes('origin')) sentencesPT.push('De qual cidade partem e qual é o destino?');
             else if (p === 'aviation' && missing.includes('nationality')) sentencesPT.push('Qual a nacionalidade dos passageiros? (Para antinarcóticos e migração.)');
             else if (p === 'villa' && missing.includes('nights') && missing.includes('guests')) sentencesPT.push('Para a villa, quantas noites e hóspedes?');
@@ -5129,8 +5149,12 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
                 ncSentencesES.push('¿Desde qué ciudad salen, cuántas personas viajan y qué fecha tienen en mente?');
               else if (p === 'aviation' && missing.includes('origin'))
                 ncSentencesES.push('¿Desde qué ciudad salen y cuál es el destino?');
-              else if (p === 'aviation' && missing.includes('passengers'))
+              else if (p === 'aviation' && missing.includes('passengers') && missing.includes('date'))
                 ncSentencesES.push('¿Cuántas personas viajan y qué fecha tienen en mente?');
+              else if (p === 'aviation' && missing.includes('passengers'))
+                ncSentencesES.push('¿Cuántas personas viajan?');
+              else if (p === 'aviation' && missing.includes('date'))
+                ncSentencesES.push('¿Qué fecha tienen en mente?');
               else if (p === 'aviation' && missing.includes('nationality'))
                 ncSentencesES.push('¿Qué nacionalidad tienen los pasajeros? (Para antinarcóticos y migración.)');
               else if (p === 'yacht' && (missing.includes('passengers') || missing.includes('date')))
@@ -5153,8 +5177,12 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
                 ncSentencesEN.push('Where are you flying from and to, how many passengers, and what dates?');
               else if (p === 'aviation' && missing.includes('origin'))
                 ncSentencesEN.push('Where are you flying from and to?');
-              else if (p === 'aviation' && missing.includes('passengers'))
+              else if (p === 'aviation' && missing.includes('passengers') && missing.includes('date'))
                 ncSentencesEN.push('How many people will be traveling, and what dates?');
+              else if (p === 'aviation' && missing.includes('passengers'))
+                ncSentencesEN.push('How many people will be traveling?');
+              else if (p === 'aviation' && missing.includes('date'))
+                ncSentencesEN.push('What dates do you have in mind?');
               else if (p === 'aviation' && missing.includes('nationality'))
                 ncSentencesEN.push('What nationality are the passengers? (For antinarcotics and migration.)');
               else if (p === 'yacht' && (missing.includes('passengers') || missing.includes('date')))
