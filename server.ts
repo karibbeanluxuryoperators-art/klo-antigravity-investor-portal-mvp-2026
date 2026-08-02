@@ -3897,15 +3897,19 @@ ALWAYS:
 
 This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
-    // ── Try Gemini first, then OpenAI as fallback. On failure or timeout, fall
-    //    through to the rule-based path so the user always gets an answer. ──
+    // ── Try Gemini first, then Groq as fallback. On failure or timeout, fall
+    //    through to the rule-based path so the user always gets an answer.
+    //    Groq (not OpenAI) is the second layer: OPENAI_API_KEY was never
+    //    actually provisioned in Vercel, so that branch was silently
+    //    unreachable. GROQ_API_KEY was already configured (María's original
+    //    Gemini+Groq design) but nothing in this file called it. ──
     let usedGemini = false;
     const hasGeminiKey = !!process.env.GEMINI_API_KEY;
-    const hasOpenAIKey = !!process.env.OPENAI_API_KEY;
-    if (!hasGeminiKey && !hasOpenAIKey) {
-      console.error('[maria] Neither GEMINI_API_KEY nor OPENAI_API_KEY is set — running rule-based fallback only.');
+    const hasGroqKey = !!process.env.GROQ_API_KEY;
+    if (!hasGeminiKey && !hasGroqKey) {
+      console.error('[maria] Neither GEMINI_API_KEY nor GROQ_API_KEY is set — running rule-based fallback only.');
     } else if (!hasGeminiKey) {
-      console.warn('[maria] GEMINI_API_KEY not set, will try OPENAI_API_KEY as fallback.');
+      console.warn('[maria] GEMINI_API_KEY not set, will try GROQ_API_KEY as fallback.');
     }
 
     // Backfill fields the AI sometimes misses even though a simple regex
@@ -4074,9 +4078,9 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
     }
 
     // ── Try OpenAI as fallback (structured JSON via gpt-4o-mini) ──
-    if (!usedGemini && hasOpenAIKey) {
+    if (!usedGemini && hasGroqKey) {
       try {
-        const openaiMessages: any[] = [
+        const groqMessages: any[] = [
           { role: 'system', content: systemInstruction + '\n\nIMPORTANT: You MUST respond with valid JSON only. No markdown, no code fences, no extra text. Just the JSON object matching the schema.' },
           ...((history || []).map((h: any) => ({
             role: h.role === 'user' ? 'user' : 'assistant',
@@ -4084,74 +4088,76 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           })) as any[]),
           { role: 'user', content: message },
         ];
-        const openaiCall = fetch('https://api.openai.com/v1/chat/completions', {
+        // Groq's API is OpenAI-compatible (same request/response shape,
+        // same response_format: json_object support) — just a different
+        // endpoint + key + model.
+        const groqCall = fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
           },
           body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: openaiMessages,
+            model: 'llama-3.3-70b-versatile',
+            messages: groqMessages,
             temperature: 0.3,
             max_tokens: 1500,
             response_format: { type: 'json_object' },
           }),
         });
         const timeoutMs = 15000;
-        const openaiResp: any = await Promise.race([
-          openaiCall.then(r => r.json()),
-          new Promise<never>((_, rej) => setTimeout(() => rej(new Error('openai_timeout')), timeoutMs)),
+        const groqResp: any = await Promise.race([
+          groqCall.then(r => r.json()),
+          new Promise<never>((_, rej) => setTimeout(() => rej(new Error('groq_timeout')), timeoutMs)),
         ]);
-        // OpenAI returns 200-with-error-body for some failure modes (invalid
-        // key, quota, model access) — `choices` is absent and `error` is
-        // present. Without this check, that fell through as responseText =
-        // '{}' → an empty-but-"successful" result, which masked the real
-        // failure and returned a blank reply as if OpenAI had worked.
-        if (openaiResp.error) {
-          throw new Error(`OpenAI API error: ${openaiResp.error.message || JSON.stringify(openaiResp.error)}`);
+        // Same defensive check as Gemini: a 200-with-error-body (invalid
+        // key, quota, decommissioned model) has no `choices` — without this
+        // it silently becomes an empty "successful" result instead of a
+        // caught, logged, fallback-triggering error.
+        if (groqResp.error) {
+          throw new Error(`Groq API error: ${groqResp.error.message || JSON.stringify(groqResp.error)}`);
         }
-        const responseText = openaiResp.choices?.[0]?.message?.content || '{}';
-        let openaiResult: any;
-        try { openaiResult = JSON.parse(responseText); }
-        catch { openaiResult = { reply: responseText, qualified: false, preferredLanguage: lang }; }
-        openaiResult.preferredLanguage = openaiResult.preferredLanguage || lang;
-        if (!openaiResult.pillarInterest && Array.isArray(openaiResult.servicesNeeded) && openaiResult.servicesNeeded.length > 0) {
-          openaiResult.pillarInterest = openaiResult.servicesNeeded[0];
+        const responseText = groqResp.choices?.[0]?.message?.content || '{}';
+        let groqResult: any;
+        try { groqResult = JSON.parse(responseText); }
+        catch { groqResult = { reply: responseText, qualified: false, preferredLanguage: lang }; }
+        groqResult.preferredLanguage = groqResult.preferredLanguage || lang;
+        if (!groqResult.pillarInterest && Array.isArray(groqResult.servicesNeeded) && groqResult.servicesNeeded.length > 0) {
+          groqResult.pillarInterest = groqResult.servicesNeeded[0];
         }
-        if (!Array.isArray(openaiResult.experienceDna)) openaiResult.experienceDna = [];
+        if (!Array.isArray(groqResult.experienceDna)) groqResult.experienceDna = [];
         // Apply accumulated context from previous turns
         if (context && typeof context === 'object') {
           if (Array.isArray(context.servicesNeeded) && context.servicesNeeded.length > 0) {
-            const existing = Array.isArray(openaiResult.servicesNeeded) ? openaiResult.servicesNeeded : [];
+            const existing = Array.isArray(groqResult.servicesNeeded) ? groqResult.servicesNeeded : [];
             for (const svc of context.servicesNeeded) {
               if (!existing.includes(svc)) existing.push(svc);
             }
-            openaiResult.servicesNeeded = existing;
+            groqResult.servicesNeeded = existing;
           }
-          if (context.fullName && !openaiResult.fullName) openaiResult.fullName = context.fullName;
-          if (context.email && !openaiResult.email) openaiResult.email = context.email;
-          if (context.phone && !openaiResult.phone) openaiResult.phone = context.phone;
-          if (context.origin && !openaiResult.origin) openaiResult.origin = context.origin;
-          if (context.destination && !openaiResult.destination) openaiResult.destination = context.destination;
-          if (context.passengers && !openaiResult.passengers) openaiResult.passengers = context.passengers;
-          if (context.budget && !openaiResult.budget) openaiResult.budget = context.budget;
-          if (context.travelDates && !openaiResult.travelDates) openaiResult.travelDates = context.travelDates;
+          if (context.fullName && !groqResult.fullName) groqResult.fullName = context.fullName;
+          if (context.email && !groqResult.email) groqResult.email = context.email;
+          if (context.phone && !groqResult.phone) groqResult.phone = context.phone;
+          if (context.origin && !groqResult.origin) groqResult.origin = context.origin;
+          if (context.destination && !groqResult.destination) groqResult.destination = context.destination;
+          if (context.passengers && !groqResult.passengers) groqResult.passengers = context.passengers;
+          if (context.budget && !groqResult.budget) groqResult.budget = context.budget;
+          if (context.travelDates && !groqResult.travelDates) groqResult.travelDates = context.travelDates;
         }
         {
-          const filled = backfillFromMessage(openaiResult, message);
-          if (filled.passengers || filled.travelDates) correctStaleAviationReply(openaiResult, lang);
+          const filled = backfillFromMessage(groqResult, message);
+          if (filled.passengers || filled.travelDates) correctStaleAviationReply(groqResult, lang);
         }
         // Persist + notify
-        const lead = await persistMariaLead(openaiResult, existingLeadId);
-        if (lead && isLeadActionable(openaiResult)) {
-          notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new', 'openai');
+        const lead = await persistMariaLead(groqResult, existingLeadId);
+        if (lead && isLeadActionable(groqResult)) {
+          notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new', 'groq');
         }
         usedGemini = true;
-        console.log('[maria] openai succeeded');
-        return res.json({ success: true, result: openaiResult, lead, meta: { language: lang, source: 'openai' } });
-      } catch (openaiErr: any) {
-        console.error('[maria] openai failed, falling back to rule-based:', openaiErr?.message || openaiErr);
+        console.log('[maria] groq succeeded');
+        return res.json({ success: true, result: groqResult, lead, meta: { language: lang, source: 'groq' } });
+      } catch (groqErr: any) {
+        console.error('[maria] groq failed, falling back to rule-based:', groqErr?.message || groqErr);
         // Fall through to rule-based below
       }
     }
@@ -5637,7 +5643,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
   // messages in one live conversation hits the same warm serverless instance.
   const __notifiedLeads = new Map<string, number>();
   const NOTIFY_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
-  function notifyAdminNewLead(lead: any, source: string, mode: 'new' | 'update' = 'new', engine: 'gemini' | 'openai' | 'fallback' = 'fallback') {
+  function notifyAdminNewLead(lead: any, source: string, mode: 'new' | 'update' = 'new', engine: 'gemini' | 'groq' | 'fallback' = 'fallback') {
     const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     if (!adminChatId || !botToken) return;
@@ -5679,7 +5685,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       } catch { return ''; }
     })();
     const header = mode === 'new' ? `🆕 Nuevo lead — ${lead.id}` : `🔄 Lead actualizado — ${lead.id}`;
-    const engineLabel = engine === 'gemini' ? '✨ Gemini' : engine === 'openai' ? '✨ OpenAI' : '⚙️ Rule-based fallback';
+    const engineLabel = engine === 'gemini' ? '✨ Gemini' : engine === 'groq' ? '✨ Groq' : '⚙️ Rule-based fallback';
     const tgText = [
       header,
       `Fuente: ${source} (${engineLabel})`,
