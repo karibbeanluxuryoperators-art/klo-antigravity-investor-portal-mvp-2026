@@ -876,10 +876,10 @@ const PageHeader: React.FC<{
   const titles: Record<AdminSection, { eyebrow: string; title: string }> = {
     SUPPLIERS: {
       eyebrow: lang === 'ES' ? 'Gestión de Red' : lang === 'PT' ? 'Gestão de Rede' : 'Network Management',
-      title:   lang === 'ES' ? 'Socios'     : lang === 'PT' ? 'Parceiros' : 'Suppliers',
+      title:   lang === 'ES' ? 'Socios'     : lang === 'PT' ? 'Parceiros' : 'Partners',
     },
     SERVICES: {
-      eyebrow: lang === 'ES' ? 'Activos de Socios' : lang === 'PT' ? 'Ativos de Parceiros' : 'Supplier Assets',
+      eyebrow: lang === 'ES' ? 'Activos de Socios' : lang === 'PT' ? 'Ativos de Parceiros' : 'Partner Assets',
       title:   lang === 'ES' ? 'Servicios'  : lang === 'PT' ? 'Serviços'  : 'Services',
     },
     EXPERIENCES: {
@@ -899,7 +899,7 @@ const PageHeader: React.FC<{
       title:   'Leads',
     },
     BUNDLES: {
-      eyebrow: lang === 'ES' ? 'Paquetes Multi-socio' : lang === 'PT' ? 'Pacotes Multi-parceiro' : 'Multi-supplier Packages',
+      eyebrow: lang === 'ES' ? 'Paquetes Multi-socio' : lang === 'PT' ? 'Pacotes Multi-parceiro' : 'Multi-partner Packages',
       title:   lang === 'ES' ? 'Paquetes' : lang === 'PT' ? 'Pacotes' : 'Bundles',
     },
     STATS: {

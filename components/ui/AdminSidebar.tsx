@@ -82,7 +82,7 @@ const T: Record<string, { EN: string; ES: string; PT: string }> = {
   brand:        { EN: 'KLO Operations', ES: 'KLO Operaciones', PT: 'KLO Operações' },
   brand_sub:    { EN: 'Concierge OS',   ES: 'Sistema Conserjería', PT: 'Sistema Concierge' },
   // Section labels
-  suppliers:    { EN: 'Suppliers',  ES: 'Socios',     PT: 'Parceiros' },
+  suppliers:    { EN: 'Partners',   ES: 'Socios',     PT: 'Parceiros' },
   services:     { EN: 'Services',   ES: 'Servicios',  PT: 'Serviços' },
   experiences:  { EN: 'Experiences',ES: 'Experiencias',PT: 'Experiências' },
   bookings:     { EN: 'Bookings',   ES: 'Reservas',   PT: 'Reservas' },

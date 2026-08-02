@@ -126,7 +126,7 @@ interface VisibilityRequest {
 }
 
 const T_BUNDLES: Record<string, { EN: string; ES: string; PT: string }> = {
-  title:           { EN: 'Multi-supplier Packages', ES: 'Paquetes Multi-socio', PT: 'Pacotes Multi-parceiro' },
+  title:           { EN: 'Multi-partner Packages',  ES: 'Paquetes Multi-socio', PT: 'Pacotes Multi-parceiro' },
   empty:           { EN: 'No bundles yet', ES: 'Sin paquetes aún', PT: 'Sem pacotes ainda' },
   emptyHint:       { EN: 'When partners create bundles in their dashboard, they appear here.', ES: 'Cuando los socios crean paquetes en su panel, aparecen aquí.', PT: 'Quando os parceiros criam pacotes no painel, aparecem aqui.' },
   col_bundle:      { EN: 'Bundle', ES: 'Paquete', PT: 'Pacote' },
@@ -163,7 +163,7 @@ const T_BUNDLES: Record<string, { EN: string; ES: string; PT: string }> = {
   qty:             { EN: 'Qty', ES: 'Cant', PT: 'Qtd' },
   subtotal:        { EN: 'Subtotal', ES: 'Subtotal', PT: 'Subtotal' },
   client_paid:     { EN: 'Client paid', ES: 'Pagado por cliente', PT: 'Pago pelo cliente' },
-  supplier_payout: { EN: 'Supplier payout', ES: 'Pago a proveedor', PT: 'Pagamento ao fornecedor' },
+  supplier_payout: { EN: 'Partner payout',  ES: 'Pago a socio',     PT: 'Pagamento ao parceiro'    },
   klo_revenue:     { EN: 'KLO revenue', ES: 'Ingreso KLO', PT: 'Receita KLO' },
   cross_sell:      { EN: 'Cross-sell payout', ES: 'Pago cross-sell', PT: 'Pagamento cross-sell' },
   close:           { EN: 'Close', ES: 'Cerrar', PT: 'Fechar' },

@@ -127,7 +127,7 @@ export const SupplierDetail: React.FC<SupplierDetailProps> = (props) => {
     <AdminDetailLayout<SupplierRecord>
       section="SUPPLIERS"
       backHref="/admin"
-      backLabel={{ EN: 'Back to Suppliers', ES: 'Volver a Socios', PT: 'Voltar a Parceiros' }}
+      backLabel={{ EN: 'Back to Partners', ES: 'Volver a Socios', PT: 'Voltar a Parceiros' }}
       pageEyebrow={{ EN: 'Network Management', ES: 'Gestión de Red', PT: 'Gestão de Rede' }}
       endpoint={`/api/suppliers/${id}`}
       lang={lang}
@@ -502,8 +502,8 @@ export const BookingDetail: React.FC<BookingDetailProps> = (props) => {
                   <DetailField lang={lang} label={{ EN: 'Type', ES: 'Tipo', PT: 'Tipo' }} value={b.asset_type || b.assets?.type} />
                   {b.assets?.suppliers && (
                     <>
-                      <DetailField lang={lang} label={{ EN: 'Supplier', ES: 'Socio', PT: 'Parceiro' }} value={b.assets.suppliers.business_name} />
-                      <DetailField lang={lang} label={{ EN: 'Supplier Contact', ES: 'Contacto del Socio', PT: 'Contato do Parceiro' }} value={b.assets.suppliers.contact_name} />
+                      <DetailField lang={lang} label={{ EN: 'Partner', ES: 'Socio', PT: 'Parceiro' }} value={b.assets.suppliers.business_name} />
+                      <DetailField lang={lang} label={{ EN: 'Partner Contact', ES: 'Contacto del Socio', PT: 'Contato do Parceiro' }} value={b.assets.suppliers.contact_name} />
                     </>
                   )}
                 </DetailCard>
@@ -938,7 +938,7 @@ export const ExperienceDetail: React.FC<ExperienceDetailProps> = (props) => {
                   <DetailField lang={lang} label={{ EN: 'KLO Markup %', ES: 'Markup KLO %', PT: 'Markup KLO %' }} value={e.klo_markup_pct != null ? `${e.klo_markup_pct}%` : null} />
                   <DetailField lang={lang} label={{ EN: 'Override Total (USD)', ES: 'Override Total (USD)', PT: 'Override Total (USD)' }} value={e.bundle_price != null ? `$${e.bundle_price.toLocaleString()}` : (lang === 'ES' ? '(auto-calculado)' : lang === 'PT' ? '(auto-calculado)' : '(auto-calculated)')} />
                   <DetailField lang={lang} label={{ EN: 'Curated by', ES: 'Curado por', PT: 'Curado por' }} value={e.curated_by_role} />
-                  <DetailField lang={lang} label={{ EN: 'Visibility', ES: 'Visibilidad', PT: 'Visibilidade' }} value={e.is_supplier_published ? (lang === 'ES' ? 'Solo proveedor' : lang === 'PT' ? 'Só fornecedor' : 'Supplier only') : (lang === 'ES' ? 'Público (KLO)' : lang === 'PT' ? 'Público (KLO)' : 'Public (KLO)')} />
+                  <DetailField lang={lang} label={{ EN: 'Visibility', ES: 'Visibilidad', PT: 'Visibilidade' }} value={e.is_supplier_published ? (lang === 'ES' ? 'Solo socio' : lang === 'PT' ? 'Só parceiro' : 'Partner only') : (lang === 'ES' ? 'Público (KLO)' : lang === 'PT' ? 'Público (KLO)' : 'Public (KLO)')} />
                 </DetailCard>
 
                 {e.hero_image && (

@@ -51,9 +51,9 @@ export const EXPERIENCES_CONFIG: EntityConfig = {
               ES: 'Cargo de servicio KLO: champagne, tapete rojo, mayordomo, transiciones. Esta es la única fuente de ingresos KLO.',
               PT: 'Taxa de serviço KLO: champagne, tapete vermelho, mordomo, transições. Esta é a única fonte de receita KLO.' } },
     { kind: 'number', key: 'klo_markup_pct',  label: { EN: 'KLO Markup % (on service fee)', ES: 'Markup KLO % (sobre tarifa)', PT: 'Markup KLO % (sobre taxa)' }, min: 0, max: 100, step: 0.5, defaultValue: 10.00,
-      help: { EN: 'Markup on KLO\'s own service fee. Defaults to 10% from /api/settings. Suppliers don\'t see this.',
-              ES: 'Markup sobre la tarifa KLO. Default 10% desde /api/settings. Los proveedores no lo ven.',
-              PT: 'Markup sobre a taxa KLO. Default 10% de /api/settings. Os fornecedores não veem isso.' } },
+      help: { EN: 'Markup on KLO\'s own service fee. Defaults to 10% from /api/settings. Partners don\'t see this.',
+              ES: 'Markup sobre la tarifa KLO. Default 10% desde /api/settings. Los socios no lo ven.',
+              PT: 'Markup sobre a taxa KLO. Default 10% de /api/settings. Os parceiros não veem isso.' } },
     { kind: 'number', key: 'bundle_price',    label: { EN: 'Override Total (USD)', ES: 'Override Total (USD)', PT: 'Override Total (USD)' }, min: 0, step: 100,
       help: { EN: 'Leave NULL to auto-calc: sum(assets.cost) + klo_service_fee * (1 + klo_markup/100). Set to override (e.g. for premium bundles).',
               ES: 'Dejar NULL para auto-calcular: sum(assets.cost) + klo_service_fee * (1 + klo_markup/100). Setear para override (ej. bundles premium).',
@@ -61,19 +61,19 @@ export const EXPERIENCES_CONFIG: EntityConfig = {
     { kind: 'select',  key: 'curated_by_role', label: { EN: 'Curated by', ES: 'Curado por', PT: 'Curado por' },
       options: [
         { value: 'admin',    label: { EN: 'KLO (admin)',  ES: 'KLO (admin)',  PT: 'KLO (admin)' } },
-        { value: 'supplier', label: { EN: 'Supplier',     ES: 'Proveedor',    PT: 'Fornecedor' } },
+        { value: 'supplier', label: { EN: 'Partner',      ES: 'Socio',        PT: 'Parceiro'    } },
       ], defaultValue: 'admin' },
     { kind: 'select',  key: 'is_supplier_published', label: { EN: 'Visibility', ES: 'Visibilidad', PT: 'Visibilidade' },
       options: [
-        { value: 'true',  label: { EN: 'Supplier only (private)', ES: 'Solo proveedor (privado)', PT: 'Só fornecedor (privado)' } },
+        { value: 'true',  label: { EN: 'Partner only (private)',  ES: 'Solo socio (privado)',     PT: 'Só parceiro (privado)'    } },
         { value: 'false', label: { EN: 'Public (KLO curated)',     ES: 'Público (curado por KLO)', PT: 'Público (curado por KLO)' } },
       ], defaultValue: 'false' },
   ],
 };
 
 export const SUPPLIERS_CONFIG: EntityConfig = {
-  name:        { EN: 'Suppliers',  ES: 'Socios',    PT: 'Parceiros' },
-  nameSingular:{ EN: 'Supplier',   ES: 'Socio',     PT: 'Parceiro'  },
+  name:        { EN: 'Partners',   ES: 'Socios',    PT: 'Parceiros' },
+  nameSingular:{ EN: 'Partner',    ES: 'Socio',     PT: 'Parceiro'  },
   apiBase:     '/api/suppliers',
   idKey:       'id',
   defaultSort: { key: 'created_at', order: 'desc' },
@@ -132,9 +132,9 @@ export const SUPPLIERS_CONFIG: EntityConfig = {
     { kind: 'text',   key: 'bank_name',         label: { EN: 'Bank Name', ES: 'Banco', PT: 'Banco' } },
     { kind: 'text',   key: 'bank_account_last4', label: { EN: 'Bank Account (last 4)', ES: 'Cuenta (últimos 4)', PT: 'Conta (últimos 4)' } },
     { kind: 'number', key: 'commission_pct', label: { EN: 'Commission %', ES: 'Comisión %', PT: 'Comissão %' }, min: 0, max: 100, step: 0.5, defaultValue: 5.00,
-      help: { EN: 'Default 5%. Goes to the supplier for cross-supplier bundles.',
-              ES: 'Default 5%. Va al proveedor para bundles cross-supplier.',
-              PT: 'Default 5%. Vai para o fornecedor em bundles cross-supplier.' } },
+      help: { EN: 'Default 5%. Goes to the partner for cross-partner bundles.',
+              ES: 'Default 5%. Va al socio para bundles cross-partner.',
+              PT: 'Default 5%. Vai para o parceiro em bundles cross-partner.' } },
     { kind: 'select', key: 'payment_terms', label: { EN: 'Payment Terms', ES: 'Términos de Pago', PT: 'Termos de Pagamento' },
       options: [
         { value: 'NET_24', label: { EN: 'Net 24h', ES: 'Neto 24h', PT: 'Líquido 24h' } },
@@ -242,7 +242,7 @@ export const ASSETS_CONFIG: EntityConfig = {
   ],
   fields: [
     { kind: 'trilingual', key: 'name', label: { EN: 'Name', ES: 'Nombre', PT: 'Nome' }, subKind: 'text', required: true, maxLength: 120 },
-    { kind: 'select',  key: 'supplier_id', label: { EN: 'Supplier', ES: 'Socio', PT: 'Parceiro' },
+    { kind: 'select',  key: 'supplier_id', label: { EN: 'Partner',  ES: 'Socio', PT: 'Parceiro' },
       options: 'dynamic:/api/suppliers?status=APPROVED' },
     { kind: 'select',  key: 'asset_type', label: { EN: 'Pillar', ES: 'Pilar', PT: 'Pilar' },
       options: [
@@ -265,9 +265,9 @@ export const ASSETS_CONFIG: EntityConfig = {
       ]
     },
     { kind: 'number',  key: 'cost_to_klo',     label: { EN: 'Cost to KLO (USD)', ES: 'Costo para KLO (USD)', PT: 'Custo para KLO (USD)' }, min: 0,
-      help: { EN: 'What the supplier quoted to you. This is the price the client sees for the asset itself (no markup).',
-              ES: 'Lo que el proveedor te cotizó. Este es el precio que el cliente ve para el servicio (sin markup).',
-              PT: 'O que o fornecedor te cotizou. Este é o preço que o cliente vê para o serviço (sem markup).' } },
+      help: { EN: 'What the partner quoted to you. This is the price the client sees for the asset itself (no markup).',
+              ES: 'Lo que el socio te cotizó. Este es el precio que el cliente ve para el servicio (sin markup).',
+              PT: 'O que o parceiro te cotizou. Este é o preço que o cliente vê para o serviço (sem markup).' } },
     { kind: 'select',  key: 'cost_currency',    label: { EN: 'Currency', ES: 'Moneda', PT: 'Moeda' },
       options: [
         { value: 'USD', label: { EN: 'USD', ES: 'USD', PT: 'USD' } },
