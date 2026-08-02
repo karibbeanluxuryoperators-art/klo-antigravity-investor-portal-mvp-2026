@@ -6,6 +6,26 @@ import {
   DollarSign, Calendar
 } from 'lucide-react';
 import { Bundle, BundleItem, AvailableAsset } from '../types';
+import { getSupplierSession } from '../services/supabase';
+
+// v1.8.0 Step 22.37: Helper that fetches with the supplier's bearer token.
+// Without this the GET /api/bundles endpoint returns 401 "auth required"
+// because the server-side resolveAuthFromRequest needs the JWT.
+async function authedFetchJSON<T = any>(input: string, init: RequestInit = {}): Promise<T> {
+  const session = await getSupplierSession();
+  const token = session?.access_token;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(init.headers as Record<string, string> | undefined || {}),
+  };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(input, { ...init, headers });
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => ({}));
+    throw new Error(errBody.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
 
 // Local Language alias — see SupplierPortal.tsx for rationale
 type Language = 'EN' | 'ES' | 'PT';
@@ -179,9 +199,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
     try {
       // v2: ownership enforced server-side via assembled_by_email.
       // No supplier_id param needed; server filters by authed user.
-      const res = await fetch('/api/bundles');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      const data = await authedFetchJSON<{ bundles: Bundle[] }>('/api/bundles');
       setBundles(Array.isArray(data?.bundles) ? data.bundles : []);
     } catch (err: any) {
       setLoadError(err?.message || t.error);
@@ -219,9 +237,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
     setIsCreateOpen(true);
     setLoadingAvailable(true);
     try {
-      const res = await fetch('/api/bundles/available-assets');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      const data = await authedFetchJSON<AvailableAsset[]>('/api/bundles/available-assets');
       setAvailableAssets(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load available assets', err);
@@ -281,19 +297,14 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
         default_markup_pct: 30,
         quantity: s.qty || 1,
       }));
-      const res = await fetch('/api/bundles', {
+      await authedFetchJSON<{ success: boolean; bundle_id: string }>('/api/bundles', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
           description: description.trim() || null,
           items,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || t.errors.createFailed);
-      }
       setIsCreateOpen(false);
       await loadBundles();
     } catch (err: any) {
