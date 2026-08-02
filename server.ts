@@ -1962,11 +1962,33 @@ async function startServer() {
 
   // PATCH /api/suppliers/:id — partial update (used by EntityEditModal "Save" on an existing row).
   // Only updates fields present in body. Skips unknown columns defensively.
+  //
+  // v1.8.0 Step 22.35: partners can also PATCH their own profile (Account Settings
+  // edit toggle in /supplier/dashboard). A partner can only edit the row whose
+  // `email` matches their auth email — never another partner's. Admins can edit
+  // any row as before.
   app.patch("/api/suppliers/:id", async (req: express.Request<{ id: string }>, res) => {
     const { id } = req.params;
     try {
       const { role, email: updaterEmail } = await resolveAuthFromRequest(req);
-      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      if (role !== 'admin' && role !== 'partner') {
+        return res.status(403).json({ error: 'admin or partner only' });
+      }
+      // Partners are scoped to their own row only.
+      if (role === 'partner') {
+        if (!updaterEmail) return res.status(401).json({ error: 'auth required' });
+        // Look up the target row's email and compare.
+        const { data: own, error: ownErr } = await supabase
+          .from('suppliers')
+          .select('email')
+          .eq('id', id)
+          .maybeSingle();
+        if (ownErr) throw ownErr;
+        if (!own) return res.status(404).json({ error: 'supplier not found' });
+        if ((own.email || '').toLowerCase() !== updaterEmail.toLowerCase()) {
+          return res.status(403).json({ error: 'partners can only edit their own record' });
+        }
+      }
       // v1.8.0 Step 20: full supplier profile is now editable. Any unknown
       // column is silently dropped on 42703 (Postgres missing column).
       const allowed = [
