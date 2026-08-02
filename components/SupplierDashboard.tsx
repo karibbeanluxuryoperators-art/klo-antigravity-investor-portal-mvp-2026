@@ -101,6 +101,15 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
   const [telegramSaved, setTelegramSaved] = useState(false);
   const [syncingCalendar, setSyncingCalendar] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  // v1.8.0 Step 22.35: Account Settings edit toggle.
+  // Partners need to be able to correct their own business name, contact, location,
+  // email, or whatsapp without having to email the admin. Toggle exposes editable
+  // inputs + Cancel (revert) + Save (PATCH /api/suppliers/:id).
+  const [accountEditing, setAccountEditing] = useState(false);
+  const [accountDraft, setAccountDraft] = useState<{ business_name: string; contact_name: string; location: string; email: string; whatsapp: string }>({
+    business_name: '', contact_name: '', location: '', email: '', whatsapp: '',
+  });
+  const [accountSaved, setAccountSaved] = useState(false);
 
   // Load supplier + assets
   useEffect(() => {
@@ -348,6 +357,63 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
       }
     } catch (err) {
       console.error('Failed to save Telegram', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // v1.8.0 Step 22.35: Account Settings edit helpers.
+  const enterAccountEdit = () => {
+    if (!supplierData) return;
+    setAccountDraft({
+      business_name: supplierData.business_name || '',
+      contact_name:  supplierData.contact_name  || '',
+      location:     supplierData.location     || '',
+      email:        supplierData.email        || '',
+      whatsapp:     supplierData.whatsapp     || '',
+    });
+    setAccountEditing(true);
+    setAccountSaved(false);
+  };
+  const cancelAccountEdit = () => {
+    setAccountEditing(false);
+    setAccountSaved(false);
+  };
+  const saveAccountEdit = async () => {
+    if (!supplierId) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/suppliers/${supplierId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          business_name: accountDraft.business_name,
+          contact_name:  accountDraft.contact_name,
+          location:      accountDraft.location,
+          email:         accountDraft.email,
+          whatsapp:      accountDraft.whatsapp,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Patch local supplierData so the UI updates without a full reload.
+        setSupplierData((prev: any) => prev ? {
+          ...prev,
+          business_name: accountDraft.business_name,
+          contact_name:  accountDraft.contact_name,
+          location:      accountDraft.location,
+          email:         accountDraft.email,
+          whatsapp:      accountDraft.whatsapp,
+        } : prev);
+        setAccountSaved(true);
+        setAccountEditing(false);
+        setTimeout(() => setAccountSaved(false), 3000);
+      } else {
+        alert(data.error || (lang === 'ES' ? 'No se pudo guardar' : lang === 'PT' ? 'Não foi possível salvar' : 'Failed to save'));
+      }
+    } catch (err) {
+      console.error('Failed to save account', err);
+      alert(lang === 'ES' ? 'No se pudo guardar' : lang === 'PT' ? 'Não foi possível salvar' : 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -953,41 +1019,107 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
           {activeTab === 'settings' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6 max-w-2xl">
               <div className="bg-luxury-slate border border-white/10  rounded-2xl overflow-hidden">
-                <div className="px-8 py-6 border-b border-white/10">
-                  <h3 className="text-xl font-serif italic text-white">{lang === 'EN' ? 'Account Settings' : lang === 'ES' ? 'Ajustes de Cuenta' : 'Configurações da Conta'}</h3>
-                  <p className="text-[11px] text-white/60 mt-1">{lang === 'EN' ? 'Manage your partner profile' : lang === 'ES' ? 'Gestiona tu perfil de socio' : 'Gerencie seu perfil de parceiro'}</p>
+                <div className="px-8 py-6 border-b border-white/10 flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-xl font-serif italic text-white">{lang === 'EN' ? 'Account Settings' : lang === 'ES' ? 'Ajustes de Cuenta' : 'Configurações da Conta'}</h3>
+                    <p className="text-[11px] text-white/60 mt-1">{lang === 'EN' ? 'Manage your partner profile' : lang === 'ES' ? 'Gestiona tu perfil de socio' : 'Gerencie seu perfil de parceiro'}</p>
+                  </div>
+                  {/* v1.8.0 Step 22.35: Edit toggle */}
+                  {!accountEditing && (
+                    <button onClick={enterAccountEdit}
+                      className="px-4 py-2 bg-white/5 border border-[#B8963E]/40 rounded-full text-[#B8963E] text-[10px] uppercase tracking-widest font-semibold flex items-center gap-2 hover:bg-[#B8963E]/10 transition-all shrink-0">
+                      <Edit2 size={12} />
+                      {lang === 'EN' ? 'Edit' : lang === 'ES' ? 'Editar' : 'Editar'}
+                    </button>
+                  )}
                 </div>
                 <div className="p-8 space-y-6">
                   <div className="grid grid-cols-1 gap-4">
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Business Name' : lang === 'ES' ? 'Nombre del Negocio' : 'Nome do Negócio'}</label>
-                      <input value={supplierData?.business_name || ''} readOnly
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
+                      {accountEditing ? (
+                        <input value={accountDraft.business_name}
+                          onChange={e => setAccountDraft({ ...accountDraft, business_name: e.target.value })}
+                          className="w-full bg-luxury-black border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30" />
+                      ) : (
+                        <input value={supplierData?.business_name || ''} readOnly
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
+                      )}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Contact' : lang === 'ES' ? 'Contacto' : 'Contato'}</label>
-                        <input value={supplierData?.contact_name || ''} readOnly
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
+                        {accountEditing ? (
+                          <input value={accountDraft.contact_name}
+                            onChange={e => setAccountDraft({ ...accountDraft, contact_name: e.target.value })}
+                            className="w-full bg-luxury-black border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30" />
+                        ) : (
+                          <input value={supplierData?.contact_name || ''} readOnly
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
+                        )}
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Location' : lang === 'ES' ? 'Ubicación' : 'Localização'}</label>
-                        <input value={supplierData?.location || ''} readOnly
-                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
+                        {accountEditing ? (
+                          <input value={accountDraft.location}
+                            onChange={e => setAccountDraft({ ...accountDraft, location: e.target.value })}
+                            className="w-full bg-luxury-black border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30" />
+                        ) : (
+                          <input value={supplierData?.location || ''} readOnly
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
+                        )}
                       </div>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">{lang === 'EN' ? 'Email' : lang === 'ES' ? 'Correo' : 'E-mail'}</label>
-                      <input value={supplierData?.email || ''} readOnly
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
+                      {accountEditing ? (
+                        <input type="email" value={accountDraft.email}
+                          onChange={e => setAccountDraft({ ...accountDraft, email: e.target.value })}
+                          className="w-full bg-luxury-black border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30" />
+                      ) : (
+                        <input value={supplierData?.email || ''} readOnly
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
+                      )}
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase tracking-[0.3em] text-white/60 font-semibold">WhatsApp</label>
-                      <input value={supplierData?.whatsapp || ''} readOnly
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
+                      {accountEditing ? (
+                        <input value={accountDraft.whatsapp}
+                          onChange={e => setAccountDraft({ ...accountDraft, whatsapp: e.target.value })}
+                          placeholder="+57 300 000 0000"
+                          className="w-full bg-luxury-black border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:outline-none focus:border-[#B8963E] focus:ring-1 focus:ring-[#B8963E]/30" />
+                      ) : (
+                        <input value={supplierData?.whatsapp || ''} readOnly
+                          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white" />
+                      )}
                     </div>
                   </div>
-                  <p className="text-[10px] text-white/40 italic">{lang === 'EN' ? 'Profile edits coming soon. Contact KLO admin to update your details.' : lang === 'ES' ? 'Las ediciones de perfil estarán disponibles pronto. Contacta al administrador de KLO para actualizar tus datos.' : 'Edições de perfil em breve. Contate o administrador KLO para atualizar seus dados.'}</p>
+
+                  {/* v1.8.0 Step 22.35: Edit-mode action row (Cancel + Save) */}
+                  {accountEditing && (
+                    <div className="flex gap-3 pt-2 border-t border-white/5">
+                      <button onClick={cancelAccountEdit} disabled={saving}
+                        className="flex-1 py-3 bg-white/5 border border-white/10 rounded-full text-[11px] uppercase tracking-widest font-semibold text-white/80 hover:bg-white/10 transition-all disabled:opacity-50">
+                        {lang === 'EN' ? 'Cancel' : lang === 'ES' ? 'Cancelar' : 'Cancelar'}
+                      </button>
+                      <button onClick={saveAccountEdit} disabled={saving}
+                        className="flex-1 py-3 bg-[#B8963E] text-white rounded-full text-[11px] uppercase tracking-widest font-semibold flex items-center justify-center gap-2 hover:bg-white hover:text-slate-900 transition-all disabled:opacity-50">
+                        {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                        {saving ? (lang === 'EN' ? 'Saving...' : lang === 'ES' ? 'Guardando...' : 'Salvando...')
+                          : (lang === 'EN' ? 'Save Changes' : lang === 'ES' ? 'Guardar Cambios' : 'Salvar Alterações')}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Saved confirmation banner */}
+                  {accountSaved && !accountEditing && (
+                    <div className="px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-center">
+                      <p className="text-[10px] uppercase tracking-[0.3em] text-emerald-300 font-semibold flex items-center justify-center gap-2">
+                        <Check size={12} />
+                        {lang === 'EN' ? 'Changes saved' : lang === 'ES' ? 'Cambios guardados' : 'Alterações salvas'}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
