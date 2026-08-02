@@ -3677,7 +3677,23 @@ ${assetContext}`;
               },
               details: {
                 type: "OBJECT",
-                description: "Any specifics: passengers, route, bedrooms, nights, dietary, flexibility, etc. Free-form key/value."
+                description: "Structured per-service specifics. Only fill fields relevant to this service's pillar; leave others unset.",
+                properties: {
+                  passengers: { type: "INTEGER", description: "Party size for this specific service, if different from the overall passenger count" },
+                  travel_date: { type: "STRING", description: "ISO date (YYYY-MM-DD) or free text date/season for this service" },
+                  nights: { type: "INTEGER", description: "Villa: number of nights" },
+                  days: { type: "INTEGER", description: "Yacht/staff: number of days" },
+                  schedule: { type: "STRING", description: "Staff/transport: 'half_day' | 'eight_hour' | 'full_day'" },
+                  nationality: { type: "STRING", description: "Passenger nationality — required for international aviation/yacht. NOT passport numbers/expiry, those come later on the call." },
+                  route_type: { type: "STRING", description: "Transport: 'airport_transfer' | 'city_tour' | 'inter_city'" },
+                  origin: { type: "STRING", description: "Per-service origin city/airport, if different from the overall origin" },
+                  destination: { type: "STRING", description: "Per-service destination/zone, if different from the overall destination" },
+                  event_type: { type: "STRING", description: "Events: 'wedding' | 'birthday' | 'corporate' | 'private_dining'" },
+                  bedrooms: { type: "INTEGER", description: "Villa: number of bedrooms requested" },
+                  dietary: { type: "STRING", description: "Dietary restrictions/preferences, if mentioned" },
+                  zone: { type: "STRING", description: "Villa: neighborhood/zone, e.g. Bocagrande, Old Town, Barú" },
+                  passports_ready: { type: "BOOLEAN", description: "True if the user confirms passports/documents are ready" },
+                }
               }
             }
           },
@@ -3977,7 +3993,14 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           geminiCall,
           new Promise<never>((_, rej) => setTimeout(() => rej(new Error('gemini_timeout')), timeoutMs)),
         ]);
-        const responseText = geminiResp.text || '{}';
+        const responseText = geminiResp.text || '';
+        if (!responseText) {
+          // No throw from the SDK, but also no text — usually a safety-filtered
+          // response with no candidates. Surface it instead of silently
+          // returning an empty "successful" result.
+          const blockReason = (geminiResp as any)?.promptFeedback?.blockReason;
+          throw new Error(`Gemini returned empty response${blockReason ? ` (blockReason: ${blockReason})` : ''}`);
+        }
         let geminiResult: any;
         try { geminiResult = JSON.parse(responseText); }
         catch { geminiResult = { reply: responseText, qualified: false, preferredLanguage: lang }; }
@@ -4014,7 +4037,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         // the guest yet, so the notification is just noise.
         const lead = await persistMariaLead(geminiResult, existingLeadId);
         if (lead && isLeadActionable(geminiResult)) {
-          notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new');
+          notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new', 'gemini');
         }
         usedGemini = true;
         return res.json({ success: true, result: geminiResult, lead, meta: { language: lang, source: 'gemini' } });
@@ -4058,6 +4081,14 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           openaiCall.then(r => r.json()),
           new Promise<never>((_, rej) => setTimeout(() => rej(new Error('openai_timeout')), timeoutMs)),
         ]);
+        // OpenAI returns 200-with-error-body for some failure modes (invalid
+        // key, quota, model access) — `choices` is absent and `error` is
+        // present. Without this check, that fell through as responseText =
+        // '{}' → an empty-but-"successful" result, which masked the real
+        // failure and returned a blank reply as if OpenAI had worked.
+        if (openaiResp.error) {
+          throw new Error(`OpenAI API error: ${openaiResp.error.message || JSON.stringify(openaiResp.error)}`);
+        }
         const responseText = openaiResp.choices?.[0]?.message?.content || '{}';
         let openaiResult: any;
         try { openaiResult = JSON.parse(responseText); }
@@ -4092,7 +4123,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         // Persist + notify
         const lead = await persistMariaLead(openaiResult, existingLeadId);
         if (lead && isLeadActionable(openaiResult)) {
-          notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new');
+          notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new', 'openai');
         }
         usedGemini = true;
         console.log('[maria] openai succeeded');
@@ -5584,7 +5615,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
   // messages in one live conversation hits the same warm serverless instance.
   const __notifiedLeads = new Map<string, number>();
   const NOTIFY_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
-  function notifyAdminNewLead(lead: any, source: string, mode: 'new' | 'update' = 'new') {
+  function notifyAdminNewLead(lead: any, source: string, mode: 'new' | 'update' = 'new', engine: 'gemini' | 'openai' | 'fallback' = 'fallback') {
     const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     if (!adminChatId || !botToken) return;
@@ -5626,9 +5657,10 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       } catch { return ''; }
     })();
     const header = mode === 'new' ? `🆕 Nuevo lead — ${lead.id}` : `🔄 Lead actualizado — ${lead.id}`;
+    const engineLabel = engine === 'gemini' ? '✨ Gemini' : engine === 'openai' ? '✨ OpenAI' : '⚙️ Rule-based fallback';
     const tgText = [
       header,
-      `Fuente: ${source}`,
+      `Fuente: ${source} (${engineLabel})`,
       `👤 ${lead.name || '(sin nombre)'}`,
       `✉️ ${lead.email || '—'}`,
       `📱 ${lead.phone || lead.whatsapp || '—'}`,
@@ -5777,7 +5809,7 @@ LANGUAGE: respond in the user's language (ES/EN/PT). Always reply in JSON matchi
       }
 
       const lead = await persistMariaLead(result, existingLeadId);
-      if (lead) notifyAdminNewLead(lead, 'maria_chat_gemini', existingLeadId ? 'update' : 'new');
+      if (lead) notifyAdminNewLead(lead, 'maria_chat_gemini', existingLeadId ? 'update' : 'new', 'gemini');
       const turns = (history?.length || 0) + 1;
       return res.json({
         success: true,
