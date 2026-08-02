@@ -111,6 +111,12 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
   });
   const [accountSaved, setAccountSaved] = useState(false);
 
+  // v1.8.0 Step 22.36: Bulk-select + bulk-delete in the Activos tab.
+  // Useful for partners with 50+ vehicles (Partner B) who need to remove
+  // a batch of incorrect test rows or out-of-service inventory in one go.
+  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   // Load supplier + assets
   useEffect(() => {
     const init = async () => {
@@ -320,9 +326,58 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
       const res = await fetch(`/api/assets/${assetId}`, { method: 'DELETE' });
       if (res.ok) {
         setAssets(prev => prev.filter(a => a.id !== assetId));
+        setSelectedAssetIds(prev => {
+          const next = new Set(prev);
+          next.delete(assetId);
+          return next;
+        });
       }
     } catch (err) {
       console.error('Failed to delete asset', err);
+    }
+  };
+
+  // v1.8.0 Step 22.36: Bulk-select helpers + delete.
+  const toggleAssetSelection = (id: string) => {
+    setSelectedAssetIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAllAssets = () => {
+    if (selectedAssetIds.size === assets.length) {
+      setSelectedAssetIds(new Set());
+    } else {
+      setSelectedAssetIds(new Set(assets.map(a => a.id)));
+    }
+  };
+  const clearAssetSelection = () => setSelectedAssetIds(new Set());
+  const handleBulkDeleteAssets = async () => {
+    if (selectedAssetIds.size === 0) return;
+    const count = selectedAssetIds.size;
+    const confirmMsg = lang === 'ES'
+      ? `¿Eliminar ${count} activo(s)? Esta acción no se puede deshacer.`
+      : lang === 'PT'
+      ? `Excluir ${count} ativo(s)? Esta ação não pode ser desfeita.`
+      : `Delete ${count} asset(s)? This cannot be undone.`;
+    if (!confirm(confirmMsg)) return;
+    setBulkDeleting(true);
+    const ids = Array.from(selectedAssetIds);
+    // Best-effort parallel delete. Server is idempotent on missing ids.
+    const results = await Promise.allSettled(
+      ids.map(id => fetch(`/api/assets/${id}`, { method: 'DELETE' }).then(r => r.ok))
+    );
+    const succeeded = results.filter(r => r.status === 'fulfilled' && r.value).length;
+    setAssets(prev => prev.filter(a => !selectedAssetIds.has(a.id)));
+    setSelectedAssetIds(new Set());
+    setBulkDeleting(false);
+    if (succeeded < ids.length) {
+      alert(lang === 'ES'
+        ? `Se eliminaron ${succeeded} de ${ids.length} activo(s). Algunos fallaron.`
+        : lang === 'PT'
+        ? `${succeeded} de ${ids.length} ativo(s) excluídos. Alguns falharam.`
+        : `Deleted ${succeeded} of ${ids.length} asset(s). Some failed.`);
     }
   };
 
@@ -912,7 +967,35 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
           {activeTab === 'assets' && (
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div></div>
+                {/* v1.8.0 Step 22.36: Select-all + counter + bulk delete row */}
+                {assets.length > 0 && (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <label className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/60 font-semibold cursor-pointer">
+                      <input type="checkbox"
+                        checked={assets.length > 0 && selectedAssetIds.size === assets.length}
+                        onChange={toggleSelectAllAssets}
+                        className="w-4 h-4 accent-[#B8963E] cursor-pointer" />
+                      {lang === 'EN' ? 'Select All' : lang === 'ES' ? 'Seleccionar Todo' : 'Selecionar Tudo'}
+                    </label>
+                    {selectedAssetIds.size > 0 && (
+                      <>
+                        <span className="text-[10px] uppercase tracking-widest text-[#B8963E] font-bold">
+                          {selectedAssetIds.size} {lang === 'EN' ? 'selected' : lang === 'ES' ? 'seleccionado(s)' : 'selecionado(s)'}
+                        </span>
+                        <button onClick={clearAssetSelection}
+                          className="text-[10px] uppercase tracking-widest text-white/50 hover:text-white font-semibold">
+                          {lang === 'EN' ? 'Clear' : lang === 'ES' ? 'Limpiar' : 'Limpar'}
+                        </button>
+                        <button onClick={handleBulkDeleteAssets} disabled={bulkDeleting}
+                          className="px-4 py-2 bg-red-500/10 border border-red-500/40 rounded-full text-red-300 text-[10px] uppercase tracking-widest font-semibold flex items-center gap-2 hover:bg-red-500/20 transition-all disabled:opacity-50">
+                          {bulkDeleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                          {lang === 'EN' ? `Delete ${selectedAssetIds.size}` : lang === 'ES' ? `Eliminar ${selectedAssetIds.size}` : `Excluir ${selectedAssetIds.size}`}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+                {assets.length === 0 && <div></div>}
                 <button onClick={() => openEditModal()}
                   className="px-6 py-3 bg-[#B8963E] text-white rounded-full font-bold text-[10px] uppercase tracking-[0.3em] flex items-center gap-2 hover:bg-white hover:text-slate-900 transition-all shrink-0">
                   <Plus size={14} /> {lang === 'EN' ? 'Add Asset' : lang === 'ES' ? 'Agregar' : 'Adicionar'}
@@ -945,8 +1028,20 @@ export const SupplierDashboard: React.FC<SupplierDashboardProps> = ({ user, lang
                     const Icon = ASSET_TYPE_ICONS[a.type] || Package;
                     const price = (a as any).price_per_night || (a as any).price_per_day || (a as any).price_per_unit;
                     const isSyncing = syncingCalendar === a.id;
+                    const isSelected = selectedAssetIds.has(a.id);
                     return (
-                      <div key={a.id} className="bg-luxury-slate border border-white/5 rounded-2xl p-5 flex items-start gap-4 hover:border-[#B8963E]/30 transition-colors">
+                      <div key={a.id}
+                        onClick={() => toggleAssetSelection(a.id)}
+                        className={`bg-luxury-slate border rounded-2xl p-5 flex items-start gap-4 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'border-[#B8963E] ring-1 ring-[#B8963E]/30'
+                            : 'border-white/5 hover:border-[#B8963E]/30'
+                        }`}>
+                        {/* v1.8.0 Step 22.36: per-card selection checkbox */}
+                        <input type="checkbox" checked={isSelected}
+                          onChange={() => toggleAssetSelection(a.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 mt-1 accent-[#B8963E] shrink-0 cursor-pointer" />
                         <div className="w-14 h-14 rounded-xl bg-[#B8963E]/15 flex items-center justify-center text-[#B8963E] shrink-0">
                           <Icon size={26} />
                         </div>
