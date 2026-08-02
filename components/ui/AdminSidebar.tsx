@@ -37,7 +37,7 @@ const ROLE_TABS: Record<AdminRole, AdminSection[]> = {
   ops:     ['SUPPLIERS', 'SERVICES', 'EXPERIENCES', 'BOOKINGS', 'CLIENTS', 'LEADS', 'BUNDLES', 'STATS'],
   sales:   ['BOOKINGS', 'CLIENTS', 'LEADS', 'STATS'],
   // v1.8.0 Step 22.23a: partners can now see BUNDLES so they can assemble
-  // multi-supplier experiences (Phase 4 builder will use this). Partners
+  // multi-partner experiences (Phase 4 builder will use this). Partners
   // cannot see the lead pipeline or other partners' rosters.
   partner: ['SERVICES', 'EXPERIENCES', 'BOOKINGS', 'BUNDLES', 'STATS'],
   viewer:  ['STATS'],
@@ -98,7 +98,7 @@ const T: Record<string, { EN: string; ES: string; PT: string }> = {
   bookings_sub:  { EN: 'Journey Orchestration',  ES: 'Orquestación de Viajes',  PT: 'Orquestração de Viagens' },
   clients_sub:   { EN: 'UHNWI Guest Relations',  ES: 'Relaciones Huéspedes UHNWI', PT: 'Relações Hóspedes UHNWI' },
   leads_sub:     { EN: 'Inbound Inquiries',      ES: 'Consultas Entrantes',     PT: 'Consultas Entrantes' },
-  bundles_sub:   { EN: 'Multi-supplier Packages', ES: 'Paquetes Multi-socio',   PT: 'Pacotes Multi-parceiro' },
+  bundles_sub:   { EN: 'Multi-partner Packages',  ES: 'Paquetes Multi-socio',   PT: 'Pacotes Multi-parceiro' },
   stats_sub:     { EN: 'KPIs & Activity',        ES: 'KPIs y Actividad',        PT: 'KPIs e Atividade' },
   settings_sub:  { EN: 'Roles, Integrations',    ES: 'Roles, Integraciones',    PT: 'Funções, Integrações' },
   // UI
