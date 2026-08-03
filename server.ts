@@ -737,6 +737,61 @@ async function startServer() {
     }
   });
 
+  // GET /api/bundles/available-assets
+  // Returns ACTIVE assets from APPROVED suppliers, with parent business_name.
+  // v1.8.0 Step 22.38: moved here from below the :id route. Express matches
+  // routes in registration order, so the static path must come BEFORE the
+  // dynamic /:id route or the dynamic catches it and returns 401.
+  // v1.8.0 Step 20.1: avoid nested embed (assets -> suppliers) for the
+  // same PostgREST schema-cache reason as the bundles list below. Two
+  // flat queries instead, then a Map merge in JS.
+  app.get("/api/bundles/available-assets", async (_req, res) => {
+    try {
+      const { data, error } = await supabase
+        .from('assets')
+        .select('id, name, type, location, description, price_per_unit, price_type, capacity, status, supplier_id')
+        .eq('status', 'ACTIVE');
+
+      if (error) throw error;
+      const supplierIds = Array.from(new Set(
+        (data || []).map((a: any) => a.supplier_id).filter((x: any): x is string => typeof x === 'string' && x.length > 0)
+      ));
+      let supplierMap: Record<string, { business_name: string; status: string }> = {};
+      if (supplierIds.length > 0) {
+        const { data: supplierRows, error: sErr } = await supabase
+          .from('suppliers')
+          .select('id, business_name, status')
+          .in('id', supplierIds);
+        if (sErr) throw sErr;
+        supplierMap = Object.fromEntries(
+          (supplierRows || []).map((s: any) => [s.id, { business_name: s.business_name, status: s.status }])
+        );
+      }
+
+      // Filter to only APPROVED suppliers (Supabase JS doesn't filter
+      // nested relationship .eq() — do it client-side).
+      const rows = (data || [])
+        .filter((row: any) => supplierMap[row.supplier_id]?.status === 'APPROVED')
+        .map((row: any) => ({
+          id: row.id,
+          name: row.name,
+          type: row.type,
+          location: row.location,
+          description: row.description,
+          price_per_unit: row.price_per_unit,
+          price_type: row.price_type,
+          capacity: row.capacity,
+          status: row.status,
+          supplier_id: row.supplier_id,
+          business_name: supplierMap[row.supplier_id]?.business_name ?? 'Unknown',
+        }));
+
+      res.json(rows);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // GET /api/bundles/:id — single bundle + its items.
   app.get("/api/bundles/:id", async (req, res) => {
     const { id } = req.params;
@@ -2101,59 +2156,9 @@ async function startServer() {
   // ═════════════════════════════════════════════════════════════════════
   // BUNDLES API — multi-supplier packages owned by a partner
   // ═════════════════════════════════════════════════════════════════════
-
-  // GET /api/bundles/available-assets
-  // Returns ACTIVE assets from APPROVED suppliers, with parent business_name.
-  // (Mounted BEFORE /api/bundles/:id so it wins the static path match.)
-  // v1.8.0 Step 20.1: avoid nested embed (assets -> suppliers) for the
-  // same PostgREST schema-cache reason as the bundles list below. Two
-  // flat queries instead, then a Map merge in JS.
-  app.get("/api/bundles/available-assets", async (_req, res) => {
-    try {
-      const { data, error } = await supabase
-        .from('assets')
-        .select('id, name, type, location, description, price_per_unit, price_type, capacity, status, supplier_id')
-        .eq('status', 'ACTIVE');
-
-      if (error) throw error;
-      const supplierIds = Array.from(new Set(
-        (data || []).map((a: any) => a.supplier_id).filter((x: any): x is string => typeof x === 'string' && x.length > 0)
-      ));
-      let supplierMap: Record<string, { business_name: string; status: string }> = {};
-      if (supplierIds.length > 0) {
-        const { data: supplierRows, error: sErr } = await supabase
-          .from('suppliers')
-          .select('id, business_name, status')
-          .in('id', supplierIds);
-        if (sErr) throw sErr;
-        supplierMap = Object.fromEntries(
-          (supplierRows || []).map((s: any) => [s.id, { business_name: s.business_name, status: s.status }])
-        );
-      }
-
-      // Filter to only APPROVED suppliers (Supabase JS doesn't filter
-      // nested relationship .eq() — do it client-side).
-      const rows = (data || [])
-        .filter((row: any) => supplierMap[row.supplier_id]?.status === 'APPROVED')
-        .map((row: any) => ({
-          id: row.id,
-          name: row.name,
-          type: row.type,
-          location: row.location,
-          description: row.description,
-          price_per_unit: row.price_per_unit,
-          price_type: row.price_type,
-          capacity: row.capacity,
-          status: row.status,
-          supplier_id: row.supplier_id,
-          business_name: supplierMap[row.supplier_id]?.business_name ?? 'Unknown',
-        }));
-
-      res.json(rows);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
+  // Note: /api/bundles/available-assets is registered ABOVE (just before
+  // the /:id route) so the static path wins the Express match. v1.8.0
+  // Step 22.38.
 
   // POST /api/bundles — create a new bundle
   app.post("/api/bundles", async (req, res) => {
