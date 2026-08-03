@@ -92,6 +92,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
         submitting: 'Creating…',
         cancel: 'Cancel',
         selectAll: 'All',
+        loadError: 'Could not load available assets. Please try again.',
       },
       errors: {
         name: 'Please enter a name and pick at least one asset.',
@@ -131,6 +132,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
         submitting: 'Creando…',
         cancel: 'Cancelar',
         selectAll: 'Todos',
+        loadError: 'No se pudieron cargar los activos disponibles. Inténtalo de nuevo.',
       },
       errors: {
         name: 'Ingresa un nombre y selecciona al menos un activo.',
@@ -170,6 +172,7 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
         submitting: 'Criando…',
         cancel: 'Cancelar',
         selectAll: 'Todos',
+        loadError: 'Não foi possível carregar os ativos disponíveis. Tente novamente.',
       },
       errors: {
         name: 'Digite um nome e selecione pelo menos um ativo.',
@@ -186,6 +189,11 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [availableAssets, setAvailableAssets] = useState<AvailableAsset[]>([]);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
+  // v1.8.0 Step 22.38: distinguish "no assets" (DB query returned []) from
+  // "failed to load" (e.g. 401 routing bug or network error). Previously the
+  // catch set the list to [] and the user saw the misleading "no assets"
+  // message even when the API call itself failed.
+  const [availableAssetsError, setAvailableAssetsError] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selected, setSelected] = useState<Record<string, SelectedAsset>>({});
@@ -234,14 +242,16 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
     setDescription('');
     setSelected({});
     setSubmitError(null);
+    setAvailableAssetsError(null);
     setIsCreateOpen(true);
     setLoadingAvailable(true);
     try {
       const data = await authedFetchJSON<AvailableAsset[]>('/api/bundles/available-assets');
       setAvailableAssets(Array.isArray(data) ? data : []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load available assets', err);
       setAvailableAssets([]);
+      setAvailableAssetsError(err?.message || t.modal.loadError);
     } finally {
       setLoadingAvailable(false);
     }
@@ -494,6 +504,11 @@ export const PartnerBundles: React.FC<PartnerBundlesProps> = ({ supplierId, lang
                   {loadingAvailable ? (
                     <div className="py-10 flex justify-center">
                       <Loader2 className="animate-spin text-gold" size={24} />
+                    </div>
+                  ) : availableAssetsError ? (
+                    <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4 text-center text-red-300 text-xs flex items-center justify-center gap-2">
+                      <AlertCircle size={14} />
+                      {availableAssetsError}
                     </div>
                   ) : availableAssets.length === 0 ? (
                     <div className="bg-luxury-black border border-border-main rounded-xl p-8 text-center text-text-main/40 text-xs">

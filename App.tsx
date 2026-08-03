@@ -81,14 +81,33 @@ function App() {
   // which made it skip on the first render and run on the second.
   const supplierSubroute = useSupplierRoute();
 
-  // Initialize language from localStorage on mount
+  // Initialize language: ?lang= URL param wins over localStorage so that
+  // outbound links (e.g. investor emails, marketing campaigns) can deep-link
+  // the visitor straight into the right language. Falls back to localStorage,
+  // then to Spanish (the team's working language).
+  // v1.8.0 Step 22.39: supports ?lang=en|ES|PT|pt-BR|en-US|en-GB|es-CO etc.
   useEffect(() => {
-    const savedLang = localStorage.getItem('language') as Language;
-    if (savedLang && ['es', 'en', 'pt'].includes(savedLang)) {
-      setLang(savedLang);
+    const fromUrl = new URLSearchParams(window.location.search).get('lang');
+    const norm = (s: string | null): Language | null => {
+      if (!s) return null;
+      const lower = s.toLowerCase();
+      if (lower.startsWith('en')) return 'en';
+      if (lower.startsWith('pt')) return 'pt';
+      if (lower.startsWith('es')) return 'es';
+      return null;
+    };
+    const fromQuery = norm(fromUrl);
+    if (fromQuery) {
+      setLang(fromQuery);
+      localStorage.setItem('language', fromQuery);
     } else {
-      localStorage.setItem('language', 'es');
-      setLang('es');
+      const savedLang = localStorage.getItem('language') as Language;
+      if (savedLang && ['es', 'en', 'pt'].includes(savedLang)) {
+        setLang(savedLang);
+      } else {
+        localStorage.setItem('language', 'es');
+        setLang('es');
+      }
     }
     setIsReady(true);
   }, []);
