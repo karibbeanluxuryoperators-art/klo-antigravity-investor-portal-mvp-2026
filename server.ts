@@ -3653,16 +3653,34 @@ ${assetContext}`;
       return res.status(400).json({ error: 'message is required' });
     }
 
-    // Auto-detect language from message if not provided
-    const detectLang = (txt: string): 'EN' | 'ES' | 'PT' => {
-      const t = txt.toLowerCase();
-      // Common PT markers
-      if (/\b(bom dia|boa tarde|boa noite|olá|obrigad[oa]|por favor|quero|gostaria|vocês?|está|estou|tenho)\b/.test(t)) return 'PT';
-      // Common ES markers
-      if (/\b(hola|buenos días|buenas tardes|buenas noches|gracias|por favor|quiero|quisiera|tengo|está|estoy)\b/.test(t)) return 'ES';
-      return 'EN';
+    // Detect language from the message itself, not the site-wide UI toggle.
+    // Previously reqLang (always sent by the frontend, from the global
+    // language switcher) unconditionally won, so detectLang() below never
+    // actually ran in production -- every reply was forced into whatever
+    // language the site toggle happened to be set to, regardless of what
+    // the guest actually typed. Now: current message wins when it has a
+    // clear signal (handles a genuine language switch mid-conversation);
+    // falls back to conversation history for a short/ambiguous message
+    // ("somos 4", a bare phone number); site toggle is the last resort.
+    const detectLang = (txt: string): 'EN' | 'ES' | 'PT' | null => {
+      const t = ` ${txt.toLowerCase()} `;
+      const count = (re: RegExp) => (t.match(re) || []).length;
+      const ptScore = count(/\b(bom dia|boa tarde|boa noite|olá|obrigad[oa]|gostaria|vocês?|estou|tenho|preciso|não|iate|hóspedes)\b/g);
+      const esScore = count(/\b(hola|buenos días|buenas tardes|buenas noches|gracias|quiero|quisiera|tengo|estoy|necesito|somos|día|yate|huéspedes|habitaciones)\b/g);
+      const enScore = count(/\b(hello|hi there|thanks|thank you|please|i want|i need|we are|i am|looking for|yacht|guests)\b/g);
+      if (ptScore === 0 && esScore === 0 && enScore === 0) return null; // no signal at all (bare numbers, an email, a name)
+      if (ptScore > esScore && ptScore > enScore) return 'PT';
+      if (esScore > ptScore && esScore > enScore) return 'ES';
+      if (enScore > ptScore && enScore > esScore) return 'EN';
+      return null; // tie between two languages -- not confident enough to switch
     };
-    const lang: 'EN' | 'ES' | 'PT' = (reqLang === 'EN' || reqLang === 'ES' || reqLang === 'PT') ? reqLang : detectLang(message);
+    const historyText = Array.isArray(history)
+      ? history.map((h: any) => h?.content || h?.text || '').join(' ')
+      : '';
+    const lang: 'EN' | 'ES' | 'PT' =
+      detectLang(message)
+      || (historyText ? detectLang(historyText) : null)
+      || ((reqLang === 'EN' || reqLang === 'ES' || reqLang === 'PT') ? reqLang : 'ES');
 
     // ── Schema for structured extraction (Gemini) ──
     const responseSchema = {
