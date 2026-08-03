@@ -3665,9 +3665,16 @@ ${assetContext}`;
     const detectLang = (txt: string): 'EN' | 'ES' | 'PT' | null => {
       const t = ` ${txt.toLowerCase()} `;
       const count = (re: RegExp) => (t.match(re) || []).length;
-      const ptScore = count(/\b(bom dia|boa tarde|boa noite|olá|obrigad[oa]|gostaria|vocês?|estou|tenho|preciso|não|iate|hóspedes)\b/g);
-      const esScore = count(/\b(hola|buenos días|buenas tardes|buenas noches|gracias|quiero|quisiera|tengo|estoy|necesito|somos|día|yate|huéspedes|habitaciones)\b/g);
-      const enScore = count(/\b(hello|hi there|thanks|thank you|please|i want|i need|we are|i am|looking for|yacht|guests)\b/g);
+      // Common function words (articles, prepositions, pronouns, everyday
+      // verbs) carry a language's signature even in short, marker-free
+      // sentences like "Helicopter to Tayrona" or "Isla privada por una
+      // semana" -- neither has a greeting or "I want/need", so a phrase-only
+      // list (the previous version) scored both as zero-signal and fell
+      // through to the site toggle, reproducing the original bug for a
+      // different pattern of message.
+      const ptScore = count(/\b(bom dia|boa tarde|boa noite|olá|obrigad[oa]|gostaria|vocês?|estou|tenho|preciso|não|iate|hóspedes|você|para|em|uma|um|da|do|das|dos|são|está|estão|quero|semana|dias|mês|ano|viagem|família|também|muito)\b/g);
+      const esScore = count(/\b(hola|buenos días|buenas tardes|buenas noches|gracias|quiero|quisiera|tengo|estoy|necesito|somos|día|yate|huéspedes|habitaciones|una|un|del|los|las|está|están|son|para|con|sin|semana|días|mes|año|viaje|familia|también|muy|isla|privada|favor)\b/g);
+      const enScore = count(/\b(hello|hi there|thanks|thank you|please|i want|i need|we are|i am|looking for|yacht|guests|the|a|an|of|is|are|to|for|with|without|this|that|my|our|week|days|month|year|trip|family|also|very|help)\b/g);
       if (ptScore === 0 && esScore === 0 && enScore === 0) return null; // no signal at all (bare numbers, an email, a name)
       if (ptScore > esScore && ptScore > enScore) return 'PT';
       if (esScore > ptScore && esScore > enScore) return 'ES';
