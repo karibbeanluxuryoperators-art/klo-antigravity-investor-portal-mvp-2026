@@ -3995,6 +3995,55 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       result.reply = hasContact ? L.done : L.contact;
     }
 
+    // Safety net: `required: ["reply"]` in the schema only enforces that the
+    // KEY is present — a model can still validly return `"reply": ""` for a
+    // message it finds hard to summarize (e.g. multi-destination, multiple
+    // services in one message). Without this, an empty reply reaches the
+    // client silently and the frontend shows a generic "tell me more" in
+    // whatever language the site's UI toggle happens to be set to — even
+    // when the guest just gave a rich, detailed request. This builds a
+    // reasonable reply from the structured data whenever the model's own
+    // text came back blank, so the guest is never met with silence.
+    function ensureReply(result: any, lang: 'EN' | 'ES' | 'PT'): void {
+      if (result.reply && String(result.reply).trim().length > 0) return; // trust the AI's own text
+      const services: string[] = Array.isArray(result.servicesNeeded) ? result.servicesNeeded : [];
+      const missing: string[] = Array.isArray(result.missingForQuote) ? result.missingForQuote : [];
+      const hasContact = !!(result.email || result.phone);
+      const L = lang === 'ES'
+        ? { askServices: 'Con gusto le ayudo. ¿Podría contarme un poco más — vuelo privado, yate, villa, transporte VIP o personal?',
+            gotIt: (s: string) => `Perfecto, entendido: ${s}. `,
+            askMissing: (s: string) => `¿Me podría confirmar ${s}?`,
+            askContact: '¿Cómo prefiere que le contactemos — correo o WhatsApp?',
+            done: 'Perfecto, tengo todo lo necesario. Un asesor le escribirá en breve con una propuesta a medida.',
+            join: ' y ' }
+        : lang === 'PT'
+        ? { askServices: 'Com prazer ajudo. Pode me contar um pouco mais — jato privado, iate, villa, transporte VIP ou staff?',
+            gotIt: (s: string) => `Perfeito, entendido: ${s}. `,
+            askMissing: (s: string) => `Pode confirmar ${s}?`,
+            askContact: 'Como prefere que entremos em contato — e-mail ou WhatsApp?',
+            done: 'Perfeito, tenho tudo que preciso. Um consultor entrará em contato em breve com uma proposta personalizada.',
+            join: ' e ' }
+        : { askServices: 'Happy to help. Could you tell me a bit more — private jet, yacht, villa, VIP ground transport, or staff?',
+            gotIt: (s: string) => `Great, understood: ${s}. `,
+            askMissing: (s: string) => `Could you confirm ${s}?`,
+            askContact: 'How would you prefer to be contacted — email or WhatsApp?',
+            done: 'Perfect, I have everything I need. A broker will reach out shortly with a bespoke proposal.',
+            join: ' and ' };
+      if (services.length === 0) {
+        result.reply = L.askServices;
+        return;
+      }
+      const summary = services.join(', ');
+      if (missing.length > 0) {
+        // missingForQuote entries look like "aviation:passengers" — show
+        // just the readable part after the colon, de-duplicated.
+        const fields = Array.from(new Set(missing.map((m: string) => (m.includes(':') ? m.split(':')[1] : m).replace(/_/g, ' '))));
+        result.reply = L.gotIt(summary) + L.askMissing(fields.join(L.join));
+        return;
+      }
+      result.reply = L.gotIt(summary) + (hasContact ? L.done : L.askContact);
+    }
+
     if (hasGeminiKey) {
       try {
         const { GoogleGenAI } = require('@google/genai');
@@ -4057,6 +4106,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           const filled = backfillFromMessage(geminiResult, message);
           if (filled.passengers || filled.travelDates) correctStaleAviationReply(geminiResult, lang);
         }
+        ensureReply(geminiResult, lang);
         // Persist + notify (only when the lead is actionable: contact + service).
         // Step 22.30: replaced the old "new OR has-quote" rule. A bare "Villas in
         // Cartagena" with no contact is NOT actionable — the broker can't reach
@@ -4148,6 +4198,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           const filled = backfillFromMessage(groqResult, message);
           if (filled.passengers || filled.travelDates) correctStaleAviationReply(groqResult, lang);
         }
+        ensureReply(groqResult, lang);
         // Persist + notify
         const lead = await persistMariaLead(groqResult, existingLeadId);
         if (lead && isLeadActionable(groqResult)) {
@@ -5389,6 +5440,8 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           result.reply = `Para finalizar sua solicitação, ${s}`;
         }
       }
+
+      ensureReply(result, lang);
 
       // Persist to Supabase
       const lead = await persistMariaLead(result, existingLeadId);
