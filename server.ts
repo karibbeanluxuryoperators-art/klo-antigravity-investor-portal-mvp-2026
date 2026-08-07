@@ -269,7 +269,16 @@ async function notifyApproval(supplierId: string, kind: string, payload: Record<
 
 async function startServer() {
   const PORT = 3000;
+  // ── APP_URL ─────────────────────────────────────────────────────────────
+  // IMPORTANT: always set APP_URL in Vercel env vars to the production domain.
+  // VERCEL_URL is per-deployment and changes on every deploy — using it for the
+  // Telegram webhook means the webhook silently points at a dead URL after
+  // most deploys. APP_URL=https://www.karibbeanluxuryoperators.lat (all envs).
   const APP_URL = process.env.APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : `http://localhost:${PORT}`);
+  if (process.env.TELEGRAM_BOT_TOKEN && APP_URL.includes('vercel.app')) {
+    console.warn(`⚠️  APP_URL is still pointing at a Vercel deployment URL: ${APP_URL}`);
+    console.warn(`   Set APP_URL=https://www.karibbeanluxuryoperators.lat in Vercel env vars to fix the Telegram webhook.`);
+  }
 
   app.use(express.json());
 
@@ -356,6 +365,7 @@ async function startServer() {
       stripe: Boolean(process.env.STRIPE_SECRET_KEY),
       ai: Boolean(process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY),
       googleCalendar: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+      tts: process.env.TTS_ENABLED === 'true' && Boolean(process.env.FISH_AUDIO_API_KEY && process.env.FISH_AUDIO_VOICE_ID),
     };
     res.json({
       status: 'ok',
@@ -386,15 +396,47 @@ async function startServer() {
     } catch { /* non-fatal */ }
   });
 
-  // Register webhook with Telegram on startup
+  // ── Telegram Webhook Registration (cold-start) ───────────────────────
   // The /api/maria/telegram-webhook endpoint handles full Maria conversation.
   // The /api/telegram/webhook endpoint is the legacy helper for /start, /id.
+  // NOTE: cold-start registration is fragile (VERCEL_URL changes per deploy).
+  // Use GET /api/admin/set-telegram-webhook to re-register manually.
   if (process.env.TELEGRAM_BOT_TOKEN) {
-    fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/setWebhook?url=${APP_URL}/api/maria/telegram-webhook`)
+    const webhookUrl = `${APP_URL}/api/maria/telegram-webhook`;
+    fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/setWebhook?url=${webhookUrl}`)
       .then(r => r.json() as Promise<{ ok: boolean; description?: string }>)
-      .then(d => { if (d.ok) console.log('✅ Telegram webhook set (Maria bot)'); else console.warn('⚠️ Telegram:', d.description); })
-      .catch(() => {});
+      .then(d => {
+        if (d.ok) console.log(`✅ Telegram webhook set → ${webhookUrl}`);
+        else console.warn(`⚠️ Telegram webhook registration failed: ${d.description}`);
+      })
+      .catch((e) => console.warn('⚠️ Telegram webhook registration error:', (e as any)?.message || e));
   }
+
+  // ── Admin: Manual Telegram Webhook Registration ─────────────────────
+  // GET /api/admin/set-telegram-webhook
+  // Allows re-registering the webhook on demand, decoupled from cold starts.
+  // Protected by admin auth (same as other admin routes).
+  app.get('/api/admin/set-telegram-webhook', async (req, res) => {
+    try {
+      const { role } = await resolveAuthFromRequest(req);
+      if (role !== 'admin') return res.status(403).json({ error: 'admin only' });
+      const token = process.env.TELEGRAM_BOT_TOKEN;
+      if (!token) return res.status(503).json({ error: 'TELEGRAM_BOT_TOKEN not set' });
+      const targetUrl = `${APP_URL}/api/maria/telegram-webhook`;
+      const r = await fetch(`https://api.telegram.org/bot${token}/setWebhook?url=${targetUrl}`);
+      const data = await r.json() as any;
+      if (data.ok) {
+        console.log(`✅ Admin webhook re-registered → ${targetUrl}`);
+        res.json({ success: true, url: targetUrl, telegram_response: data });
+      } else {
+        console.warn(`⚠️ Admin webhook registration failed:`, data);
+        res.status(500).json({ error: data.description || 'Telegram setWebhook failed', telegram_response: data });
+      }
+    } catch (e: any) {
+      console.error('[admin/set-telegram-webhook] error:', e?.message || e);
+      res.status(500).json({ error: e?.message || 'Internal error' });
+    }
+  });
 
   // Auth API
   app.post("/api/auth/login", (req, res) => {
@@ -5486,6 +5528,44 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
   });
 
   // ─────────────────────────────────────────────────────────────────────────
+  // POST /api/maria/tts
+  // Server-side proxy to Fish Audio TTS. Keeps the API key off the client.
+  // Returns raw audio bytes (mp3 or opus). On failure returns 204 so the
+  // caller can fall back to text-only silently.
+  // ─────────────────────────────────────────────────────────────────────────
+  app.post('/api/maria/tts', async (req, res) => {
+    try {
+      if (process.env.TTS_ENABLED !== 'true') return res.status(204).end();
+      const apiKey = process.env.FISH_AUDIO_API_KEY;
+      const voiceId = process.env.FISH_AUDIO_VOICE_ID;
+      if (!apiKey || !voiceId) return res.status(204).end();
+      const { text, format = 'mp3' } = req.body || {};
+      if (!text || typeof text !== 'string') return res.status(400).json({ error: 'text is required' });
+      // Cap at 600 chars and strip markdown/emoji before sending to Fish Audio
+      let clean = text.slice(0, 600);
+      clean = clean
+        .replace(/\*{1,3}[^*]+\*{1,3}/g, (match) => match.replace(/\*/g, ''))
+        .replace(/`[^`]+`/g, (match) => match.replace(/`/g, ''))
+        .replace(/~~[^~]+~~/g, (match) => match.replace(/~/g, ''))
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (!clean) return res.status(204).end();
+      const fishRes = await fetch('https://api.fish.audio/v1/tts', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'model': 's2.1-pro-free' },
+        body: JSON.stringify({ text: clean, reference_id: voiceId, format, normalize: true }),
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!fishRes.ok) { console.warn('[maria/tts] Fish Audio returned', fishRes.status); return res.status(204).end(); }
+      const audioBuffer = await fishRes.buffer();
+      res.set({ 'Content-Type': format === 'opus' ? 'audio/ogg' : 'audio/mpeg', 'Content-Length': audioBuffer.length, 'Cache-Control': 'no-store' });
+      res.send(audioBuffer);
+    } catch (e: any) { console.warn('[maria/tts] error:', e?.message || e); res.status(204).end(); }
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
   // POST /api/maria/telegram-webhook
   // Receives Telegram bot updates (when a user messages @MariaKLOBot) and
   // runs the same Maria logic as the web chat, then sends the reply back
@@ -5611,6 +5691,34 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       // Telegram has a 4096-char limit per message; truncate gracefully
       const truncated = replyText.length > 4000 ? replyText.slice(0, 4000) + '...' : replyText;
       await sendTelegramMessage(chatId, truncated);
+
+      // ── Voice note via Fish Audio (TTS) ───────────────────────────────
+      if (process.env.TTS_ENABLED === 'true' && process.env.FISH_AUDIO_API_KEY && process.env.FISH_AUDIO_VOICE_ID) {
+        try {
+          let voiceText = replyText.slice(0, 600);
+          voiceText = voiceText
+            .replace(/\*{1,3}[^*]+\*{1,3}/g, (m) => m.replace(/\*/g, ''))
+            .replace(/`[^`]+`/g, (m) => m.replace(/`/g, ''))
+            .replace(/~~[^~]+~~/g, (m) => m.replace(/~/g, ''))
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+            .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+            .replace(/\s+/g, ' ').trim();
+          if (voiceText) {
+            const fishRes = await fetch('https://api.fish.audio/v1/tts', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${process.env.FISH_AUDIO_API_KEY}`, 'Content-Type': 'application/json', 'model': 's2.1-pro-free' },
+              body: JSON.stringify({ text: voiceText, reference_id: process.env.FISH_AUDIO_VOICE_ID, format: 'opus', normalize: true }),
+              signal: AbortSignal.timeout(15_000),
+            });
+            if (fishRes.ok) {
+              const audioBuffer = await fishRes.buffer();
+              const sent = await sendTelegramVoice(chatId, audioBuffer);
+              if (sent) console.log('[maria-telegram] voice note sent');
+              else console.warn('[maria-telegram] sendVoice failed');
+            } else { console.warn('[maria-telegram] Fish Audio TTS failed:', fishRes.status); }
+          }
+        } catch (voiceErr: any) { console.warn('[maria-telegram] voice note error (non-fatal):', voiceErr?.message || voiceErr); }
+      }
     } catch (e: any) {
       console.error('[maria-telegram] webhook error:', e?.message || e);
     }
@@ -5622,15 +5730,25 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
     if (!token) return false;
     try {
       const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
       });
       return r.ok;
-    } catch (e) {
-      console.error('[maria-telegram] sendMessage failed:', (e as any)?.message || e);
-      return false;
-    }
+    } catch (e) { console.error('[maria-telegram] sendMessage failed:', (e as any)?.message || e); return false; }
+  }
+
+  // Helper: send a Telegram voice note (opus .ogg) via the bot API
+  async function sendTelegramVoice(chatId: number | string, audioBuffer: Buffer): Promise<boolean> {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) return false;
+    try {
+      const FormData = (await import('form-data')).default;
+      const form = new FormData();
+      form.append('chat_id', String(chatId));
+      form.append('voice', audioBuffer, { filename: 'voice.ogg', contentType: 'audio/ogg' });
+      const r = await fetch(`https://api.telegram.org/bot${token}/sendVoice`, { method: 'POST', body: form as any });
+      return r.ok;
+    } catch (e) { console.error('[maria-telegram] sendVoice failed:', (e as any)?.message || e); return false; }
   }
 
   // Fire-and-forget notification to the admin's Telegram chat. Used by
