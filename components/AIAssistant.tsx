@@ -1,5 +1,10 @@
 /**
- * AIAssistant — KLO Concierge (María 3.1)
+ * AIAssistant — KLO Concierge (María 3.2)
+ *
+ * v3.2 adds Fish Audio voice replies:
+ *   - Speaker icon on each assistant bubble for on-demand playback
+ *   - Persistent voice-mode toggle in the header (auto-plays every reply)
+ *   - Default: OFF — no autoplay without user gesture
  *
  * The qualification panel that was here (X/6 captured, tier badge, "Pending"
  * rows) has been REMOVED — it was tactless to display that publicly to a
@@ -44,6 +49,7 @@ const STORAGE_KEY_EMAIL = 'klo_email';
 const STORAGE_KEY_HISTORY = 'klo_chat_history';
 const STORAGE_KEY_LEAD_ID = 'klo_maria_lead_id';
 const STORAGE_KEY_QUAL = 'klo_maria_qualification';
+const STORAGE_KEY_VOICE = 'klo_voice_mode';
 
 const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -89,6 +95,20 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
       };
     }
   });
+
+  // ── Voice mode ─────────────────────────────────────────────────────────
+  // voiceMode: auto-play every reply. Default OFF.
+  // playingIndex: which message bubble is currently speaking (-1 = none).
+  const [voiceMode, setVoiceMode] = useState<boolean>(() => {
+    try { return localStorage.getItem(STORAGE_KEY_VOICE) === 'true'; } catch { return false; }
+  });
+  const [playingIndex, setPlayingIndex] = useState<number>(-1);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY_VOICE, String(voiceMode)); } catch {}
+  }, [voiceMode]);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -108,6 +128,53 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, isLoading]);
+
+  // ── TTS playback helper ────────────────────────────────────────────────
+  // Plays audio for a given message text. Returns true if audio started.
+  const playVoice = useCallback(async (text: string, index: number) => {
+    if (!text || !text.trim()) return;
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    setPlayingIndex(index);
+
+    try {
+      const res = await fetch('/api/maria/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, format: 'mp3' }),
+      });
+      if (!res.ok || res.status === 204) {
+        // TTS not available or disabled — fail silently
+        setPlayingIndex(-1);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => { setPlayingIndex(-1); URL.revokeObjectURL(url); };
+      audio.onerror = () => { setPlayingIndex(-1); URL.revokeObjectURL(url); };
+      await audio.play();
+    } catch {
+      // Network or playback error — fail silently
+      setPlayingIndex(-1);
+    }
+  }, []);
+
+  // Auto-play last assistant message if voice mode is on
+  useEffect(() => {
+    if (voiceMode && messages.length > 0) {
+      const last = messages[messages.length - 1];
+      if (last.role === 'assistant') {
+        playVoice(last.text, messages.length - 1);
+      }
+    }
+    // Only trigger when messages change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length > 0 ? messages[messages.length - 1]?.text : null, voiceMode]);
 
   const handleSendText = useCallback(async (overrideInput?: string) => {
     const textToSend = overrideInput || input;
@@ -274,44 +341,97 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => {
-                // Hard reset: clear all stored state and start fresh
-                try { sessionStorage.removeItem(STORAGE_KEY_HISTORY); } catch {}
-                try { localStorage.removeItem(STORAGE_KEY_LEAD_ID); } catch {}
-                try { localStorage.removeItem(STORAGE_KEY_QUAL); } catch {}
-                try { localStorage.removeItem(STORAGE_KEY_EMAIL); } catch {}
-                setMessages([]);
-                setQualification({
-                  fullName: null, email: null, phone: null, servicesNeeded: [], experienceDna: [],
-                  travelDates: null, origin: null, destination: null,
-                  passengers: null, budget: null, documentationReady: null,
-                  qualified: false, preferredLanguage: null,
-                });
-                setLeadId(null);
-                setTurnsUsed(0);
-                setNotified(false);
-              }}
-              aria-label="Start new conversation"
-              title="Start a new conversation"
-              style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginRight: '6px' }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(244,239,230,0.50)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                <path d="M21 3v5h-5" />
-                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                <path d="M3 21v-5h5" />
-              </svg>
-            </button>
-            <button
-              onClick={() => setIsOpen(false)}
-              aria-label="Close chat"
-              style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(244,239,230,0.50)" strokeWidth="2" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
+
+            {/* Header action buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {/* ── Voice mode toggle ────────────────────────────────────── */}
+              <button
+                onClick={() => {
+                  const next = !voiceMode;
+                  setVoiceMode(next);
+                  // If turning off, stop any playing audio
+                  if (!next && audioRef.current) {
+                    audioRef.current.pause();
+                    audioRef.current = null;
+                    setPlayingIndex(-1);
+                  }
+                }}
+                aria-label={voiceMode ? 'Disable voice mode' : 'Enable voice mode'}
+                title={voiceMode
+                  ? (lang === 'en' ? 'Voice mode ON — click to mute' : lang === 'pt' ? 'Modo voz ATIVADO — clique para desativar' : 'Modo voz ACTIVADO — haz clic para silenciar')
+                  : (lang === 'en' ? 'Voice mode OFF — click to enable' : lang === 'pt' ? 'Modo voz desativado — clique para ativar' : 'Modo voz desactivado — haz clic para activar')
+                }
+                style={{
+                  background: voiceMode ? 'rgba(0,168,181,0.15)' : 'rgba(255,255,255,0.05)',
+                  border: voiceMode ? '1px solid rgba(0,168,181,0.35)' : '1px solid transparent',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {voiceMode ? (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00a8b5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                  </svg>
+                ) : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(244,239,230,0.50)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                    <line x1="23" y1="9" x2="17" y2="15" />
+                    <line x1="17" y1="9" x2="23" y2="15" />
+                  </svg>
+                )}
+              </button>
+
+              {/* New conversation (reset) */}
+              <button
+                onClick={() => {
+                  try { sessionStorage.removeItem(STORAGE_KEY_HISTORY); } catch {}
+                  try { localStorage.removeItem(STORAGE_KEY_LEAD_ID); } catch {}
+                  try { localStorage.removeItem(STORAGE_KEY_QUAL); } catch {}
+                  try { localStorage.removeItem(STORAGE_KEY_EMAIL); } catch {}
+                  setMessages([]);
+                  setQualification({
+                    fullName: null, email: null, phone: null, servicesNeeded: [], experienceDna: [],
+                    travelDates: null, origin: null, destination: null,
+                    passengers: null, budget: null, documentationReady: null,
+                    qualified: false, preferredLanguage: null,
+                  });
+                  setLeadId(null);
+                  setTurnsUsed(0);
+                  setNotified(false);
+                  setPlayingIndex(-1);
+                  if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+                }}
+                aria-label="Start new conversation"
+                title="Start a new conversation"
+                style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginRight: '2px' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(244,239,230,0.50)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                  <path d="M3 21v-5h5" />
+                </svg>
+              </button>
+
+              {/* Close chat */}
+              <button
+                onClick={() => setIsOpen(false)}
+                aria-label="Close chat"
+                style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(244,239,230,0.50)" strokeWidth="2" strokeLinecap="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Chat column only — no qualification panel */}
@@ -327,6 +447,52 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
                   <div style={{ padding: '0.875rem 1.125rem', maxWidth: '88%', borderRadius: '0px', background: m.role === 'user' ? 'rgba(0,168,181,0.12)' : 'rgba(26,46,53,0.60)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: m.role === 'user' ? '1px solid rgba(0,168,181,0.20)' : '1px solid rgba(255,255,255,0.05)', color: m.role === 'user' ? 'rgba(244,239,230,0.95)' : 'rgba(244,239,230,0.80)' }}>
                     <p style={{ fontFamily: '"Inter", sans-serif', fontWeight: 300, fontSize: '13px', lineHeight: 1.7, letterSpacing: '0.01em', whiteSpace: 'pre-wrap' }}>{m.text}</p>
                   </div>
+                  {/* ── Speaker icon on assistant bubbles ─────────────────── */}
+                  {m.role === 'assistant' && (
+                    <button
+                      onClick={() => {
+                        if (playingIndex === i) {
+                          if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+                          setPlayingIndex(-1);
+                        } else {
+                          playVoice(m.text, i);
+                        }
+                      }}
+                      aria-label={playingIndex === i ? 'Stop playback' : 'Listen to reply'}
+                      title={playingIndex === i
+                        ? (lang === 'en' ? 'Stop' : lang === 'pt' ? 'Parar' : 'Detener')
+                        : (lang === 'en' ? 'Listen' : lang === 'pt' ? 'Ouvir' : 'Escuchar')
+                      }
+                      style={{
+                        marginTop: '4px',
+                        marginLeft: '4px',
+                        background: playingIndex === i ? 'rgba(0,168,181,0.15)' : 'rgba(255,255,255,0.03)',
+                        border: playingIndex === i ? '1px solid rgba(0,168,181,0.25)' : '1px solid transparent',
+                        borderRadius: '50%',
+                        width: '24px',
+                        height: '24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        padding: 0,
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {playingIndex === i ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00a8b5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                          <path d="M19.07 4.93a10 10 0 0 1 0 14.14" style={{ animation: 'klo-pulse-wave 1s ease infinite' }} />
+                          <path d="M15.54 8.46a5 5 0 0 1 0 7.07" style={{ animation: 'klo-pulse-wave 1s ease 0.2s infinite' }} />
+                        </svg>
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(244,239,230,0.35)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                          <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
                 </div>
               ))}
               {isLoading && (
@@ -403,6 +569,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ t, lang }) => {
         @keyframes klo-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes klo-bounce { 0%, 60%, 100% { opacity: 0.3; transform: scale(0.85); } 30% { opacity: 1; transform: scale(1.15); } }
+        @keyframes klo-pulse-wave { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         .custom-scrollbar { scrollbar-width: thin; scrollbar-color: rgba(0,168,181,0.4) transparent; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
