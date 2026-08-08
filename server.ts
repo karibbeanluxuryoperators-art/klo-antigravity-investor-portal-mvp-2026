@@ -3969,19 +3969,22 @@ ALWAYS:
 
 This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
 
-    // ── Try Gemini first, then Groq as fallback. On failure or timeout, fall
-    //    through to the rule-based path so the user always gets an answer.
-    //    Groq (not OpenAI) is the second layer: OPENAI_API_KEY was never
-    //    actually provisioned in Vercel, so that branch was silently
-    //    unreachable. GROQ_API_KEY was already configured (María's original
-    //    Gemini+Groq design) but nothing in this file called it. ──
-    let usedGemini = false;
+    // ── Try Groq first, then Gemini as fallback. ──
+    // Google's Gemini API key format transition (AIza → AQ.) is causing
+    // widespread auth failures (2025-07). GROQ_API_KEY is already provisioned
+    // and working, so we route Groq as primary. Gemini stays as a secondary
+    // fallback in case Google resolves the key migration later. On failure or
+    // timeout of both, fall through to rule-based so the user always gets an
+    // answer. ──
+    let aiSucceeded = false;
     const hasGeminiKey = !!process.env.GEMINI_API_KEY;
     const hasGroqKey = !!process.env.GROQ_API_KEY;
-    if (!hasGeminiKey && !hasGroqKey) {
-      console.error('[maria] Neither GEMINI_API_KEY nor GROQ_API_KEY is set — running rule-based fallback only.');
-    } else if (!hasGeminiKey) {
-      console.warn('[maria] GEMINI_API_KEY not set, will try GROQ_API_KEY as fallback.');
+    if (!hasGroqKey && !hasGeminiKey) {
+      console.error('[maria] Neither GROQ_API_KEY nor GEMINI_API_KEY is set — running rule-based fallback only.');
+    } else if (!hasGroqKey) {
+      console.warn('[maria] GROQ_API_KEY not set, will try GEMINI_API_KEY as fallback.');
+    } else {
+      console.log('[maria] AI provider priority: Groq (primary) → Gemini (fallback) → rules.');
     }
 
     // Backfill fields the AI sometimes misses even though a simple regex
@@ -4116,92 +4119,10 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
       result.reply = L.gotIt(summary) + (hasContact ? L.done : L.askContact);
     }
 
-    if (hasGeminiKey) {
+    // ── Try Groq as primary (structured JSON via llama-3.3-70b-versatile) ──
+    if (hasGroqKey) {
       try {
-        const { GoogleGenAI } = require('@google/genai');
-        const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-        const formattedHistory = (history || []).map((h: any) => ({
-          role: h.role === 'user' ? 'user' : 'model',
-          parts: [{ text: h.content || h.text || '' }],
-        }));
-        formattedHistory.push({ role: 'user', parts: [{ text: message }] });
-        const geminiCall = genai.models.generateContent({
-          model: 'gemini-2.0-flash',
-          contents: formattedHistory,
-          config: {
-            systemInstruction: systemInstruction,
-            responseMimeType: 'application/json',
-            responseSchema: responseSchema as any,
-            temperature: 0.3,
-          },
-        });
-        const timeoutMs = 12000;
-        const geminiResp = await Promise.race([
-          geminiCall,
-          new Promise<never>((_, rej) => setTimeout(() => rej(new Error('gemini_timeout')), timeoutMs)),
-        ]);
-        const responseText = geminiResp.text || '';
-        if (!responseText) {
-          // No throw from the SDK, but also no text — usually a safety-filtered
-          // response with no candidates. Surface it instead of silently
-          // returning an empty "successful" result.
-          const blockReason = (geminiResp as any)?.promptFeedback?.blockReason;
-          throw new Error(`Gemini returned empty response${blockReason ? ` (blockReason: ${blockReason})` : ''}`);
-        }
-        let geminiResult: any;
-        try { geminiResult = JSON.parse(responseText); }
-        catch { geminiResult = { reply: responseText, qualified: false, preferredLanguage: lang }; }
-        geminiResult.preferredLanguage = geminiResult.preferredLanguage || lang;
-        if (!geminiResult.pillarInterest && Array.isArray(geminiResult.servicesNeeded) && geminiResult.servicesNeeded.length > 0) {
-          geminiResult.pillarInterest = geminiResult.servicesNeeded[0];
-        }
-        if (!Array.isArray(geminiResult.experienceDna)) geminiResult.experienceDna = [];
-        // Apply accumulated context from previous turns
-        if (context && typeof context === 'object') {
-          if (Array.isArray(context.servicesNeeded) && context.servicesNeeded.length > 0) {
-            const existing = Array.isArray(geminiResult.servicesNeeded) ? geminiResult.servicesNeeded : [];
-            for (const svc of context.servicesNeeded) {
-              if (!existing.includes(svc)) existing.push(svc);
-            }
-            geminiResult.servicesNeeded = existing;
-          }
-          if (context.fullName && !geminiResult.fullName) geminiResult.fullName = context.fullName;
-          if (context.email && !geminiResult.email) geminiResult.email = context.email;
-          if (context.phone && !geminiResult.phone) geminiResult.phone = context.phone;
-          if (context.origin && !geminiResult.origin) geminiResult.origin = context.origin;
-          if (context.destination && !geminiResult.destination) geminiResult.destination = context.destination;
-          if (context.passengers && !geminiResult.passengers) geminiResult.passengers = context.passengers;
-          if (context.budget && !geminiResult.budget) geminiResult.budget = context.budget;
-          if (context.travelDates && !geminiResult.travelDates) geminiResult.travelDates = context.travelDates;
-        }
-        {
-          const filled = backfillFromMessage(geminiResult, message);
-          if (filled.passengers || filled.travelDates) correctStaleAviationReply(geminiResult, lang);
-        }
-        ensureReply(geminiResult, lang);
-        // Persist + notify (only when the lead is actionable: contact + service).
-        // Step 22.30: replaced the old "new OR has-quote" rule. A bare "Villas in
-        // Cartagena" with no contact is NOT actionable — the broker can't reach
-        // the guest yet, so the notification is just noise.
-        const lead = await persistMariaLead(geminiResult, existingLeadId);
-        if (lead && isLeadActionable(geminiResult)) {
-          notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new', 'gemini');
-        }
-        usedGemini = true;
-        return res.json({ success: true, result: geminiResult, lead, meta: { language: lang, source: 'gemini' } });
-      } catch (geminiErr: any) {
-        console.error('[maria] gemini failed, falling back to rule-based:', geminiErr?.message || geminiErr);
-        // Log extra detail for debugging (timeout vs API error vs key issue)
-        if (geminiErr instanceof Error) {
-          console.error('[maria] gemini error type:', geminiErr.name, '| message:', geminiErr.message);
-        }
-        // Fall through to OpenAI or rule-based below
-      }
-    }
-
-    // ── Try OpenAI as fallback (structured JSON via gpt-4o-mini) ──
-    if (!usedGemini && hasGroqKey) {
-      try {
+        console.log('[maria] Calling Groq (primary)...');
         const groqMessages: any[] = [
           { role: 'system', content: systemInstruction + '\n\nIMPORTANT: You MUST respond with valid JSON only. No markdown, no code fences, no extra text. Just the JSON object matching the schema.' },
           ...((history || []).map((h: any) => ({
@@ -4276,18 +4197,106 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
         if (lead && isLeadActionable(groqResult)) {
           notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new', 'groq');
         }
-        usedGemini = true;
-        console.log('[maria] groq succeeded');
+        aiSucceeded = true;
+        console.log('[maria] Groq succeeded (primary).');
         return res.json({ success: true, result: groqResult, lead, meta: { language: lang, source: 'groq' } });
       } catch (groqErr: any) {
-        console.error('[maria] groq failed, falling back to rule-based:', groqErr?.message || groqErr);
+        console.error('[maria] Groq (primary) failed, falling back to Gemini:', groqErr?.message || groqErr);
+        if (groqErr instanceof Error) {
+          console.error('[maria] Groq error type:', groqErr.name, '| message:', groqErr.message);
+        }
+        // Fall through to Gemini or rule-based below
+      }
+    }
+
+    // ── Try Gemini as fallback (structured JSON via gemini-2.0-flash) ──
+    if (!aiSucceeded && hasGeminiKey) {
+      try {
+        console.log('[maria] Calling Gemini (fallback)...');
+        const { GoogleGenAI } = require('@google/genai');
+        const genai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const formattedHistory = (history || []).map((h: any) => ({
+          role: h.role === 'user' ? 'user' : 'model',
+          parts: [{ text: h.content || h.text || '' }],
+        }));
+        formattedHistory.push({ role: 'user', parts: [{ text: message }] });
+        const geminiCall = genai.models.generateContent({
+          model: 'gemini-2.0-flash',
+          contents: formattedHistory,
+          config: {
+            systemInstruction: systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: responseSchema as any,
+            temperature: 0.3,
+          },
+        });
+        const timeoutMs = 12000;
+        const geminiResp = await Promise.race([
+          geminiCall,
+          new Promise<never>((_, rej) => setTimeout(() => rej(new Error('gemini_timeout')), timeoutMs)),
+        ]);
+        const responseText = geminiResp.text || '';
+        if (!responseText) {
+          // No throw from the SDK, but also no text — usually a safety-filtered
+          // response with no candidates. Surface it instead of silently
+          // returning an empty "successful" result.
+          const blockReason = (geminiResp as any)?.promptFeedback?.blockReason;
+          throw new Error(`Gemini returned empty response${blockReason ? ` (blockReason: ${blockReason})` : ''}`);
+        }
+        let geminiResult: any;
+        try { geminiResult = JSON.parse(responseText); }
+        catch { geminiResult = { reply: responseText, qualified: false, preferredLanguage: lang }; }
+        geminiResult.preferredLanguage = geminiResult.preferredLanguage || lang;
+        if (!geminiResult.pillarInterest && Array.isArray(geminiResult.servicesNeeded) && geminiResult.servicesNeeded.length > 0) {
+          geminiResult.pillarInterest = geminiResult.servicesNeeded[0];
+        }
+        if (!Array.isArray(geminiResult.experienceDna)) geminiResult.experienceDna = [];
+        // Apply accumulated context from previous turns
+        if (context && typeof context === 'object') {
+          if (Array.isArray(context.servicesNeeded) && context.servicesNeeded.length > 0) {
+            const existing = Array.isArray(geminiResult.servicesNeeded) ? geminiResult.servicesNeeded : [];
+            for (const svc of context.servicesNeeded) {
+              if (!existing.includes(svc)) existing.push(svc);
+            }
+            geminiResult.servicesNeeded = existing;
+          }
+          if (context.fullName && !geminiResult.fullName) geminiResult.fullName = context.fullName;
+          if (context.email && !geminiResult.email) geminiResult.email = context.email;
+          if (context.phone && !geminiResult.phone) geminiResult.phone = context.phone;
+          if (context.origin && !geminiResult.origin) geminiResult.origin = context.origin;
+          if (context.destination && !geminiResult.destination) geminiResult.destination = context.destination;
+          if (context.passengers && !geminiResult.passengers) geminiResult.passengers = context.passengers;
+          if (context.budget && !geminiResult.budget) geminiResult.budget = context.budget;
+          if (context.travelDates && !geminiResult.travelDates) geminiResult.travelDates = context.travelDates;
+        }
+        {
+          const filled = backfillFromMessage(geminiResult, message);
+          if (filled.passengers || filled.travelDates) correctStaleAviationReply(geminiResult, lang);
+        }
+        ensureReply(geminiResult, lang);
+        // Persist + notify (only when the lead is actionable: contact + service).
+        // Step 22.30: replaced the old "new OR has-quote" rule. A bare "Villas in
+        // Cartagena" with no contact is NOT actionable — the broker can't reach
+        // the guest yet, so the notification is just noise.
+        const lead = await persistMariaLead(geminiResult, existingLeadId);
+        if (lead && isLeadActionable(geminiResult)) {
+          notifyAdminNewLead(lead, 'maria_chat', existingLeadId ? 'update' : 'new', 'gemini');
+        }
+        aiSucceeded = true;
+        console.log('[maria] Gemini succeeded (fallback).');
+        return res.json({ success: true, result: geminiResult, lead, meta: { language: lang, source: 'gemini' } });
+      } catch (geminiErr: any) {
+        console.error('[maria] Gemini (fallback) failed, falling back to rule-based:', geminiErr?.message || geminiErr);
+        if (geminiErr instanceof Error) {
+          console.error('[maria] Gemini error type:', geminiErr.name, '| message:', geminiErr.message);
+        }
         // Fall through to rule-based below
       }
     }
 
     // ── Rule-based fallback ──
-    if (!usedGemini) {
-      console.warn('[maria] using rule-based fallback (gemini not available or failed)');
+    if (!aiSucceeded) {
+      console.warn('[maria] Both Groq and Gemini failed or unavailable — using rule-based fallback.');
       const msgLower = message.toLowerCase();
       const result: any = {
         reply: lang === 'ES'
@@ -6518,9 +6527,10 @@ export default app;
 
 /*
 # AI PROVIDER SELECTION
-# Options: gemini (default), claude, openrouter
-# Change this one variable to switch AI providers
-AI_PROVIDER=gemini
+# Options: gemini, claude, openrouter
+# Default for /api/maria/chat is now: Groq (primary) → Gemini (fallback) → rules
+# This env var is for other routes (e.g. KLO backend). Change to switch.
+AI_PROVIDER=groq
 
 # Required for Claude:
 ANTHROPIC_API_KEY=
