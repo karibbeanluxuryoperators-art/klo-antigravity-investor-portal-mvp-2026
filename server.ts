@@ -4131,9 +4131,82 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           })) as any[]),
           { role: 'user', content: message },
         ];
-        // Groq's API is OpenAI-compatible (same request/response shape,
-        // same response_format: json_object support) — just a different
-        // endpoint + key + model.
+        // Groq's API supports structured outputs (json_schema) which enforces
+        // required fields — unlike basic json_object mode which only guarantees
+        // valid JSON but allows the model to omit fields entirely.
+        // This mirrors Gemini's responseSchema behavior: reply, servicesNeeded,
+        // experienceDna, preferredLanguage are always present (even if empty/null).
+        const groqResponseSchema = {
+          type: "object",
+          strict: true,
+          properties: {
+            reply: { type: "string", description: "Warm, elegant concierge reply in the user's language." },
+            fullName: { type: ["string", "null"] },
+            email: { type: ["string", "null"] },
+            phone: { type: ["string", "null"] },
+            servicesNeeded: { type: "array", items: { type: "string" }, description: "One or more of: aviation, yacht, villa, transport, staff, events" },
+            travelDates: { type: ["string", "null"] },
+            origin: { type: ["string", "null"] },
+            destination: { type: ["string", "null"] },
+            passengers: { type: ["integer", "null"] },
+            budget: { type: ["integer", "null"] },
+            documentationReady: { type: ["boolean", "null"] },
+            preferredLanguage: { type: "string" },
+            pillarInterest: { type: ["string", "null"] },
+            qualified: { type: "boolean" },
+            experienceDna: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  pillar: { type: "string" },
+                  type: { type: "string" },
+                  details: {
+                    type: "object",
+                    properties: {
+                      passengers: { type: ["integer", "null"] },
+                      travel_date: { type: ["string", "null"] },
+                      nights: { type: ["integer", "null"] },
+                      days: { type: ["integer", "null"] },
+                      schedule: { type: ["string", "null"] },
+                      nationality: { type: ["string", "null"] },
+                      route_type: { type: ["string", "null"] },
+                      origin: { type: ["string", "null"] },
+                      destination: { type: ["string", "null"] },
+                      event_type: { type: ["string", "null"] },
+                      bedrooms: { type: ["integer", "null"] },
+                      dietary: { type: ["string", "null"] },
+                      zone: { type: ["string", "null"] },
+                      passports_ready: { type: ["boolean", "null"] },
+                    },
+                    required: [],
+                    additionalProperties: false,
+                  },
+                },
+                required: ["pillar", "type", "details"],
+                additionalProperties: false,
+              },
+            },
+            priceEstimate: {
+              type: ["object", "null"],
+              properties: {
+                low: { type: ["integer", "null"] },
+                high: { type: ["integer", "null"] },
+                currency: { type: ["string", "null"] },
+                confidence: { type: ["string", "null"] },
+                reasoning: { type: ["string", "null"] },
+              },
+              required: [],
+              additionalProperties: false,
+            },
+            isInternational: { type: ["boolean", "null"] },
+            operationalNotes: { type: "array", items: { type: "string" } },
+            missingForQuote: { type: "array", items: { type: "string" } },
+          },
+          required: ["reply", "servicesNeeded", "experienceDna", "preferredLanguage", "qualified", "operationalNotes", "missingForQuote"],
+          additionalProperties: false,
+        };
+
         const groqCall = fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
@@ -4145,7 +4218,7 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
             messages: groqMessages,
             temperature: 0.3,
             max_tokens: 1500,
-            response_format: { type: 'json_object' },
+            response_format: { type: 'json_schema', json_schema: { name: 'maria_response', strict: true, schema: groqResponseSchema } },
           }),
         });
         const timeoutMs = 15000;
@@ -4177,6 +4250,70 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           groqResult.pillarInterest = groqResult.servicesNeeded[0];
         }
         if (!Array.isArray(groqResult.experienceDna)) groqResult.experienceDna = [];
+        // ── PILLAR NORMALIZATION ──
+        // The system prompt teaches the model uppercase pillar names (AIR, SEA,
+        // STAY, LAND, STAFF) but all downstream code expects lowercase
+        // (aviation, yacht, villa, transport, staff, events). Groq (and
+        // sometimes Gemini) may follow the prompt's uppercase vocabulary
+        // instead of the schema description's lowercase enum. This block
+        // normalizes BOTH the experienceDna entries AND any top-level
+        // servicesNeeded/pillarInterest values before anything else reads them.
+        const PILLAR_MAP: Record<string, string> = {
+          'air': 'aviation', 'sea': 'yacht', 'stay': 'villa',
+          'land': 'transport', 'staff': 'staff', 'events': 'events',
+          // Also handle case variations the model might produce
+          'Air': 'aviation', 'Sea': 'yacht', 'Stay': 'villa',
+          'Land': 'transport', 'Staff': 'staff', 'Events': 'events',
+          'AIR': 'aviation', 'SEA': 'yacht', 'STAY': 'villa',
+          'LAND': 'transport', 'STAFF': 'staff', 'EVENTS': 'events',
+        };
+        const normalizePillar = (p: string): string | null => {
+          if (!p || typeof p !== 'string') return null;
+          const lower = p.toLowerCase();
+          // Direct lowercase match (avoids unnecessary mapping)
+          if (['aviation','yacht','villa','transport','staff','events'].includes(lower)) return lower;
+          // Map from prompt vocabulary
+          return PILLAR_MAP[p] || PILLAR_MAP[lower] || null;
+        };
+        // Normalize experienceDna pillar values
+        for (const dna of groqResult.experienceDna) {
+          if (dna?.pillar) {
+            const norm = normalizePillar(dna.pillar);
+            if (norm) dna.pillar = norm;
+          }
+        }
+        // Normalize top-level servicesNeeded
+        if (Array.isArray(groqResult.servicesNeeded)) {
+          groqResult.servicesNeeded = groqResult.servicesNeeded
+            .map((s: string) => normalizePillar(s) || s);
+        }
+        // Normalize pillarInterest
+        if (groqResult.pillarInterest) {
+          const norm = normalizePillar(groqResult.pillarInterest);
+          if (norm) groqResult.pillarInterest = norm;
+        }
+        // ── END PILLAR NORMALIZATION ──
+        // ── DEFENSIVE: derive servicesNeeded from experienceDna if omitted ──
+        // Groq's basic json_object mode allowed the model to omit servicesNeeded
+        // and reply entirely. The json_schema strict mode (above) fixes this for
+        // future calls, but we also guard against empty arrays from models that
+        // filled experienceDna but forgot to populate servicesNeeded.
+        if (!Array.isArray(groqResult.servicesNeeded) || groqResult.servicesNeeded.length === 0) {
+          const derived = Array.from(new Set(
+            (groqResult.experienceDna || [])
+              .map((d: any) => normalizePillar(d?.pillar))
+              .filter((p: string | null): p is string => !!p)
+          ));
+          if (derived.length > 0) {
+            console.log('[maria] Groq servicesNeeded was empty — derived from experienceDna:', derived);
+            groqResult.servicesNeeded = derived;
+          }
+        }
+        // Same for pillarInterest — derive from first experienceDna entry if missing
+        if (!groqResult.pillarInterest && Array.isArray(groqResult.servicesNeeded) && groqResult.servicesNeeded.length > 0) {
+          groqResult.pillarInterest = groqResult.servicesNeeded[0];
+        }
+        // ── END DEFENSIVE ──
         // ── DIAGNOSTIC: log parsed result BEFORE context merge / ensureReply ──
         console.log('[maria] Groq parsed result:', JSON.stringify({
           reply: groqResult.reply ? String(groqResult.reply).substring(0, 200) : null,
@@ -4280,6 +4417,29 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           geminiResult.pillarInterest = geminiResult.servicesNeeded[0];
         }
         if (!Array.isArray(geminiResult.experienceDna)) geminiResult.experienceDna = [];
+        // ── PILLAR NORMALIZATION (same as Groq path) ──
+        const _gPILLAR_MAP: Record<string, string> = {
+          'air': 'aviation', 'sea': 'yacht', 'stay': 'villa',
+          'land': 'transport', 'staff': 'staff', 'events': 'events',
+          'Air': 'aviation', 'Sea': 'yacht', 'Stay': 'villa',
+          'Land': 'transport', 'Staff': 'staff', 'Events': 'events',
+          'AIR': 'aviation', 'SEA': 'yacht', 'STAY': 'villa',
+          'LAND': 'transport', 'STAFF': 'staff', 'EVENTS': 'events',
+        };
+        const _gNorm = (p: string): string | null => {
+          if (!p || typeof p !== 'string') return null;
+          const lower = p.toLowerCase();
+          if (['aviation','yacht','villa','transport','staff','events'].includes(lower)) return lower;
+          return _gPILLAR_MAP[p] || _gPILLAR_MAP[lower] || null;
+        };
+        for (const dna of geminiResult.experienceDna) {
+          if (dna?.pillar) { const n = _gNorm(dna.pillar); if (n) dna.pillar = n; }
+        }
+        if (Array.isArray(geminiResult.servicesNeeded)) {
+          geminiResult.servicesNeeded = geminiResult.servicesNeeded.map((s: string) => _gNorm(s) || s);
+        }
+        if (geminiResult.pillarInterest) { const n = _gNorm(geminiResult.pillarInterest); if (n) geminiResult.pillarInterest = n; }
+        // ── END PILLAR NORMALIZATION ──
         // Apply accumulated context from previous turns
         if (context && typeof context === 'object') {
           if (Array.isArray(context.servicesNeeded) && context.servicesNeeded.length > 0) {
