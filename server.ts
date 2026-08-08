@@ -4161,14 +4161,43 @@ This is a CONCIERGE TOOL, not a general-purpose assistant. Scope is enforced.`;
           throw new Error(`Groq API error: ${groqResp.error.message || JSON.stringify(groqResp.error)}`);
         }
         const responseText = groqResp.choices?.[0]?.message?.content || '{}';
+        console.log('[maria] Groq raw response length:', responseText.length, '| preview:', responseText.substring(0, 300));
+        if (!responseText.trim()) {
+          console.error('[maria] Groq returned EMPTY content — choices:', JSON.stringify(groqResp.choices?.length), '| model:', groqResp.model);
+          throw new Error('Groq returned empty response body');
+        }
         let groqResult: any;
         try { groqResult = JSON.parse(responseText); }
-        catch { groqResult = { reply: responseText, qualified: false, preferredLanguage: lang }; }
+        catch (parseErr) {
+          console.error('[maria] Groq JSON parse failed:', (parseErr as Error)?.message, '| raw (first 500):', responseText.substring(0, 500));
+          groqResult = { reply: responseText, qualified: false, preferredLanguage: lang };
+        }
         groqResult.preferredLanguage = groqResult.preferredLanguage || lang;
         if (!groqResult.pillarInterest && Array.isArray(groqResult.servicesNeeded) && groqResult.servicesNeeded.length > 0) {
           groqResult.pillarInterest = groqResult.servicesNeeded[0];
         }
         if (!Array.isArray(groqResult.experienceDna)) groqResult.experienceDna = [];
+        // ── DIAGNOSTIC: log parsed result BEFORE context merge / ensureReply ──
+        console.log('[maria] Groq parsed result:', JSON.stringify({
+          reply: groqResult.reply ? String(groqResult.reply).substring(0, 200) : null,
+          servicesNeeded: groqResult.servicesNeeded,
+          pillarInterest: groqResult.pillarInterest,
+          qualified: groqResult.qualified,
+          preferredLanguage: groqResult.preferredLanguage,
+          fullName: groqResult.fullName,
+          email: groqResult.email,
+          phone: groqResult.phone,
+          passengers: groqResult.passengers,
+          travelDates: groqResult.travelDates,
+          origin: groqResult.origin,
+          destination: groqResult.destination,
+          budget: groqResult.budget,
+          experienceDna: groqResult.experienceDna,
+          priceEstimate: groqResult.priceEstimate,
+          missingForQuote: groqResult.missingForQuote,
+          operationalNotes: groqResult.operationalNotes,
+        }));
+        // ── END DIAGNOSTIC ──
         // Apply accumulated context from previous turns
         if (context && typeof context === 'object') {
           if (Array.isArray(context.servicesNeeded) && context.servicesNeeded.length > 0) {
